@@ -1,0 +1,1391 @@
+{
+  "_source": "https://github.com/yuhonas/free-exercise-db (Unlicense / public domain). Built-in exercises added after the original seed: name, primary muscle (see MUSCLE_SUBGROUPS) and the dataset id used for the photo and the how-to steps.",
+  "exercises": [
+    {
+      "name": "Incline Dumbbell Fly",
+      "muscle_group": "upper-chest",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Incline_Dumbbell_Flyes"
+    },
+    {
+      "name": "Incline Cable Fly",
+      "muscle_group": "upper-chest",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Incline_Cable_Flye"
+    },
+    {
+      "name": "Low Cable Crossover",
+      "muscle_group": "upper-chest",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Low_Cable_Crossover"
+    },
+    {
+      "name": "Incline Machine Press",
+      "muscle_group": "upper-chest",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Leverage_Incline_Chest_Press"
+    },
+    {
+      "name": "Smith Machine Incline Press",
+      "muscle_group": "upper-chest",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Incline_Bench_Press"
+    },
+    {
+      "name": "Decline Push Up",
+      "muscle_group": "upper-chest",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Decline_Push-Up"
+    },
+    {
+      "name": "Wide-Grip Bench Press",
+      "muscle_group": "mid-chest",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Wide-Grip_Barbell_Bench_Press"
+    },
+    {
+      "name": "Neutral-Grip Dumbbell Press",
+      "muscle_group": "mid-chest",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Bench_Press_with_Neutral_Grip"
+    },
+    {
+      "name": "Single-Arm Dumbbell Bench Press",
+      "muscle_group": "mid-chest",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "One_Arm_Dumbbell_Bench_Press"
+    },
+    {
+      "name": "Dumbbell Pullover",
+      "muscle_group": "mid-chest",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Straight-Arm_Dumbbell_Pullover"
+    },
+    {
+      "name": "Cable Fly",
+      "muscle_group": "mid-chest",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Flat_Bench_Cable_Flyes"
+    },
+    {
+      "name": "Single-Arm Cable Crossover",
+      "muscle_group": "mid-chest",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Single-Arm_Cable_Crossover"
+    },
+    {
+      "name": "Cable Chest Press",
+      "muscle_group": "mid-chest",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Cable_Chest_Press"
+    },
+    {
+      "name": "Smith Machine Bench Press",
+      "muscle_group": "mid-chest",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Bench_Press"
+    },
+    {
+      "name": "Wide Push Up",
+      "muscle_group": "mid-chest",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Push-Up_Wide"
+    },
+    {
+      "name": "Plyo Push Up",
+      "muscle_group": "mid-chest",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Plyo_Push-up"
+    },
+    {
+      "name": "Svend Press",
+      "muscle_group": "mid-chest",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Svend_Press"
+    },
+    {
+      "name": "Medicine Ball Chest Pass",
+      "muscle_group": "mid-chest",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Medicine_Ball_Chest_Pass"
+    },
+    {
+      "name": "Kettlebell Floor Press",
+      "muscle_group": "mid-chest",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "One-Arm_Kettlebell_Floor_Press"
+    },
+    {
+      "name": "Decline Bench Press",
+      "muscle_group": "lower-chest",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Decline_Barbell_Bench_Press"
+    },
+    {
+      "name": "Decline Dumbbell Press",
+      "muscle_group": "lower-chest",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Decline_Dumbbell_Bench_Press"
+    },
+    {
+      "name": "Decline Dumbbell Fly",
+      "muscle_group": "lower-chest",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Decline_Dumbbell_Flyes"
+    },
+    {
+      "name": "Decline Machine Press",
+      "muscle_group": "lower-chest",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Leverage_Decline_Chest_Press"
+    },
+    {
+      "name": "Incline Push Up",
+      "muscle_group": "lower-chest",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Incline_Push-Up"
+    },
+    {
+      "name": "Close-Grip Lat Pulldown",
+      "muscle_group": "lats",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Close-Grip_Front_Lat_Pulldown"
+    },
+    {
+      "name": "Reverse-Grip Lat Pulldown",
+      "muscle_group": "lats",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Underhand_Cable_Pulldowns"
+    },
+    {
+      "name": "V-Bar Pulldown",
+      "muscle_group": "lats",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "V-Bar_Pulldown"
+    },
+    {
+      "name": "Single-Arm Lat Pulldown",
+      "muscle_group": "lats",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "One_Arm_Lat_Pulldown"
+    },
+    {
+      "name": "Rope Straight-Arm Pulldown",
+      "muscle_group": "lats",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Rope_Straight-Arm_Pulldown"
+    },
+    {
+      "name": "Weighted Pull Up",
+      "muscle_group": "lats",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Weighted_Pull_Ups"
+    },
+    {
+      "name": "Band-Assisted Pull Up",
+      "muscle_group": "lats",
+      "equipment": "band",
+      "kind": "bodyweight_reps",
+      "datasetId": "Band_Assisted_Pull-Up"
+    },
+    {
+      "name": "Muscle Up",
+      "muscle_group": "lats",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Muscle_Up"
+    },
+    {
+      "name": "Barbell Pullover",
+      "muscle_group": "lats",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Bent-Arm_Barbell_Pullover"
+    },
+    {
+      "name": "Reverse-Grip Barbell Row",
+      "muscle_group": "lats",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Reverse_Grip_Bent-Over_Rows"
+    },
+    {
+      "name": "Single-Arm Landmine Row",
+      "muscle_group": "lats",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Bent_Over_One-Arm_Long_Bar_Row"
+    },
+    {
+      "name": "Single-Arm Cable Row",
+      "muscle_group": "lats",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Seated_One-arm_Cable_Pulley_Rows"
+    },
+    {
+      "name": "Kettlebell Row",
+      "muscle_group": "lats",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "One-Arm_Kettlebell_Row"
+    },
+    {
+      "name": "Inverted Row",
+      "muscle_group": "upper-back",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Inverted_Row"
+    },
+    {
+      "name": "Scapular Pull Up",
+      "muscle_group": "upper-back",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Scapular_Pull-Up"
+    },
+    {
+      "name": "Bent-Over Dumbbell Row",
+      "muscle_group": "upper-back",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Bent_Over_Two-Dumbbell_Row"
+    },
+    {
+      "name": "Chest-Supported Dumbbell Row",
+      "muscle_group": "upper-back",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Incline_Row"
+    },
+    {
+      "name": "Chest-Supported T-Bar Row",
+      "muscle_group": "upper-back",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Lying_T-Bar_Row"
+    },
+    {
+      "name": "Seal Row",
+      "muscle_group": "upper-back",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Lying_Cambered_Barbell_Row"
+    },
+    {
+      "name": "Machine High Row",
+      "muscle_group": "upper-back",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Leverage_High_Row"
+    },
+    {
+      "name": "Smith Machine Row",
+      "muscle_group": "upper-back",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Bent_Over_Row"
+    },
+    {
+      "name": "Renegade Row",
+      "muscle_group": "upper-back",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Alternating_Renegade_Row"
+    },
+    {
+      "name": "Suspension Row",
+      "muscle_group": "upper-back",
+      "equipment": "other",
+      "kind": "bodyweight_reps",
+      "datasetId": "Suspended_Row"
+    },
+    {
+      "name": "Dumbbell Shrug",
+      "muscle_group": "traps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Shrug"
+    },
+    {
+      "name": "Cable Shrug",
+      "muscle_group": "traps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Cable_Shrugs"
+    },
+    {
+      "name": "Machine Shrug",
+      "muscle_group": "traps",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Leverage_Shrug"
+    },
+    {
+      "name": "Behind-the-Back Shrug",
+      "muscle_group": "traps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Barbell_Shrug_Behind_The_Back"
+    },
+    {
+      "name": "Rack Pull",
+      "muscle_group": "lower-back",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Rack_Pulls"
+    },
+    {
+      "name": "Deficit Deadlift",
+      "muscle_group": "lower-back",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Deficit_Deadlift"
+    },
+    {
+      "name": "Sumo Deadlift",
+      "muscle_group": "lower-back",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Sumo_Deadlift"
+    },
+    {
+      "name": "Trap Bar Deadlift",
+      "muscle_group": "lower-back",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Trap_Bar_Deadlift"
+    },
+    {
+      "name": "Arnold Press",
+      "muscle_group": "front-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Arnold_Dumbbell_Press"
+    },
+    {
+      "name": "Standing Dumbbell Press",
+      "muscle_group": "front-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Dumbbell_Press"
+    },
+    {
+      "name": "Seated Barbell Press",
+      "muscle_group": "front-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Seated_Barbell_Military_Press"
+    },
+    {
+      "name": "Push Press",
+      "muscle_group": "front-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Push_Press"
+    },
+    {
+      "name": "Single-Arm Dumbbell Shoulder Press",
+      "muscle_group": "front-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_One-Arm_Shoulder_Press"
+    },
+    {
+      "name": "Single-Arm Landmine Press",
+      "muscle_group": "front-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Single-Arm_Linear_Jammer"
+    },
+    {
+      "name": "Smith Machine Shoulder Press",
+      "muscle_group": "front-delts",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Overhead_Shoulder_Press"
+    },
+    {
+      "name": "Cable Front Raise",
+      "muscle_group": "front-delts",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Front_Cable_Raise"
+    },
+    {
+      "name": "Plate Front Raise",
+      "muscle_group": "front-delts",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Front_Plate_Raise"
+    },
+    {
+      "name": "Handstand Push Up",
+      "muscle_group": "front-delts",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Handstand_Push-Ups"
+    },
+    {
+      "name": "Kettlebell Press",
+      "muscle_group": "front-delts",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Alternating_Kettlebell_Press"
+    },
+    {
+      "name": "Turkish Get-Up",
+      "muscle_group": "front-delts",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Kettlebell_Turkish_Get-Up_Squat_style"
+    },
+    {
+      "name": "Clean and Press",
+      "muscle_group": "front-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Clean_and_Press"
+    },
+    {
+      "name": "Clean and Jerk",
+      "muscle_group": "front-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Clean_and_Jerk"
+    },
+    {
+      "name": "Seated Lateral Raise",
+      "muscle_group": "side-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Seated_Side_Lateral_Raise"
+    },
+    {
+      "name": "Single-Arm Lateral Raise",
+      "muscle_group": "side-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "One-Arm_Side_Laterals"
+    },
+    {
+      "name": "Band Lateral Raise",
+      "muscle_group": "side-delts",
+      "equipment": "band",
+      "kind": "weight_reps",
+      "datasetId": "Lateral_Raise_-_With_Bands"
+    },
+    {
+      "name": "Upright Row",
+      "muscle_group": "side-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Upright_Barbell_Row"
+    },
+    {
+      "name": "Dumbbell Upright Row",
+      "muscle_group": "side-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Dumbbell_Upright_Row"
+    },
+    {
+      "name": "Cable Upright Row",
+      "muscle_group": "side-delts",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Upright_Cable_Row"
+    },
+    {
+      "name": "Cable Rear Delt Fly",
+      "muscle_group": "rear-delts",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Cable_Rear_Delt_Fly"
+    },
+    {
+      "name": "Reverse Pec Deck",
+      "muscle_group": "rear-delts",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Reverse_Machine_Flyes"
+    },
+    {
+      "name": "Barbell Rear Delt Row",
+      "muscle_group": "rear-delts",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Barbell_Rear_Delt_Row"
+    },
+    {
+      "name": "Band Pull Apart",
+      "muscle_group": "rear-delts",
+      "equipment": "band",
+      "kind": "weight_reps",
+      "datasetId": "Band_Pull_Apart"
+    },
+    {
+      "name": "Cable External Rotation",
+      "muscle_group": "rear-delts",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "External_Rotation_with_Cable"
+    },
+    {
+      "name": "Dumbbell External Rotation",
+      "muscle_group": "rear-delts",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "External_Rotation"
+    },
+    {
+      "name": "EZ-Bar Curl",
+      "muscle_group": "biceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "EZ-Bar_Curl"
+    },
+    {
+      "name": "Barbell Preacher Curl",
+      "muscle_group": "biceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Preacher_Curl"
+    },
+    {
+      "name": "Dumbbell Preacher Curl",
+      "muscle_group": "biceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "One_Arm_Dumbbell_Preacher_Curl"
+    },
+    {
+      "name": "Cable Preacher Curl",
+      "muscle_group": "biceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Cable_Preacher_Curl"
+    },
+    {
+      "name": "Concentration Curl",
+      "muscle_group": "biceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Concentration_Curls"
+    },
+    {
+      "name": "Spider Curl",
+      "muscle_group": "biceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Spider_Curl"
+    },
+    {
+      "name": "Prone Incline Curl",
+      "muscle_group": "biceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Prone_Incline_Curl"
+    },
+    {
+      "name": "Rope Hammer Curl",
+      "muscle_group": "biceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Cable_Hammer_Curls_-_Rope_Attachment"
+    },
+    {
+      "name": "Cross-Body Hammer Curl",
+      "muscle_group": "biceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Cross_Body_Hammer_Curl"
+    },
+    {
+      "name": "Incline Hammer Curl",
+      "muscle_group": "biceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Incline_Hammer_Curls"
+    },
+    {
+      "name": "Reverse Barbell Curl",
+      "muscle_group": "biceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Reverse_Barbell_Curl"
+    },
+    {
+      "name": "Zottman Curl",
+      "muscle_group": "biceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Zottman_Curl"
+    },
+    {
+      "name": "Drag Curl",
+      "muscle_group": "biceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Drag_Curl"
+    },
+    {
+      "name": "Overhead Cable Curl",
+      "muscle_group": "biceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Overhead_Cable_Curl"
+    },
+    {
+      "name": "Single-Arm Cable Curl",
+      "muscle_group": "biceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Standing_One-Arm_Cable_Curl"
+    },
+    {
+      "name": "Machine Bicep Curl",
+      "muscle_group": "biceps",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Machine_Bicep_Curl"
+    },
+    {
+      "name": "Rope Pushdown",
+      "muscle_group": "triceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Triceps_Pushdown_-_Rope_Attachment"
+    },
+    {
+      "name": "V-Bar Pushdown",
+      "muscle_group": "triceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Triceps_Pushdown_-_V-Bar_Attachment"
+    },
+    {
+      "name": "Reverse-Grip Pushdown",
+      "muscle_group": "triceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Reverse_Grip_Triceps_Pushdown"
+    },
+    {
+      "name": "Single-Arm Cable Extension",
+      "muscle_group": "triceps",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Cable_One_Arm_Tricep_Extension"
+    },
+    {
+      "name": "Dumbbell Overhead Extension",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Dumbbell_Triceps_Extension"
+    },
+    {
+      "name": "Single-Arm Overhead Extension",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Standing_One-Arm_Dumbbell_Triceps_Extension"
+    },
+    {
+      "name": "Dumbbell Kickback",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Tricep_Dumbbell_Kickback"
+    },
+    {
+      "name": "Lying Dumbbell Extension",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Lying_Dumbbell_Tricep_Extension"
+    },
+    {
+      "name": "JM Press",
+      "muscle_group": "triceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "JM_Press"
+    },
+    {
+      "name": "Close-Grip Dumbbell Press",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Close-Grip_Dumbbell_Press"
+    },
+    {
+      "name": "Tate Press",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Tate_Press"
+    },
+    {
+      "name": "Bench Dip",
+      "muscle_group": "triceps",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Bench_Dips"
+    },
+    {
+      "name": "Ring Dip",
+      "muscle_group": "triceps",
+      "equipment": "other",
+      "kind": "bodyweight_reps",
+      "datasetId": "Ring_Dips"
+    },
+    {
+      "name": "Diamond Push Up",
+      "muscle_group": "triceps",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Push-Ups_-_Close_Triceps_Position"
+    },
+    {
+      "name": "Machine Triceps Extension",
+      "muscle_group": "triceps",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Machine_Triceps_Extension"
+    },
+    {
+      "name": "Machine Dip",
+      "muscle_group": "triceps",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Dip_Machine"
+    },
+    {
+      "name": "Floor Press",
+      "muscle_group": "triceps",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Floor_Press"
+    },
+    {
+      "name": "Dumbbell Floor Press",
+      "muscle_group": "triceps",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Floor_Press"
+    },
+    {
+      "name": "Reverse Wrist Curl",
+      "muscle_group": "forearms",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Palms-Down_Wrist_Curl_Over_A_Bench"
+    },
+    {
+      "name": "Barbell Wrist Curl",
+      "muscle_group": "forearms",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Palms-Up_Barbell_Wrist_Curl_Over_A_Bench"
+    },
+    {
+      "name": "Farmer's Walk",
+      "muscle_group": "forearms",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Farmers_Walk"
+    },
+    {
+      "name": "Plate Pinch",
+      "muscle_group": "forearms",
+      "equipment": "other",
+      "kind": "duration",
+      "datasetId": "Plate_Pinch"
+    },
+    {
+      "name": "Wrist Roller",
+      "muscle_group": "forearms",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Wrist_Roller"
+    },
+    {
+      "name": "Box Squat",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Box_Squat"
+    },
+    {
+      "name": "Zercher Squat",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Zercher_Squats"
+    },
+    {
+      "name": "Overhead Squat",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Overhead_Squat"
+    },
+    {
+      "name": "Barbell Hack Squat",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Barbell_Hack_Squat"
+    },
+    {
+      "name": "Smith Machine Squat",
+      "muscle_group": "quads",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Squat"
+    },
+    {
+      "name": "Narrow-Stance Leg Press",
+      "muscle_group": "quads",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Narrow_Stance_Leg_Press"
+    },
+    {
+      "name": "Single-Leg Leg Extension",
+      "muscle_group": "quads",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Single-Leg_Leg_Extension"
+    },
+    {
+      "name": "Barbell Lunge",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Barbell_Lunge"
+    },
+    {
+      "name": "Barbell Walking Lunge",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Barbell_Walking_Lunge"
+    },
+    {
+      "name": "Reverse Lunge",
+      "muscle_group": "quads",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Rear_Lunge"
+    },
+    {
+      "name": "Dumbbell Step Up",
+      "muscle_group": "quads",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Step_Ups"
+    },
+    {
+      "name": "Dumbbell Squat",
+      "muscle_group": "quads",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Squat"
+    },
+    {
+      "name": "Sumo Dumbbell Squat",
+      "muscle_group": "quads",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Plie_Dumbbell_Squat"
+    },
+    {
+      "name": "Bodyweight Squat",
+      "muscle_group": "quads",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Bodyweight_Squat"
+    },
+    {
+      "name": "Jump Squat",
+      "muscle_group": "quads",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Freehand_Jump_Squat"
+    },
+    {
+      "name": "Kettlebell Pistol Squat",
+      "muscle_group": "quads",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Kettlebell_Pistol_Squat"
+    },
+    {
+      "name": "Double Kettlebell Front Squat",
+      "muscle_group": "quads",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Front_Squats_With_Two_Kettlebells"
+    },
+    {
+      "name": "Smith Machine Split Squat",
+      "muscle_group": "quads",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Single-Leg_Split_Squat"
+    },
+    {
+      "name": "Box Jump",
+      "muscle_group": "quads",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Front_Box_Jump"
+    },
+    {
+      "name": "Broad Jump",
+      "muscle_group": "quads",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Standing_Long_Jump"
+    },
+    {
+      "name": "Sled Push",
+      "muscle_group": "quads",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Sled_Push"
+    },
+    {
+      "name": "Hang Clean",
+      "muscle_group": "quads",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Hang_Clean"
+    },
+    {
+      "name": "Stiff-Leg Deadlift",
+      "muscle_group": "hamstrings",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Stiff-Legged_Barbell_Deadlift"
+    },
+    {
+      "name": "Dumbbell Stiff-Leg Deadlift",
+      "muscle_group": "hamstrings",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Stiff-Legged_Dumbbell_Deadlift"
+    },
+    {
+      "name": "Smith Machine Stiff-Leg Deadlift",
+      "muscle_group": "hamstrings",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Stiff-Legged_Deadlift"
+    },
+    {
+      "name": "Single-Leg Kettlebell Deadlift",
+      "muscle_group": "hamstrings",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Kettlebell_One-Legged_Deadlift"
+    },
+    {
+      "name": "Good Morning",
+      "muscle_group": "hamstrings",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Good_Morning"
+    },
+    {
+      "name": "Glute-Ham Raise",
+      "muscle_group": "hamstrings",
+      "equipment": "machine",
+      "kind": "bodyweight_reps",
+      "datasetId": "Glute_Ham_Raise"
+    },
+    {
+      "name": "Nordic Hamstring Curl",
+      "muscle_group": "hamstrings",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Natural_Glute_Ham_Raise"
+    },
+    {
+      "name": "Standing Leg Curl",
+      "muscle_group": "hamstrings",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Leg_Curl"
+    },
+    {
+      "name": "Stability Ball Leg Curl",
+      "muscle_group": "hamstrings",
+      "equipment": "other",
+      "kind": "bodyweight_reps",
+      "datasetId": "Ball_Leg_Curl"
+    },
+    {
+      "name": "Kettlebell Swing",
+      "muscle_group": "hamstrings",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "One-Arm_Kettlebell_Swings"
+    },
+    {
+      "name": "Reverse Hyperextension",
+      "muscle_group": "hamstrings",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Reverse_Hyperextension"
+    },
+    {
+      "name": "Power Clean",
+      "muscle_group": "hamstrings",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Power_Clean"
+    },
+    {
+      "name": "Power Snatch",
+      "muscle_group": "hamstrings",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Power_Snatch"
+    },
+    {
+      "name": "Kettlebell Clean",
+      "muscle_group": "hamstrings",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "One-Arm_Kettlebell_Clean"
+    },
+    {
+      "name": "Barbell Glute Bridge",
+      "muscle_group": "glutes",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Barbell_Glute_Bridge"
+    },
+    {
+      "name": "Glute Bridge",
+      "muscle_group": "glutes",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Butt_Lift_Bridge"
+    },
+    {
+      "name": "Single-Leg Glute Bridge",
+      "muscle_group": "glutes",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Single_Leg_Glute_Bridge"
+    },
+    {
+      "name": "Glute Kickback",
+      "muscle_group": "glutes",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Glute_Kickback"
+    },
+    {
+      "name": "Cable Pull Through",
+      "muscle_group": "glutes",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Pull_Through"
+    },
+    {
+      "name": "Monster Walk",
+      "muscle_group": "glutes",
+      "equipment": "band",
+      "kind": "bodyweight_reps",
+      "datasetId": "Monster_Walk"
+    },
+    {
+      "name": "Hip Adduction",
+      "muscle_group": "glutes",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Thigh_Adductor"
+    },
+    {
+      "name": "Leg Press Calf Raise",
+      "muscle_group": "calves",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Calf_Press_On_The_Leg_Press_Machine"
+    },
+    {
+      "name": "Smith Machine Calf Raise",
+      "muscle_group": "calves",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Smith_Machine_Calf_Raise"
+    },
+    {
+      "name": "Donkey Calf Raise",
+      "muscle_group": "calves",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Donkey_Calf_Raises"
+    },
+    {
+      "name": "Dumbbell Calf Raise",
+      "muscle_group": "calves",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Dumbbell_Calf_Raise"
+    },
+    {
+      "name": "Barbell Calf Raise",
+      "muscle_group": "calves",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Barbell_Calf_Raise"
+    },
+    {
+      "name": "Single-Leg Seated Calf Raise",
+      "muscle_group": "calves",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Seated_One-Leg_Calf_Raise"
+    },
+    {
+      "name": "Crunch",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Crunches"
+    },
+    {
+      "name": "Sit Up",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Sit-Up"
+    },
+    {
+      "name": "Decline Crunch",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Decline_Crunch"
+    },
+    {
+      "name": "Reverse Crunch",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Reverse_Crunch"
+    },
+    {
+      "name": "Bicycle Crunch",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Air_Bike"
+    },
+    {
+      "name": "Oblique Crunch",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Oblique_Crunches"
+    },
+    {
+      "name": "Dead Bug",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Dead_Bug"
+    },
+    {
+      "name": "Side Plank",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "duration",
+      "datasetId": "Side_Bridge"
+    },
+    {
+      "name": "Lying Leg Raise",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Flat_Bench_Lying_Leg_Raise"
+    },
+    {
+      "name": "Captain's Chair Knee Raise",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Knee_Hip_Raise_On_Parallel_Bars"
+    },
+    {
+      "name": "Ab Crunch Machine",
+      "muscle_group": "core",
+      "equipment": "machine",
+      "kind": "weight_reps",
+      "datasetId": "Ab_Crunch_Machine"
+    },
+    {
+      "name": "Standing Cable Crunch",
+      "muscle_group": "core",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Rope_Crunch"
+    },
+    {
+      "name": "Pallof Press",
+      "muscle_group": "core",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Pallof_Press"
+    },
+    {
+      "name": "Cable Woodchop",
+      "muscle_group": "core",
+      "equipment": "cable",
+      "kind": "weight_reps",
+      "datasetId": "Standing_Cable_Wood_Chop"
+    },
+    {
+      "name": "Landmine 180",
+      "muscle_group": "core",
+      "equipment": "barbell",
+      "kind": "weight_reps",
+      "datasetId": "Landmine_180s"
+    },
+    {
+      "name": "Barbell Rollout",
+      "muscle_group": "core",
+      "equipment": "barbell",
+      "kind": "bodyweight_reps",
+      "datasetId": "Barbell_Ab_Rollout"
+    },
+    {
+      "name": "Dumbbell Side Bend",
+      "muscle_group": "core",
+      "equipment": "dumbbell",
+      "kind": "weight_reps",
+      "datasetId": "Dumbbell_Side_Bend"
+    },
+    {
+      "name": "Kettlebell Windmill",
+      "muscle_group": "core",
+      "equipment": "kettlebell",
+      "kind": "weight_reps",
+      "datasetId": "Kettlebell_Windmill"
+    },
+    {
+      "name": "Mountain Climber",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Mountain_Climbers"
+    },
+    {
+      "name": "Medicine Ball Slam",
+      "muscle_group": "core",
+      "equipment": "other",
+      "kind": "weight_reps",
+      "datasetId": "Overhead_Slam"
+    },
+    {
+      "name": "Flutter Kicks",
+      "muscle_group": "core",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Flutter_Kicks"
+    },
+    {
+      "name": "Elliptical",
+      "muscle_group": "cardio",
+      "equipment": "machine",
+      "kind": "duration",
+      "datasetId": "Elliptical_Trainer"
+    },
+    {
+      "name": "Stair Climber",
+      "muscle_group": "cardio",
+      "equipment": "machine",
+      "kind": "duration",
+      "datasetId": "Stairmaster"
+    },
+    {
+      "name": "Recumbent Bike",
+      "muscle_group": "cardio",
+      "equipment": "machine",
+      "kind": "duration",
+      "datasetId": "Recumbent_Bike"
+    },
+    {
+      "name": "Jump Rope",
+      "muscle_group": "cardio",
+      "equipment": "other",
+      "kind": "duration",
+      "datasetId": "Rope_Jumping"
+    },
+    {
+      "name": "Running",
+      "muscle_group": "cardio",
+      "equipment": "bodyweight",
+      "kind": "duration",
+      "datasetId": "Trail_Running_Walking"
+    },
+    {
+      "name": "Outdoor Cycling",
+      "muscle_group": "cardio",
+      "equipment": "other",
+      "kind": "duration",
+      "datasetId": "Bicycling"
+    },
+    {
+      "name": "Battle Ropes",
+      "muscle_group": "cardio",
+      "equipment": "other",
+      "kind": "duration",
+      "datasetId": "Battling_Ropes"
+    },
+    {
+      "name": "Star Jump",
+      "muscle_group": "cardio",
+      "equipment": "bodyweight",
+      "kind": "bodyweight_reps",
+      "datasetId": "Star_Jump"
+    }
+  ]
+}

@@ -4,21 +4,17 @@
 //   node scripts/fetch-exercise-images.mjs          # skip files that already exist
 //   node scripts/fetch-exercise-images.mjs --force  # re-download everything
 //
-// Run it again only when the mapping (scripts/exercise-images.json) changes.
+// Run it again only when scripts/exercise-images.json (original seed) or
+// scripts/exercise-library.json (later additions) changes.
 // The output is committed, so the build never depends on GitHub being up.
-import { mkdir, readFile, stat } from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
+import { mkdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
+import { imageFileName, libraryProblems, loadLibrary, loadSeedMapping, root } from './library.mjs'
 
-const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const outDir = path.join(root, 'public', 'exercises')
 const BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises'
 const force = process.argv.includes('--force')
-
-// Must match the SQL in supabase/migrations/20261107000000_folders_images.sql:
-// regexp_replace(lower(name), '[^a-z0-9]+', '-', 'g') || '.webp'
-const fileName = (name) => `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.webp`
 
 const exists = (p) =>
   stat(p).then(
@@ -26,16 +22,18 @@ const exists = (p) =>
     () => false,
   )
 
-const mapping = JSON.parse(
-  await readFile(path.join(root, 'scripts', 'exercise-images.json'), 'utf8'),
-)
-delete mapping._source
+const mapping = await loadSeedMapping()
+const library = await loadLibrary()
+// Two exercises sharing a file name would silently overwrite each other's photo.
+const problems = libraryProblems(mapping, library)
+if (problems.length) throw new Error(`Library has conflicts:\n${problems.join('\n')}`)
 await mkdir(outDir, { recursive: true })
 
+const all = [...Object.entries(mapping), ...library.map((e) => [e.name, e.datasetId])]
 let done = 0
 const failed = []
-for (const [name, id] of Object.entries(mapping)) {
-  const out = path.join(outDir, fileName(name))
+for (const [name, id] of all) {
+  const out = path.join(outDir, imageFileName(name))
   if (!force && (await exists(out))) continue
   try {
     const res = await fetch(`${BASE}/${encodeURIComponent(id)}/0.jpg`)

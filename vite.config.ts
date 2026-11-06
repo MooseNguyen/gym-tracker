@@ -51,7 +51,7 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: {
               cacheName: 'exercise-images',
-              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
         ],

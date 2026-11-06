@@ -118,4 +118,13 @@ export function muscleParent(muscle: string): string {
 /** Human label for a stored muscle value: 'upper-chest' → 'upper chest'. */
 export const muscleLabel = (muscle: string) => muscle.replace(/-/g, ' ')
 
-export const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'] as const
+export const EQUIPMENT = [
+  'barbell',
+  'dumbbell',
+  'machine',
+  'cable',
+  'bodyweight',
+  'kettlebell',
+  'band',
+  'other',
+] as const
