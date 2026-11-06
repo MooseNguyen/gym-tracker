@@ -225,6 +225,10 @@ textarea:focus {
   display: flex;
   flex-direction: column;
 }
+/* A list of cards needs air between them; plain .list rows use dividers. */
+.card-list {
+  gap: 10px;
+}
 .list-item {
   display: flex;
   align-items: center;
@@ -1016,13 +1020,128 @@ button.link {
   z-index: 29;
 }
 
-.set-list {
+/* ==========================================================================
+   History card and workout detail
+   ========================================================================== */
+.history-card {
+  gap: 12px;
+}
+.history-name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+}
+.history-stats,
+.detail-stats {
   margin: 0;
-  padding-left: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.history-stats dt {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+.history-stats dd,
+.detail-stats dd {
+  margin: 0;
+  font-weight: 600;
+}
+.detail-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.detail-stats .stat-value {
+  font-size: 1.4rem;
+}
+.history-exercises {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+}
+.history-exercises li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.history-exercises .grow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tag-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.clamp-1 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.muscle-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: 0.9rem;
+}
+.muscle-bars li {
+  display: contents;
+}
+.muscle-bar-label::first-letter {
+  text-transform: uppercase;
+}
+.muscle-bar {
+  height: 8px;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  overflow: hidden;
+}
+.muscle-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+
+.set-table {
+  width: 100%;
+  border-collapse: collapse;
   font-variant-numeric: tabular-nums;
+}
+.set-table th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: left;
+  padding: 0 0 6px;
+}
+.set-table td {
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.set-table th:not(:first-child),
+.set-table td:not(:first-child) {
+  text-align: right;
+}
+.set-table th:first-child,
+.set-table td:first-child {
+  width: 3.5rem;
+}
+.exercise-footer {
+  font-size: 0.85rem;
 }
 
 /* ==========================================================================

@@ -9,6 +9,13 @@ const dateFmt = new Intl.DateTimeFormat(undefined, {
 
 export const formatDate = (iso: string) => dateFmt.format(new Date(iso))
 
+const timeFmt = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' })
+export const formatTime = (iso: string) => timeFmt.format(new Date(iso))
+
+const numberFmt = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 })
+/** "3,240 kg": volumes get large, the separator keeps them readable. */
+export const formatKg = (kg: number) => `${numberFmt.format(kg)} kg`
+
 export function durationMinutes(startIso: string, endIso: string): number {
   return Math.round((Date.parse(endIso) - Date.parse(startIso)) / 60000)
 }

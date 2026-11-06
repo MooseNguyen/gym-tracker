@@ -1,5 +1,13 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
-import { bench, customCurl, fakeLogin, folders, mockSupabase, routines } from './mockSupabase'
+import {
+  bench,
+  customCurl,
+  fakeLogin,
+  folders,
+  mockSupabase,
+  pullUp,
+  routines,
+} from './mockSupabase'
 
 test.beforeEach(async ({ page }) => {
   await fakeLogin(page)
@@ -459,5 +467,71 @@ test.describe('exercise filters', () => {
     await page.goto('/exercises')
     await page.getByRole('button', { name: 'Calves', exact: true }).click()
     await expect(page.getByRole('button', { name: 'No exercises match' })).toBeDisabled()
+  })
+})
+
+test.describe('history', () => {
+  const s = (id: string, set_type: string, weight_kg: number | null, reps: number) => ({
+    id,
+    position: 0,
+    set_type,
+    weight_kg,
+    reps,
+    duration_s: null,
+    rpe: null,
+  })
+  const workout = {
+    id: '00000000-0000-0000-0000-0000000000f1',
+    routine_id: null,
+    name: 'Push day',
+    started_at: '2026-11-06T18:00:00Z',
+    ended_at: '2026-11-06T18:52:00Z',
+    notes: 'Felt strong',
+    workout_exercises: [
+      {
+        id: 'we1',
+        exercise_id: bench.id,
+        position: 0,
+        notes: null,
+        exercise: { ...bench, muscle_group: 'mid-chest' },
+        sets: [s('a', 'warmup', 40, 10), s('b', 'normal', 80, 8), s('c', 'failure', 80, 6)],
+      },
+      {
+        id: 'we2',
+        exercise_id: pullUp.id,
+        position: 1,
+        notes: null,
+        exercise: { ...pullUp, muscle_group: 'lats' },
+        sets: [s('d', 'normal', null, 10)],
+      },
+    ],
+  }
+
+  test('a card summarises the workout, the detail page breaks it down', async ({ page }) => {
+    await mockSupabase(page, { workouts: [workout] })
+    await page.goto('/history')
+
+    const card = page.getByRole('link', { name: /Push day/ })
+    // Warm-ups are not counted: 3 working sets, 80×8 + 80×6 = 1,120 kg.
+    await expect(card.locator('.history-stats')).toContainText('52 min')
+    await expect(card.locator('.history-stats')).toContainText('3')
+    await expect(card.locator('.history-stats')).toContainText('1,120 kg')
+    await expect(card).toContainText('2 × Bench Press')
+    await expect(card).toContainText('best 80 kg × 8')
+    await expect(card.getByRole('list', { name: 'Muscles trained' })).toHaveText(/chest.*back/)
+    await expect(card).toContainText('Felt strong')
+
+    await card.click()
+    await expect(page).toHaveURL(/\/history\/0{8}-/)
+    await expect(page.locator('.detail-stats')).toContainText('+1 warm-up')
+    const muscles = page.getByRole('region', { name: 'Muscles' })
+    await expect(muscles).toContainText('mid chest')
+    await expect(muscles).toContainText('lats')
+
+    const benchTable = page.getByRole('table').first()
+    await expect(benchTable.getByRole('row')).toHaveCount(4) // header + W, 1, 2 F
+    await expect(benchTable.getByRole('cell', { name: 'W', exact: true })).toBeVisible()
+    await expect(benchTable.getByRole('cell', { name: '2 F' })).toBeVisible()
+    await expect(page.getByText('Best 80 kg × 8 (e1RM 101.3 kg)')).toBeVisible()
   })
 })
