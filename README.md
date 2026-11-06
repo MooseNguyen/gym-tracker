@@ -1,0 +1,71 @@
+# Gym Tracker
+
+Personal workout tracker: routines, set logging with "last time" values, rest timer, history and per-exercise progress charts.
+Installable on iPhone as a PWA.
+
+**Stack:** Vite + React 19 + TypeScript, React Router, TanStack Query, Supabase (Postgres, Auth, RLS), Recharts, vite-plugin-pwa. Tests: Vitest + Playwright.
+
+## Setup
+
+### 1. Supabase project
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. **SQL Editor** → run [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql), then [`supabase/seed.sql`](supabase/seed.sql).
+   Or with the CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push --include-seed`.
+3. **Authentication → Sign In / Providers → Email**: keep Email enabled. Turning on "Confirm email" is fine.
+4. **Authentication → Emails → Magic Link** template: make sure the body contains `{{ .Token }}`, so the email shows the 6-digit code.
+   Example body: `<p>Your login code: <strong>{{ .Token }}</strong></p>`
+5. **Authentication → URL Configuration**: set Site URL to your deployed URL (for example `https://gym-tracker.vercel.app`).
+
+> The built-in email sender is rate-limited (a few emails per hour). That's fine for one user. For more, configure custom SMTP.
+
+### 2. Local dev
+
+```bash
+cp .env.example .env.local   # fill in Project URL + anon key (Settings → API)
+npm install
+npm run dev
+```
+
+### 3. Deploy (Vercel)
+
+Import the repo in Vercel, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, and deploy.
+`vercel.json` rewrites every path to `index.html` so deep links like `/history/:id` work.
+
+### 4. Install on iPhone
+
+Open the deployed URL in **Safari** → Share → **Add to Home Screen** → open the app from the icon and log in **there**.
+(The home-screen app has its own storage, separate from Safari. That's why login uses a typed code instead of a magic link.)
+
+## Scripts
+
+| Command            | What it does                                                                   |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `npm run dev`      | Dev server                                                                     |
+| `npm run build`    | Type-check + production build                                                  |
+| `npm run lint`     | ESLint                                                                         |
+| `npm test`         | Unit tests (calc + workout draft logic)                                        |
+| `npm run test:e2e` | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                |
+| `npm run db:types` | Generate TS types from the linked Supabase project (replace `src/types/db.ts`) |
+
+## Architecture notes
+
+- **Workout in progress = local draft** ([`draft.ts`](src/features/workout/draft.ts), [`draftStore.ts`](src/features/workout/draftStore.ts)).
+  Every change is written to `localStorage`. "Finish" sends the whole workout in one `save_workout` RPC (one transaction).
+  `workouts.id` is generated on the client, so retrying a save never creates duplicates.
+- **RLS is the security boundary.** Every table is scoped to `auth.uid()`. The anon key in the bundle is public by design.
+- **Derived numbers are not stored.** Volume, e1RM (Epley) and PRs are computed from sets ([`shared/calc`](src/shared/calc/index.ts)), so editing an old set can never leave stale stats.
+- **Rest timer** stores `restEndsAt` (a timestamp), not a counter, so it stays correct after the app is backgrounded.
+  The screen is kept awake during a workout (Wake Lock API). iOS PWAs cannot schedule a notification for when the rest ends.
+
+## Testing checklist that needs a real Supabase project
+
+The E2E tests mock the network, so they do not cover SQL. After setting up Supabase, check by hand once:
+
+- [ ] **RLS:** log in as user A, create a workout. Log in as user B (another email) → history is empty, and
+      `supabase.from('workouts').select()` in the console returns `[]`.
+- [ ] **RLS on exercises:** as user B, call `save_workout` with an `exercise_id` of one of user A's custom exercises
+      → it fails with `new row violates row-level security policy`.
+- [ ] Finish a workout, then start the same routine again → the "Previous" column shows the last values.
+- [ ] Edit an old workout → the "Previous" column shows the workout _before_ it, not itself.
+- [ ] Delete a custom exercise that is used in history → you get a clear error, not a silent delete.
