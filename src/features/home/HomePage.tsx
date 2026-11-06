@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { HeroCanvas } from '../../shared/ui/HeroCanvas'
+import { MuscleWeekCard } from '../stats/MuscleWeekCard'
 import { WeekStrip } from './WeekStrip'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { QueryState } from '../../shared/ui/QueryState'
@@ -55,6 +56,7 @@ export function HomePage() {
       </header>
 
       <WeekStrip />
+      <MuscleWeekCard />
 
       {draft && (
         <Link to="/workout" className="card resume">

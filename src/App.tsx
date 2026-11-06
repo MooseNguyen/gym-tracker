@@ -8,6 +8,7 @@ import { HistoryPage } from './features/history/HistoryPage'
 import { WorkoutDetailPage } from './features/history/WorkoutDetailPage'
 import { HomePage } from './features/home/HomePage'
 import { RoutineEditorPage } from './features/routines/RoutineEditorPage'
+import { MuscleStatsPage } from './features/stats/MuscleStatsPage'
 import { ActiveWorkoutPage } from './features/workout/ActiveWorkoutPage'
 import { Layout } from './shared/ui/Layout'
 
@@ -29,6 +30,7 @@ export function App() {
             <Route path="history" element={<HistoryPage />} />
             <Route path="history/:id" element={<WorkoutDetailPage />} />
             <Route path="exercises" element={<ExercisesPage />} />
+            <Route path="stats" element={<MuscleStatsPage />} />
             <Route
               path="exercises/:id"
               element={

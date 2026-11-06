@@ -589,7 +589,8 @@ test.describe('home', () => {
     await page.clock.setFixedTime(new Date(2026, 10, 6, 10, 0)) // Friday 6 November, local
     await mockSupabase(page, { routines, folders })
     const iso = (d: number, h: number) => new Date(2026, 10, d, h).toISOString()
-    await page.route(/\/rest\/v1\/workouts\?.*started_at=gte/, (r) =>
+    // Only the strip's light query (id, started_at), not the weekly muscle query.
+    await page.route(/\/rest\/v1\/workouts\?select=id%2Cstarted_at&/, (r) =>
       r.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -628,4 +629,83 @@ test('a new page always opens at the top', async ({ page }) => {
   await expect(page).toHaveURL(/\/workout$/)
   // The reset runs when React commits the new page; poll instead of reading once.
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
+})
+
+test.describe('muscle stats', () => {
+  const s = (id: string, set_type = 'normal') => ({
+    id,
+    position: 0,
+    set_type,
+    weight_kg: 50,
+    reps: 10,
+    duration_s: null,
+    rpe: null,
+  })
+  const we = (id: string, muscle_group: string, sets: ReturnType<typeof s>[]) => ({
+    id,
+    exercise_id: bench.id,
+    position: 0,
+    notes: null,
+    exercise: { ...bench, muscle_group },
+    sets,
+  })
+  const thisWeek = {
+    id: '00000000-0000-0000-0000-0000000000a1',
+    routine_id: null,
+    name: 'Upper',
+    started_at: new Date(2026, 10, 4, 18).toISOString(), // Wed 4 Nov
+    ended_at: new Date(2026, 10, 4, 19).toISOString(),
+    notes: null,
+    workout_exercises: [
+      we('x1', 'mid-chest', [s('a'), s('b'), s('c'), s('d'), s('e', 'warmup')]),
+      we('x2', 'upper-chest', [s('f'), s('g'), s('h'), s('i'), s('j'), s('k'), s('l')]),
+      we('x3', 'lats', [s('m'), s('n'), s('o')]),
+    ],
+  }
+
+  test('Home shows this week per group and opens the weekly page', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 10, 6, 10, 0)) // Friday 6 November
+    // The mock ignores date filters: any week shows these workouts.
+    await mockSupabase(page, { routines, folders, workouts: [thisWeek] })
+    await page.goto('/')
+
+    const card = page.getByRole('link', { name: 'Muscles this week' })
+    await expect(card).toContainText('1 of 11 groups at 10–20 sets') // chest 11 (warm-up ignored)
+    await expect(card.locator('.volume-row')).toHaveCount(2) // only trained groups: chest, back
+    await card.click()
+
+    await expect(page).toHaveURL(/\/stats$/)
+    await expect(page.locator('.week-nav-title')).toContainText('This week')
+    await expect(page.getByRole('button', { name: 'Next week' })).toBeDisabled()
+    const bars = page.getByRole('region', { name: 'Sets per muscle group' })
+    await expect(bars.locator('.volume-row')).toHaveCount(11)
+    await expect(bars.locator('.volume-row.ok')).toContainText('Chest')
+    await expect(bars.locator('.volume-row.low')).toContainText('Back')
+    await expect(bars.getByRole('list', { name: 'Chest by target' })).toContainText('upper chest 7')
+
+    await page.getByRole('button', { name: 'Previous week' }).click()
+    await expect(page.locator('.week-nav-title')).toContainText('Last week')
+    await expect(page.getByRole('button', { name: 'Next week' })).toBeEnabled()
+  })
+})
+
+test.describe('log out', () => {
+  test('asks first; Cancel keeps the session, Log out goes to the login page', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await page.goto('/')
+    const tab = page.getByRole('navigation', { name: 'Main' }).getByRole('button', {
+      name: 'Log out',
+    })
+
+    await tab.click()
+    const dialog = page.getByRole('dialog', { name: 'Log out?' })
+    await expect(dialog).toBeVisible()
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/$/)
+
+    await tab.click()
+    await dialog.getByRole('button', { name: 'Log out' }).click()
+    await expect(page).toHaveURL(/\/login$/)
+  })
 })
