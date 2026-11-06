@@ -23,9 +23,23 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache only the app shell. Workout data always comes from Supabase.
+        // Precache only the app shell. Workout data always comes from Supabase.
+        // Exercise photos (.webp) are left out of the precache on purpose:
+        // installing the app should not download ~1 MB of images up front.
         globPatterns: ['**/*.{js,css,html,svg,png}'],
         navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            // Cached the first time each photo is shown, then served offline.
+            // The files never change in place, so cache-first is safe.
+            urlPattern: /\/exercises\/[^/]+\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
       },
     }),
   ],
