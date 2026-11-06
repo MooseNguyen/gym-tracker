@@ -42,7 +42,7 @@ test('logs a workout, survives a reload and saves only completed sets', async ({
 
   await page.getByRole('button', { name: 'Finish workout' }).click()
   await expect(page).toHaveURL(/\/history\/[0-9a-f-]{36}$/)
-  await expect(page.getByText('82.5 kg × 8')).toBeVisible()
+  await expect(page.getByRole('cell', { name: '82.5 kg × 8' })).toBeVisible()
 
   expect(api.saved).toHaveLength(1)
   expect(api.saved[0].exercises).toEqual([

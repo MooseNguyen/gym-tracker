@@ -99,6 +99,8 @@ export interface MockOptions {
   exercises?: { id: string }[]
   routines?: unknown[]
   folders?: unknown[]
+  /** Finished workouts already on the server, shaped like the PostgREST embed. */
+  workouts?: { id: string }[]
 }
 
 export async function mockSupabase(page: Page, opts: MockOptions = {}) {
@@ -162,12 +164,13 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
       return json(route, p.id)
     }
     if (path === '/rest/v1/workouts') {
+      const rows = [...saved.map(asRow), ...(opts.workouts ?? [])]
       const id = url.searchParams.get('id')?.replace('eq.', '')
       if (id) {
-        const w = saved.find((x) => x.id === id)
-        return w ? json(route, asRow(w)) : json(route, { message: 'Not found' }, 406)
+        const w = rows.find((x) => x.id === id)
+        return w ? json(route, w) : json(route, { message: 'Not found' }, 406)
       }
-      return json(route, saved.map(asRow))
+      return json(route, rows)
     }
     return json(route, { message: `Unmocked ${req.method()} ${path}` }, 501)
   })

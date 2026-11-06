@@ -1,8 +1,13 @@
 import { Link } from 'react-router'
+import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { QueryState } from '../../shared/ui/QueryState'
-import { totalVolume } from '../../shared/calc'
+import type { Workout } from '../../types/db'
 import { useWorkouts } from './api'
-import { durationMinutes, formatDate } from './format'
+import { formatDate, formatKg, formatSetValues, formatTime } from './format'
+import { exerciseSummary, groupsTrained, workoutStats } from './summary'
+
+/** Exercises listed on a card; the rest collapse into "+N more". */
+const SHOWN_EXERCISES = 3
 
 export function HistoryPage() {
   const q = useWorkouts()
@@ -18,25 +23,12 @@ export function HistoryPage() {
         isEmpty={workouts.length === 0}
         empty={<p>No workouts yet. Finished workouts show up here.</p>}
       >
-        <ul className="list">
-          {workouts.map((w) => {
-            const sets = w.workout_exercises.flatMap((we) => we.sets)
-            return (
-              <li key={w.id}>
-                <Link to={`/history/${w.id}`} className="card stack">
-                  <div className="row between">
-                    <strong>{w.name}</strong>
-                    <small className="muted">{formatDate(w.started_at)}</small>
-                  </div>
-                  <small className="muted">
-                    {durationMinutes(w.started_at, w.ended_at)} min · {sets.length} sets ·{' '}
-                    {totalVolume(sets)} kg
-                  </small>
-                  <small>{w.workout_exercises.map((we) => we.exercise.name).join(', ')}</small>
-                </Link>
-              </li>
-            )
-          })}
+        <ul className="list card-list">
+          {workouts.map((w) => (
+            <li key={w.id}>
+              <WorkoutCard workout={w} />
+            </li>
+          ))}
         </ul>
         {q.hasNextPage && (
           <button
@@ -49,5 +41,71 @@ export function HistoryPage() {
         )}
       </QueryState>
     </main>
+  )
+}
+
+function WorkoutCard({ workout: w }: { workout: Workout }) {
+  const stats = workoutStats(w)
+  const groups = groupsTrained(w)
+  const hidden = w.workout_exercises.length - SHOWN_EXERCISES
+
+  return (
+    <Link to={`/history/${w.id}`} className="card history-card">
+      <div className="row between">
+        <strong className="history-name">{w.name}</strong>
+        <small className="muted">
+          {formatDate(w.started_at)} · {formatTime(w.started_at)}
+        </small>
+      </div>
+
+      <dl className="history-stats">
+        <div>
+          <dt>Time</dt>
+          <dd>{stats.minutes} min</dd>
+        </div>
+        <div>
+          <dt>Sets</dt>
+          <dd>{stats.workingSets}</dd>
+        </div>
+        <div>
+          <dt>Volume</dt>
+          <dd>{formatKg(stats.volume)}</dd>
+        </div>
+      </dl>
+
+      <ul className="history-exercises">
+        {w.workout_exercises.slice(0, SHOWN_EXERCISES).map((we) => {
+          const s = exerciseSummary(we.exercise.kind, we.sets)
+          return (
+            <li key={we.id}>
+              <ExerciseThumb
+                imagePath={we.exercise.image_path}
+                name={we.exercise.name}
+                size={32}
+                decorative
+              />
+              <span className="grow">
+                {s.workingSets} × {we.exercise.name}
+              </span>
+              {s.best && (
+                <small className="muted">best {formatSetValues(we.exercise.kind, s.best)}</small>
+              )}
+            </li>
+          )
+        })}
+        {hidden > 0 && <li className="muted">+{hidden} more</li>}
+      </ul>
+
+      {groups.length > 0 && (
+        <ul className="tag-list" aria-label="Muscles trained">
+          {groups.map((g) => (
+            <li key={g} className="badge">
+              {g}
+            </li>
+          ))}
+        </ul>
+      )}
+      {w.notes && <p className="muted clamp-1">{w.notes}</p>}
+    </Link>
   )
 }
