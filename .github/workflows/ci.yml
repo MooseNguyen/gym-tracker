@@ -38,6 +38,13 @@ jobs:
     name: E2E (WebKit)
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # Official image with the browsers and their system libraries baked in.
+    # `playwright install --with-deps` spent 14+ minutes in apt on the runner.
+    # Keep the tag equal to @playwright/test in package-lock.json: a mismatch
+    # fails fast with "Executable doesn't exist".
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -45,7 +52,6 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps webkit
       # playwright.config.ts starts the dev server with a mocked Supabase URL.
       - run: npx playwright test
       - uses: actions/upload-artifact@v4
