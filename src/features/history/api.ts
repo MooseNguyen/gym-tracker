@@ -60,3 +60,24 @@ export function useDeleteWorkout() {
     },
   })
 }
+
+/**
+ * Just the start times of workouts since `from`, for the home week strip.
+ * Only two small columns, so it stays cheap even with many workouts.
+ * The key starts with 'workouts', so saving or deleting a workout (which
+ * invalidates ['workouts']) refreshes the strip too.
+ */
+export function useWorkoutDays(from: Date) {
+  const fromIso = from.toISOString()
+  return useQuery({
+    queryKey: ['workouts', 'days', fromIso],
+    queryFn: async () =>
+      unwrap(
+        await supabase
+          .from('workouts')
+          .select('id, started_at')
+          .gte('started_at', fromIso)
+          .order('started_at'),
+      ) as { id: string; started_at: string }[],
+  })
+}
