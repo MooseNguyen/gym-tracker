@@ -16,6 +16,7 @@ import {
   removeExercise,
   removeSet,
   reorderExercises,
+  requiredField,
   toSavePayload,
   toggleSetComplete,
   updateExercise,
@@ -40,6 +41,8 @@ export function ActiveWorkoutPage() {
   // View state only (not part of the draft): which exercise cards are folded.
   // A reload simply shows everything expanded again.
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
+  // The set whose ✓ was refused because reps (or duration) are still empty.
+  const [missing, setMissing] = useState<string | null>(null)
   const clearCelebration = useCallback(() => setCelebration(null), [])
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
@@ -79,6 +82,13 @@ export function ActiveWorkoutPage() {
       completedSet = next.exercises.find((e) => e.id === ex.id)?.sets.find((s) => s.id === set.id)
       return next
     })
+    if (!set.completed && !completedSet?.completed) {
+      // Refused: point at the field to fill instead of silently doing nothing.
+      setMissing(set.id)
+      document.getElementById(fieldId(set.id, requiredField(ex.kind)))?.focus()
+      return
+    }
+    setMissing(null)
     // Only when ticking on (not off), and not while editing an old workout.
     if (!isNew || set.completed || !completedSet?.completed) return
     const gain = improvementOver(completedSet, prev)
@@ -177,6 +187,8 @@ export function ActiveWorkoutPage() {
               handle={handle}
               previous={previous.data?.get(ex.exerciseId) ?? []}
               onToggleDone={toggleDone}
+              missingSetId={missing}
+              onEdited={(setId) => setMissing((m) => (m === setId ? null : m))}
               open={!collapsed.has(ex.id)}
               onOpenChange={(open) =>
                 setCollapsed((prev) => {
@@ -231,6 +243,8 @@ export function ActiveWorkoutPage() {
   )
 }
 
+const fieldId = (setId: string, key: 'weight' | 'reps' | 'duration') => `set-${setId}-${key}`
+
 const SET_LABEL: Record<SetType, string> = { warmup: 'W', normal: '', drop: 'D', failure: 'F' }
 
 // A routine can use any 15 s step, so make sure its value is always selectable.
@@ -245,7 +259,11 @@ function ExerciseCard({
   onToggleDone,
   open,
   onOpenChange,
+  missingSetId,
+  onEdited,
 }: {
+  missingSetId: string | null
+  onEdited: (setId: string) => void
   ex: DraftExercise
   handle: HandleProps
   previous: PreviousSet[]
@@ -261,6 +279,9 @@ function ExerciseCard({
   let normalCount = 0
   const timed = ex.kind === 'duration'
   const doneCount = ex.sets.filter((s) => s.completed).length
+  const required = requiredField(ex.kind)
+  const missingIndex = ex.sets.findIndex((s) => s.id === missingSetId)
+  const errorId = `missing-${ex.id}`
   const allDone = ex.sets.length > 0 && doneCount === ex.sets.length
 
   return (
@@ -326,20 +347,27 @@ function ExerciseCard({
                   key: 'weight' | 'reps' | 'duration',
                   placeholder: string,
                   decimal: boolean,
-                ) => (
-                  <td>
-                    <input
-                      className="num-input"
-                      inputMode={decimal ? 'decimal' : 'numeric'}
-                      aria-label={`Set ${i + 1} ${key}`}
-                      placeholder={placeholder}
-                      value={s[key]}
-                      onChange={(e) =>
-                        setDraft((d) => updateSet(d, ex.id, s.id, { [key]: e.target.value }))
-                      }
-                    />
-                  </td>
-                )
+                ) => {
+                  const invalid = s.id === missingSetId && key === required
+                  return (
+                    <td>
+                      <input
+                        id={fieldId(s.id, key)}
+                        className={invalid ? 'num-input invalid' : 'num-input'}
+                        inputMode={decimal ? 'decimal' : 'numeric'}
+                        aria-label={`Set ${i + 1} ${key}`}
+                        aria-invalid={invalid || undefined}
+                        aria-describedby={invalid ? errorId : undefined}
+                        placeholder={placeholder}
+                        value={s[key]}
+                        onChange={(e) => {
+                          setDraft((d) => updateSet(d, ex.id, s.id, { [key]: e.target.value }))
+                          onEdited(s.id)
+                        }}
+                      />
+                    </td>
+                  )
+                }
                 return (
                   <tr key={s.id} className={s.completed ? 'done' : undefined}>
                     <td>
@@ -399,6 +427,13 @@ function ExerciseCard({
               })}
             </tbody>
           </table>
+
+          {missingIndex >= 0 && (
+            <p id={errorId} role="alert" className="error small-text">
+              Enter {required === 'duration' ? 'the time' : 'reps'} for set {missingIndex + 1}, then
+              tick it.
+            </p>
+          )}
 
           <div className="row between">
             <button className="btn small" onClick={() => setDraft((d) => addSet(d, ex.id))}>

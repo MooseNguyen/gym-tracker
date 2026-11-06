@@ -196,3 +196,40 @@ test.describe('collapsible exercise cards', () => {
     await expect(page.getByRole('button', { name: 'Collapse all' })).toBeVisible()
   })
 })
+
+test('a set cannot be ticked without reps: the empty field is flagged and focused', async ({
+  page,
+}) => {
+  // No previous workout, so nothing can be filled in automatically.
+  const api = await mockSupabase(page, { routines, folders })
+  await startPush(page)
+  const card = page.getByRole('region', { name: bench.name })
+  const reps = card.getByLabel('Set 1 reps')
+
+  await card.getByLabel('Set 1 weight').fill('60')
+  await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+  await expect(card.getByRole('button', { name: 'Set 1 done' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  await expect(card.getByRole('alert')).toHaveText('Enter reps for set 1, then tick it.')
+  await expect(reps).toHaveAttribute('aria-invalid', 'true')
+  await expect(reps).toBeFocused()
+  await expect(page.getByRole('timer')).toHaveCount(0) // no rest started for a refused tick
+
+  await reps.fill('10')
+  await expect(card.getByRole('alert')).toHaveCount(0)
+  await expect(reps).not.toHaveAttribute('aria-invalid', 'true')
+  await card.getByRole('button', { name: 'Set 1 done' }).click()
+  await expect(card.getByRole('button', { name: 'Set 1 done' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  await page.getByRole('button', { name: 'Finish workout' }).click()
+  await expect(page).toHaveURL(/\/history\//)
+  expect(api.saved[0].exercises[0].sets).toEqual([
+    { set_type: 'normal', weight_kg: 60, reps: 10, duration_s: null, rpe: null },
+  ])
+})
