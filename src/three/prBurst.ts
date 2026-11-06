@@ -7,7 +7,7 @@ import * as THREE from 'three'
 const COUNT = 260
 const DURATION = 1.4 // seconds
 const GRAVITY = 900 // px / s²
-const COLORS = [0xf97316, 0xfb923c, 0xfacc15, 0xffffff]
+const COLORS = [0xb5d93a, 0xd6eb9a, 0x2dd4bf, 0xffffff]
 
 export interface Origin {
   x: number
@@ -82,6 +82,7 @@ export function playBurst(origin: Origin): Promise<void> {
     const timer = new THREE.Timer()
     timer.connect(document)
     let elapsed = 0
+    let startedAt = performance.now()
 
     const tick = (timestamp: number) => {
       timer.update(timestamp)
@@ -94,9 +95,14 @@ export function playBurst(origin: Origin): Promise<void> {
         positions[i * 3 + 1] += velocities[i * 2 + 1] * dt
       }
       posAttr.needsUpdate = true
-      material.opacity = Math.max(0, 1 - (elapsed / DURATION) ** 2)
+      // The clamp slows simulated time below 20 fps, so fade and teardown
+      // also follow the wall clock: a slow device must not keep a
+      // full-screen WebGL canvas alive longer than DURATION.
+      const wall = (performance.now() - startedAt) / 1000
+      const progress = Math.max(elapsed, wall) / DURATION
+      material.opacity = Math.max(0, 1 - progress ** 2)
       renderer.render(scene, camera)
-      if (elapsed >= DURATION) teardown()
+      if (progress >= 1) teardown()
     }
 
     const teardown = () => {
@@ -118,6 +124,7 @@ export function playBurst(origin: Origin): Promise<void> {
         reset(o)
         posAttr.needsUpdate = true
         elapsed = 0
+        startedAt = performance.now()
       },
     }
     renderer.setAnimationLoop(tick)

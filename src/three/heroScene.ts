@@ -26,23 +26,23 @@ export function createHeroScene(container: HTMLElement): () => void {
   camera.position.set(0, 0.4, 6)
   camera.lookAt(0, 0, 0)
 
-  // Warm rim light in the brand orange, on top of the neutral environment.
-  const rim = new THREE.DirectionalLight(0xf97316, 3)
+  // Rim light in the brand lime, on top of the neutral environment.
+  const rim = new THREE.DirectionalLight(0xb5d93a, 3)
   rim.position.set(-3, 2, -2)
   scene.add(rim)
 
   // Dumbbell from primitives: no model file to download, ~1 kB of code.
   const steel = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 1, roughness: 0.25 })
   const plateMat = new THREE.MeshStandardMaterial({
-    color: 0x1f2937,
+    color: 0x232720,
     metalness: 0.6,
     roughness: 0.45,
   })
   const accentMat = new THREE.MeshStandardMaterial({
-    color: 0xf97316,
+    color: 0xb5d93a,
     metalness: 0.3,
     roughness: 0.35,
-    emissive: 0x7c2d12,
+    emissive: 0x3f5208,
     emissiveIntensity: 0.4,
   })
   const handleGeo = new THREE.CylinderGeometry(0.09, 0.09, 2.4, 24)
