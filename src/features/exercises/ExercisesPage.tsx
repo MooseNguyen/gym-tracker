@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
+import { useConfirm } from '../../shared/ui/confirmContext'
 import { Dialog } from '../../shared/ui/Dialog'
 import { QueryState } from '../../shared/ui/QueryState'
 import {
@@ -16,6 +17,7 @@ import { HowToButton } from './HowTo'
 export function ExercisesPage() {
   const { data = [], isPending, error, refetch } = useExercises()
   const del = useDeleteExercise()
+  const confirm = useConfirm()
   const [adding, setAdding] = useState(false)
 
   return (
@@ -47,7 +49,15 @@ export function ExercisesPage() {
                   className="btn small danger"
                   aria-label={`Delete ${e.name}`}
                   disabled={del.isPending}
-                  onClick={() => confirm(`Delete "${e.name}"?`) && del.mutate(e.id)}
+                  onClick={async () => {
+                    const ok = await confirm({
+                      title: `Delete "${e.name}"?`,
+                      message: 'This custom exercise is removed from your library.',
+                      confirmLabel: 'Delete',
+                      danger: true,
+                    })
+                    if (ok) del.mutate(e.id)
+                  }}
                 >
                   🗑
                 </button>

@@ -1,0 +1,122 @@
+import type { ExerciseKind, PreviousSet } from '../../types/db'
+
+/** Double progression: add reps up to the top of the range, then add load and restart at the bottom. */
+export const REP_RANGE = { min: 8, max: 12 } as const
+const SECONDS_STEP = 5
+
+/** Smallest sensible load step per equipment (kg). Null: progress with reps only. */
+export function loadStep(equipment: string | undefined): number | null {
+  switch (equipment) {
+    case 'dumbbell':
+      return 2
+    case 'kettlebell':
+      return 4
+    case 'bodyweight':
+    case 'band':
+      return null
+    default:
+      // barbell, machine, cable, other — and old drafts that don't know.
+      return 2.5
+  }
+}
+
+export type SuggestionReason =
+  'rpe-easy' | 'rpe-hard' | 'rpe-max' | 'top-of-range' | 'next-rep' | 'hold'
+
+export interface SetSuggestion {
+  weight: number | null
+  reps: number | null
+  duration: number | null
+  reason: SuggestionReason
+  /** RPE of last time's set, when the reason came from it. */
+  rpe?: number
+}
+
+const round = (n: number) => Math.round(n * 100) / 100
+
+/**
+ * Next target for one set, from the same set last time.
+ * With RPE: ≤7 → more load, 8–9 → one more rep, ≥9.5 or a failure set → repeat.
+ * Without RPE: double progression in an 8–12 rep range.
+ * Warm-ups are repeated as they were. Returns null when there is nothing to build on.
+ */
+export function suggestSet(
+  kind: ExerciseKind,
+  equipment: string | undefined,
+  prev: PreviousSet | undefined,
+): SetSuggestion | null {
+  if (!prev) return null
+  const same = { weight: prev.weight_kg, reps: prev.reps, duration: prev.duration_s }
+
+  if (prev.set_type === 'warmup') return { ...same, reason: 'hold' }
+
+  if (kind === 'duration') {
+    if (!prev.duration_s) return null
+    return { ...same, duration: prev.duration_s + SECONDS_STEP, reason: 'next-rep' }
+  }
+
+  if (!prev.reps) return null
+  const step = kind === 'weight_reps' ? loadStep(equipment) : null
+  const canLoad = step != null && prev.weight_kg != null && prev.weight_kg > 0
+  const moreLoad = (reps: number, reason: SuggestionReason, rpe?: number): SetSuggestion => ({
+    weight: round(prev.weight_kg! + step!),
+    reps,
+    duration: null,
+    reason,
+    rpe,
+  })
+  const oneMoreRep = (reason: SuggestionReason, rpe?: number): SetSuggestion => ({
+    ...same,
+    reps: prev.reps! + 1,
+    reason,
+    rpe,
+  })
+
+  if (prev.set_type === 'failure') return { ...same, reason: 'hold' }
+
+  if (prev.rpe != null) {
+    if (prev.rpe >= 9.5) return { ...same, reason: 'rpe-max', rpe: prev.rpe }
+    if (prev.rpe <= 7) {
+      return canLoad ? moreLoad(prev.reps, 'rpe-easy', prev.rpe) : oneMoreRep('rpe-easy', prev.rpe)
+    }
+    return oneMoreRep('rpe-hard', prev.rpe)
+  }
+
+  if (prev.reps >= REP_RANGE.max && canLoad) return moreLoad(REP_RANGE.min, 'top-of-range')
+  return oneMoreRep('next-rep')
+}
+
+/** Suggestions for each set position, from last time's sets in the same order. */
+export function suggestSets(
+  kind: ExerciseKind,
+  equipment: string | undefined,
+  previous: PreviousSet[],
+): (SetSuggestion | null)[] {
+  return previous.map((p) => suggestSet(kind, equipment, p))
+}
+
+/** The suggestion to headline for an exercise: the first working set's. */
+export function headlineSuggestion(
+  previous: PreviousSet[],
+  suggestions: (SetSuggestion | null)[],
+): SetSuggestion | null {
+  const i = previous.findIndex((p) => p.set_type !== 'warmup')
+  return i >= 0 ? suggestions[i] : null
+}
+
+export function describeReason(s: SetSuggestion): string {
+  switch (s.reason) {
+    case 'rpe-easy':
+      return `RPE ${s.rpe} last time`
+    case 'rpe-hard':
+      return `RPE ${s.rpe} last time: one more rep`
+    case 'rpe-max':
+      return `RPE ${s.rpe} last time: repeat it`
+    case 'top-of-range':
+      return `hit ${REP_RANGE.max} reps last time`
+    case 'next-rep':
+      return 'one more than last time'
+    case 'hold':
+      return 'same as last time'
+  }
+}

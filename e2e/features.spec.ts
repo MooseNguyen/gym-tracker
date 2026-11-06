@@ -11,8 +11,16 @@ import {
 
 test.beforeEach(async ({ page }) => {
   await fakeLogin(page)
-  page.on('dialog', (d) => d.accept())
 })
+
+/** Finish, and confirm dropping the sets left unticked. */
+async function finishDroppingUnticked(page: Page) {
+  await page.getByRole('button', { name: 'Finish workout' }).click()
+  await page
+    .getByRole('dialog', { name: 'Finish workout?' })
+    .getByRole('button', { name: 'Finish' })
+    .click()
+}
 
 async function startPush(page: Page) {
   await page.goto('/')
@@ -231,7 +239,7 @@ test('a set cannot be ticked without reps: the empty field is flagged and focuse
     'true',
   )
 
-  await page.getByRole('button', { name: 'Finish workout' }).click()
+  await finishDroppingUnticked(page)
   await expect(page).toHaveURL(/\/history\//)
   expect(api.saved[0].exercises[0].sets).toEqual([
     { set_type: 'normal', weight_kg: 60, reps: 10, duration_s: null, rpe: null },
@@ -306,7 +314,7 @@ test.describe('compact card', () => {
     await card.getByLabel('Set 1 weight').fill('40')
     await card.getByLabel('Set 1 reps').fill('12')
     await card.getByRole('button', { name: 'Set 1 done' }).click()
-    await page.getByRole('button', { name: 'Finish workout' }).click()
+    await finishDroppingUnticked(page)
     await expect(page).toHaveURL(/\/history\//)
     expect(api.saved[0].exercises[0].sets[0].set_type).toBe('warmup')
   })
@@ -707,5 +715,94 @@ test.describe('log out', () => {
     await tab.click()
     await dialog.getByRole('button', { name: 'Log out' }).click()
     await expect(page).toHaveURL(/\/login$/)
+  })
+})
+
+async function emptyWorkoutWithBench(page: Page) {
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Start empty workout' }).click()
+  await page.getByRole('button', { name: '+ Add exercises' }).click()
+  await page.getByRole('button', { name: /^Show all/ }).click()
+  await page.getByRole('button', { name: `Select ${bench.name}` }).click()
+  await page.getByRole('button', { name: 'Add 1 exercise' }).click()
+  return page.getByRole('region', { name: bench.name })
+}
+
+test.describe('progression suggestion', () => {
+  test('easy last time (RPE 7): more load; Apply fills only empty sets', async ({ page }) => {
+    await mockSupabase(page, { previous: { weight_kg: 80, reps: 8, rpe: 7 } })
+    const card = await emptyWorkoutWithBench(page)
+
+    await expect(card.locator('.suggestion')).toContainText('Try 82.5 kg × 8')
+    await expect(card.locator('.suggestion')).toContainText('RPE 7 last time')
+    await card.getByRole('button', { name: `Apply suggestion for ${bench.name}` }).click()
+    await expect(card.getByLabel('Set 1 weight')).toHaveValue('82.5')
+    await expect(card.getByLabel('Set 1 reps')).toHaveValue('8')
+    // Nothing left to fill.
+    await expect(
+      card.getByRole('button', { name: `Apply suggestion for ${bench.name}` }),
+    ).toBeDisabled()
+  })
+
+  test('without RPE: one more rep, and typed values are kept', async ({ page }) => {
+    await mockSupabase(page, { previous: { weight_kg: 80, reps: 8 } })
+    const card = await emptyWorkoutWithBench(page)
+
+    await expect(card.locator('.suggestion')).toContainText('Try 80 kg × 9')
+    await card.getByLabel('Set 1 weight').fill('77,5')
+    await card.getByRole('button', { name: `Apply suggestion for ${bench.name}` }).click()
+    await expect(card.getByLabel('Set 1 weight')).toHaveValue('77,5')
+    await expect(card.getByLabel('Set 1 reps')).toHaveValue('9')
+  })
+
+  test('no history: no suggestion', async ({ page }) => {
+    await mockSupabase(page)
+    const card = await emptyWorkoutWithBench(page)
+    await expect(card.locator('.suggestion')).toHaveCount(0)
+  })
+})
+
+test.describe('in-app dialogs', () => {
+  test('remove, finish and discard ask in the app, and Cancel changes nothing', async ({
+    page,
+  }) => {
+    await mockSupabase(page)
+    const card = await emptyWorkoutWithBench(page)
+
+    // Finish with nothing ticked: an inline hint, no dialog.
+    await page.getByRole('button', { name: 'Finish workout' }).click()
+    await expect(page.getByRole('alert')).toContainText('Tick at least one set')
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+
+    await card.getByRole('button', { name: `Remove ${bench.name}` }).click()
+    const remove = page.getByRole('dialog', { name: `Remove ${bench.name}?` })
+    await remove.getByRole('button', { name: 'Cancel' }).click()
+    await expect(card).toBeVisible()
+
+    await page.getByRole('button', { name: 'Discard' }).click()
+    const discard = page.getByRole('dialog', { name: 'Discard this workout?' })
+    await expect(discard).toContainText('Nothing will be saved.')
+    await discard.getByRole('button', { name: 'Discard' }).click()
+    await expect(page).toHaveURL(/\/$/)
+    await expect(page.getByText('Resume workout')).toHaveCount(0)
+  })
+
+  test('a new folder is named in an in-app prompt; empty names are refused', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    const saved: unknown[] = []
+    await page.route(/\/rest\/v1\/routine_folders/, (r) => {
+      if (r.request().method() === 'POST') saved.push(r.request().postDataJSON())
+      return r.fulfill({ status: 201, contentType: 'application/json', body: '[]' })
+    })
+    await page.goto('/')
+    await page.getByRole('button', { name: '+ Folder' }).click()
+
+    const prompt = page.getByRole('dialog', { name: 'New folder' })
+    const create = prompt.getByRole('button', { name: 'Create' })
+    await expect(create).toBeDisabled()
+    await prompt.getByLabel('Folder name').fill('  Arms  ')
+    await create.click()
+    await expect(prompt).toBeHidden()
+    await expect.poll(() => saved).toEqual([expect.objectContaining({ name: 'Arms' })])
   })
 })

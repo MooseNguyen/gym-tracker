@@ -3,6 +3,7 @@ import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { HeroCanvas } from '../../shared/ui/HeroCanvas'
 import { MuscleWeekCard } from '../stats/MuscleWeekCard'
 import { WeekStrip } from './WeekStrip'
+import { useConfirm, usePrompt } from '../../shared/ui/confirmContext'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { QueryState } from '../../shared/ui/QueryState'
 import type { Routine, RoutineFolder } from '../../types/db'
@@ -23,24 +24,34 @@ export function HomePage() {
   const folders = useFolders()
   const saveFolder = useSaveFolder()
   const deleteFolder = useDeleteFolder()
+  const confirm = useConfirm()
+  const prompt = usePrompt()
 
   const groups = groupByFolder(folders.data ?? [], routines.data ?? [])
   const mutationError = saveFolder.error ?? deleteFolder.error
 
-  function newFolder() {
-    const name = prompt('Folder name')?.trim()
+  async function newFolder() {
+    const name = await prompt({ title: 'New folder', label: 'Folder name', confirmLabel: 'Create' })
     if (name) saveFolder.mutate({ name })
   }
 
-  function renameFolder(f: RoutineFolder) {
-    const name = prompt('Rename folder', f.name)?.trim()
+  async function renameFolder(f: RoutineFolder) {
+    const name = await prompt({
+      title: 'Rename folder',
+      label: 'Folder name',
+      initialValue: f.name,
+    })
     if (name && name !== f.name) saveFolder.mutate({ id: f.id, name })
   }
 
-  function removeFolder(f: RoutineFolder) {
-    if (confirm(`Delete folder "${f.name}"? Its routines are kept and become unfiled.`)) {
-      deleteFolder.mutate(f.id)
-    }
+  async function removeFolder(f: RoutineFolder) {
+    const ok = await confirm({
+      title: `Delete folder "${f.name}"?`,
+      message: 'Its routines are kept and become unfiled.',
+      confirmLabel: 'Delete folder',
+      danger: true,
+    })
+    if (ok) deleteFolder.mutate(f.id)
   }
 
   const start = (r: Routine) => startRoutine(draft, r) && navigate('/workout')

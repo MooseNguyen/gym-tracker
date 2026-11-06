@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { HowToButton } from '../exercises/HowTo'
 import { formatSetValues } from '../history/format'
+import { useConfirm } from '../../shared/ui/confirmContext'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { MoveButtons, SortableList, type ItemControls } from '../../shared/ui/SortableList'
@@ -10,6 +11,7 @@ import type { PreviousSet, SetType } from '../../types/db'
 import {
   addExercises,
   addSet,
+  applySuggestions,
   completedSetCount,
   describeImprovement,
   improvementOver,
@@ -27,6 +29,7 @@ import {
 import { setDraft, useDraft } from './draftStore'
 import { usePreviousSets, useSaveWorkout } from './api'
 import { PrBanner, type Celebration } from './PrBanner'
+import { describeReason, headlineSuggestion, suggestSets } from './progression'
 import { playCelebration } from './celebrate'
 import { RestTimer } from './RestTimer'
 import { formatDuration, useNow } from './useNow'
@@ -44,6 +47,9 @@ export function ActiveWorkoutPage() {
   // The set whose ✓ was refused because reps (or duration) are still empty.
   const [missing, setMissing] = useState<string | null>(null)
   const clearCelebration = useCallback(() => setCelebration(null), [])
+  const confirm = useConfirm()
+  // Finish was pressed with nothing ticked: explain next to the button.
+  const [finishHint, setFinishHint] = useState(false)
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
   useWakeLock(isNew)
@@ -97,19 +103,24 @@ export function ActiveWorkoutPage() {
     playCelebration(origin)
   }
 
-  function finish() {
+  async function finish() {
     if (!draft) return
     if (completed === 0) {
-      alert('Tick at least one set before finishing, or discard the workout.')
+      setFinishHint(true)
       return
     }
+    setFinishHint(false)
     const unfinished = draft.exercises.reduce(
       (n, e) => n + e.sets.filter((s) => !s.completed).length,
       0,
     )
     if (
       unfinished > 0 &&
-      !confirm(`${unfinished} unticked set(s) will not be saved. Finish anyway?`)
+      !(await confirm({
+        title: 'Finish workout?',
+        message: `${unfinished} unticked ${unfinished === 1 ? 'set' : 'sets'} will not be saved.`,
+        confirmLabel: 'Finish',
+      }))
     )
       return
 
@@ -121,12 +132,15 @@ export function ActiveWorkoutPage() {
     })
   }
 
-  function discard() {
-    const msg =
-      draft?.mode === 'edit'
-        ? 'Discard your changes?'
-        : 'Discard this workout? Nothing will be saved.'
-    if (!confirm(msg)) return
+  async function discard() {
+    const editing = draft?.mode === 'edit'
+    const ok = await confirm({
+      title: editing ? 'Discard your changes?' : 'Discard this workout?',
+      message: editing ? 'The saved workout stays as it was.' : 'Nothing will be saved.',
+      confirmLabel: 'Discard',
+      danger: true,
+    })
+    if (!ok) return
     setDraft(null)
     navigate(draft?.mode === 'edit' ? `/history/${draft.id}` : '/', { replace: true })
   }
@@ -186,6 +200,7 @@ export function ActiveWorkoutPage() {
               ex={ex}
               controls={controls}
               previous={previous.data?.get(ex.exerciseId) ?? []}
+              suggest={isNew}
               onToggleDone={toggleDone}
               missingSetId={missing}
               onEdited={(setId) => setMissing((m) => (m === setId ? null : m))}
@@ -222,6 +237,11 @@ export function ActiveWorkoutPage() {
         </p>
       )}
 
+      {finishHint && completed === 0 && (
+        <p role="alert" className="error">
+          Tick at least one set before finishing, or discard the workout.
+        </p>
+      )}
       <div className="row">
         <button className="btn danger" onClick={discard} disabled={save.isPending}>
           Discard
@@ -263,6 +283,7 @@ function ExerciseCard({
   ex,
   controls,
   previous,
+  suggest,
   onToggleDone,
   open,
   onOpenChange,
@@ -274,6 +295,8 @@ function ExerciseCard({
   ex: DraftExercise
   controls: ItemControls
   previous: PreviousSet[]
+  /** Show next-target suggestions: new workouts only, not when editing an old one. */
+  suggest: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
   onToggleDone: (
@@ -283,6 +306,7 @@ function ExerciseCard({
     origin: { x: number; y: number },
   ) => void
 }) {
+  const confirm = useConfirm()
   let normalCount = 0
   const timed = ex.kind === 'duration'
   const required = requiredField(ex.kind)
@@ -320,10 +344,15 @@ function ExerciseCard({
             <button
               className="icon-btn danger"
               aria-label={`Remove ${ex.name}`}
-              onClick={() =>
-                confirm(`Remove ${ex.name} from this workout?`) &&
-                setDraft((d) => removeExercise(d, ex.id))
-              }
+              onClick={async () => {
+                const ok = await confirm({
+                  title: `Remove ${ex.name}?`,
+                  message: 'Its sets in this workout are removed too.',
+                  confirmLabel: 'Remove',
+                  danger: true,
+                })
+                if (ok) setDraft((d) => removeExercise(d, ex.id))
+              }}
             >
               ✕
             </button>
@@ -331,6 +360,7 @@ function ExerciseCard({
         }
       >
         <div className="exercise-body">
+          {suggest && <SuggestionLine ex={ex} previous={previous} />}
           <input
             className="note-input"
             placeholder="Notes"
@@ -484,5 +514,41 @@ function ExerciseCard({
         </div>
       </Disclosure>
     </section>
+  )
+}
+
+/**
+ * Next target from last time's sets (RPE first, else double progression).
+ * Apply fills only empty fields of unticked sets; ticking without applying
+ * still logs last time's numbers, as before.
+ */
+function SuggestionLine({ ex, previous }: { ex: DraftExercise; previous: PreviousSet[] }) {
+  const suggestions = suggestSets(ex.kind, ex.equipment, previous)
+  const head = headlineSuggestion(previous, suggestions)
+  if (!head) return null
+
+  const field = requiredField(ex.kind)
+  const canFill = ex.sets.some((s, i) => suggestions[i] && !s.completed && !s[field])
+  const target = formatSetValues(ex.kind, {
+    weight_kg: head.weight,
+    reps: head.reps,
+    duration_s: head.duration,
+  })
+
+  return (
+    <div className="suggestion">
+      <span className="grow">
+        Try <strong>{target}</strong> <small className="muted">· {describeReason(head)}</small>
+      </span>
+      <button
+        type="button"
+        className="btn small"
+        aria-label={`Apply suggestion for ${ex.name}`}
+        disabled={!canFill}
+        onClick={() => setDraft((d) => applySuggestions(d, ex.id, suggestions))}
+      >
+        Apply
+      </button>
+    </div>
   )
 }

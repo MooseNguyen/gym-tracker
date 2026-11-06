@@ -297,6 +297,13 @@ textarea:focus {
 .btn.danger {
   color: var(--danger);
 }
+/* The confirm button of a destructive question. */
+.btn.danger-fill {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #2a0808;
+  font-weight: 700;
+}
 .btn.ghost {
   background: transparent;
   border-color: transparent;
@@ -563,6 +570,32 @@ button.link {
 }
 .sheet::backdrop {
   background: rgb(0 0 0 / 0.6);
+}
+/* The page behind fades instead of blinking dark (reduced motion: instant). */
+.sheet[open]::backdrop {
+  animation: backdrop-in 0.25s ease-out;
+}
+@keyframes backdrop-in {
+  from {
+    background: rgb(0 0 0 / 0);
+  }
+}
+/* Questions (confirm / prompt): big, thumb-reachable answers, and the
+   answer buttons rise in just after the sheet. */
+.confirm-body p {
+  line-height: 1.5;
+}
+.confirm-actions .btn {
+  min-height: 48px;
+}
+.sheet[open] .confirm-actions {
+  animation: confirm-actions-in 0.32s var(--ease) 0.06s both;
+}
+@keyframes confirm-actions-in {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
 }
 .sheet-header {
   display: flex;
@@ -889,6 +922,20 @@ button.link {
 }
 .note-input:focus {
   color: var(--text);
+}
+/* Next-target suggestion above the sets. */
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 12px;
+  border-radius: var(--r-control);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  font-size: 0.9rem;
+}
+.suggestion strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 .sets {

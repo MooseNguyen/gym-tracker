@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { ExerciseKind, PreviousSet } from '../../types/db'
 import {
   addSet,
+  applySuggestions,
   describeImprovement,
   emptySet,
   improvementOver,
@@ -291,5 +292,23 @@ describe('toSavePayload with an old draft', () => {
     d = updateSet(d, p.id, p.sets[1].id, { reps: '6', completed: true })
     expect(toSavePayload(d).exercises[0].sets).toHaveLength(1)
     expect(toSavePayload(d).exercises[0].sets[0].reps).toBe(6)
+  })
+})
+
+describe('applySuggestions', () => {
+  it('fills empty fields of unticked sets by position, keeping what was typed', () => {
+    let d = draftWith(bench)
+    const ex = d.exercises[0]
+    d = addSet(d, ex.id)
+    const [s1, s2, s3] = d.exercises[0].sets
+    d = updateSet(d, ex.id, s1.id, { weight: '80', reps: '8', completed: true })
+    d = updateSet(d, ex.id, s2.id, { weight: '85' })
+
+    const t = { weight: 82.5, reps: 9, duration: null }
+    const sets = applySuggestions(d, ex.id, [t, t, null]).exercises[0].sets
+
+    expect(sets[0]).toMatchObject({ weight: '80', reps: '8' }) // ticked: untouched
+    expect(sets[1]).toMatchObject({ weight: '85', reps: '9' }) // typed weight kept
+    expect(sets[2]).toMatchObject({ id: s3.id, weight: '', reps: '' }) // no suggestion for it
   })
 })
