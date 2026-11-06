@@ -1058,6 +1058,163 @@ button.link {
 }
 
 /* ==========================================================================
+   Exercise filters (muscles / equipment)
+   ========================================================================== */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 14px 0 6px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
+}
+.chip.on {
+  border-color: var(--accent);
+  background: rgb(181 217 58 / 0.12);
+}
+.chip.small {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.875rem;
+}
+.chip-check {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  font-size: 0.85rem;
+  color: var(--accent-ink);
+}
+.chip.on .chip-check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+/* Chips on the left, body on the right: the body is the visual anchor,
+   the chips are the precise (and accessible) control. */
+.muscle-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 12px;
+  align-items: start;
+}
+.muscle-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* "Show N exercises" stays reachable without scrolling past 12 chips:
+   on a page it sits just above the floating tab bar; inside the picker
+   sheet (which has its own sticky "Add" button) it stays in the flow. */
+.filter-actions {
+  position: sticky;
+  bottom: calc(var(--tabbar-space) + 4px);
+  z-index: 3;
+  padding: 8px 0;
+  background: linear-gradient(to top, var(--bg) 70%, transparent);
+}
+.sheet .filter-actions {
+  position: static;
+  background: none;
+}
+.muscle-chips .chip {
+  width: 100%;
+}
+.body-map-wrap {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.body-map {
+  width: 100%;
+  max-height: 60dvh;
+}
+.body-map .region {
+  fill: #3b4036;
+  stroke: var(--bg);
+  stroke-width: 6;
+  transition: fill 0.2s;
+}
+.body-map .region.decor {
+  fill: #2c3028;
+}
+.body-map .region.selectable {
+  cursor: pointer;
+}
+.body-map .region.selectable:hover {
+  fill: #4b5244;
+}
+.body-map .region.on {
+  fill: var(--accent);
+}
+.segmented.small button {
+  min-height: 32px;
+}
+
+.equipment-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.equipment-tile {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s,
+    background 0.15s;
+}
+/* "Only the icon lights up" for the picked equipment. */
+.equipment-tile.on {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: rgb(181 217 58 / 0.08);
+}
+.equipment-tile.on span {
+  color: var(--text);
+}
+
+.results-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.results-count {
+  margin-left: auto;
+}
+
+/* ==========================================================================
    Stats
    ========================================================================== */
 .segmented {

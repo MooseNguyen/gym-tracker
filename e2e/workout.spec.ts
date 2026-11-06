@@ -15,6 +15,8 @@ test('logs a workout, survives a reload and saves only completed sets', async ({
   await expect(page).toHaveURL(/\/workout$/)
 
   await page.getByRole('button', { name: '+ Add exercises' }).click()
+  // The picker opens on the filter step; skip it.
+  await page.getByRole('button', { name: /^Show all/ }).click()
   await page.getByRole('button', { name: `Select ${bench.name}` }).click()
   await page.getByRole('button', { name: 'Add 1 exercise' }).click()
 
@@ -69,6 +71,8 @@ test('keeps the draft on the phone when saving fails', async ({ page }) => {
   await page.goto('/')
   await page.getByRole('button', { name: 'Start empty workout' }).click()
   await page.getByRole('button', { name: '+ Add exercises' }).click()
+  // The picker opens on the filter step; skip it.
+  await page.getByRole('button', { name: /^Show all/ }).click()
   await page.getByRole('button', { name: `Select ${bench.name}` }).click()
   await page.getByRole('button', { name: 'Add 1 exercise' }).click()
   const card = page.getByRole('region', { name: bench.name })
