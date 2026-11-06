@@ -5,7 +5,7 @@ import { HowToButton } from '../exercises/HowTo'
 import { formatSetValues } from '../history/format'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
-import { DragHandle, SortableList, type HandleProps } from '../../shared/ui/SortableList'
+import { MoveButtons, SortableList, type ItemControls } from '../../shared/ui/SortableList'
 import type { PreviousSet, SetType } from '../../types/db'
 import {
   addExercises,
@@ -13,7 +13,6 @@ import {
   completedSetCount,
   describeImprovement,
   improvementOver,
-  nextSetType,
   removeExercise,
   removeSet,
   reorderExercises,
@@ -182,10 +181,10 @@ export function ActiveWorkoutPage() {
           items={draft.exercises}
           onReorder={(from, to) => setDraft((d) => reorderExercises(d, from, to))}
           getLabel={(ex) => ex.name}
-          renderItem={(ex, handle) => (
+          renderItem={(ex, controls) => (
             <ExerciseCard
               ex={ex}
-              handle={handle}
+              controls={controls}
               previous={previous.data?.get(ex.exerciseId) ?? []}
               onToggleDone={toggleDone}
               missingSetId={missing}
@@ -248,6 +247,13 @@ const fieldId = (setId: string, key: 'weight' | 'reps' | 'duration') => `set-${s
 
 const SET_LABEL: Record<SetType, string> = { warmup: 'W', normal: '', drop: 'D', failure: 'F' }
 
+const SET_TYPES: { value: SetType; label: string }[] = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'warmup', label: 'Warm-up' },
+  { value: 'drop', label: 'Drop set' },
+  { value: 'failure', label: 'Failure' },
+]
+
 // A routine can use any 15 s step, so make sure its value is always selectable.
 const REST_PRESETS = [0, 30, 60, 90, 120, 150, 180, 240, 300]
 const restOptions = (current: number) =>
@@ -255,7 +261,7 @@ const restOptions = (current: number) =>
 
 function ExerciseCard({
   ex,
-  handle,
+  controls,
   previous,
   onToggleDone,
   open,
@@ -266,7 +272,7 @@ function ExerciseCard({
   missingSetId: string | null
   onEdited: (setId: string) => void
   ex: DraftExercise
-  handle: HandleProps
+  controls: ItemControls
   previous: PreviousSet[]
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -279,27 +285,28 @@ function ExerciseCard({
 }) {
   let normalCount = 0
   const timed = ex.kind === 'duration'
-  const doneCount = ex.sets.filter((s) => s.completed).length
   const required = requiredField(ex.kind)
   const missingIndex = ex.sets.findIndex((s) => s.id === missingSetId)
   const errorId = `missing-${ex.id}`
-  const allDone = ex.sets.length > 0 && doneCount === ex.sets.length
 
   return (
-    <section className="card exercise-card" aria-label={ex.name}>
+    // The whole card is the drag activator (press and hold on touch);
+    // SortableList ignores presses that start on inputs and buttons.
+    <section
+      ref={controls.dragRef}
+      {...controls.dragListeners}
+      className={controls.isDragging ? 'card exercise-card dragging' : 'card exercise-card'}
+      aria-label={ex.name}
+    >
+      <MoveButtons controls={controls} label={ex.name} />
       <Disclosure
         className="exercise-disclosure"
         open={open}
         onOpenChange={onOpenChange}
-        // The handle stays usable while folded: that is the point of folding.
-        leading={<DragHandle handle={handle} label={`Reorder ${ex.name}`} />}
         summary={
           <span className="exercise-summary">
-            <ExerciseThumb imagePath={ex.imagePath} name={ex.name} size={44} decorative />
+            <ExerciseThumb imagePath={ex.imagePath} name={ex.name} size={36} decorative />
             <span className="exercise-title">{ex.name}</span>
-            <small className={allDone ? 'set-count done' : 'set-count'}>
-              {doneCount}/{ex.sets.length} sets
-            </small>
           </span>
         }
         actions={
@@ -380,17 +387,26 @@ function ExerciseCard({
                 return (
                   <tr key={s.id} className={s.completed ? 'done' : undefined}>
                     <td>
-                      <button
-                        className={`set-type ${s.setType}`}
-                        aria-label={`Set ${i + 1} type: ${s.setType}. Tap to change`}
-                        onClick={() =>
-                          setDraft((d) =>
-                            updateSet(d, ex.id, s.id, { setType: nextSetType(s.setType) }),
-                          )
-                        }
-                      >
-                        {label}
-                      </button>
+                      {/* A real <select> laid transparently over the badge: tapping it
+                          opens the native iOS picker, and it is accessible as is. */}
+                      <span className={`set-type ${s.setType}`}>
+                        <span aria-hidden="true">{label}</span>
+                        <select
+                          aria-label={`Set ${i + 1} type`}
+                          value={s.setType}
+                          onChange={(e) =>
+                            setDraft((d) =>
+                              updateSet(d, ex.id, s.id, { setType: e.target.value as SetType }),
+                            )
+                          }
+                        >
+                          {SET_TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </span>
                     </td>
                     <td className="prev">{prev ? formatSetValues(ex.kind, prev) : '—'}</td>
                     {field(

@@ -194,11 +194,6 @@ export function updateExercise(
   return mapExercise(d, exId, (e) => ({ ...e, ...patch }))
 }
 
-const SET_TYPE_CYCLE: SetType[] = ['normal', 'warmup', 'drop', 'failure']
-export function nextSetType(t: SetType): SetType {
-  return SET_TYPE_CYCLE[(SET_TYPE_CYCLE.indexOf(t) + 1) % SET_TYPE_CYCLE.length]
-}
-
 /** The value a set cannot be logged without: reps, or seconds for timed exercises. */
 export function requiredField(kind: ExerciseKind): 'reps' | 'duration' {
   return kind === 'duration' ? 'duration' : 'reps'

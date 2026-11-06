@@ -1,9 +1,9 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import {
   closestCenter,
   DndContext,
-  KeyboardSensor,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   type Announcements,
@@ -11,22 +11,25 @@ import {
   type Modifier,
   type UniqueIdentifier,
 } from '@dnd-kit/core'
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 
-/** Props to spread on the drag handle element. */
-export type HandleProps = Record<string, unknown> & { ref: (el: HTMLElement | null) => void }
+export interface ItemControls {
+  /** Put on the element that starts a drag (the whole card)… */
+  dragRef: (el: HTMLElement | null) => void
+  /** …and spread these on the same element. */
+  dragListeners: Record<string, unknown>
+  isDragging: boolean
+  /** Keyboard / screen reader alternative to dragging. */
+  moveUp?: () => void
+  moveDown?: () => void
+}
 
 interface Props<T extends { id: string }> {
   items: T[]
   /** Called with the dragged item's id and the id of the item it was dropped on. */
   onReorder: (fromId: string, toId: string) => void
-  renderItem: (item: T, handle: HandleProps, isDragging: boolean) => ReactNode
+  renderItem: (item: T, controls: ItemControls) => ReactNode
   /** Human name of an item, used in screen reader announcements. */
   getLabel: (item: T) => string
 }
@@ -35,10 +38,54 @@ interface Props<T extends { id: string }> {
 const lockX: Modifier = ({ transform }) => ({ ...transform, x: 0 })
 
 /**
- * Drag-and-drop list built on dnd-kit.
+ * A press on these never starts a drag, so typing kg/reps, ticking ✓ and picking
+ * a set type work as usual. The accordion toggle is a button too, but it stays
+ * draggable: it covers most of the card header, the natural place to grab.
+ */
+const NO_DRAG = 'input, textarea, select, a, button:not(.disclosure-toggle), [data-no-drag]'
+const canStartDrag = (event: Event) => !(event.target as Element | null)?.closest(NO_DRAG)
+
+class CardMouseSensor extends MouseSensor {
+  static activators = [
+    {
+      eventName: 'onMouseDown' as const,
+      handler: ({ nativeEvent }: { nativeEvent: MouseEvent }) =>
+        nativeEvent.button === 0 && canStartDrag(nativeEvent),
+    },
+  ]
+}
+
+class CardTouchSensor extends TouchSensor {
+  static activators = [
+    {
+      eventName: 'onTouchStart' as const,
+      handler: ({ nativeEvent }: { nativeEvent: TouchEvent }) => canStartDrag(nativeEvent),
+    },
+  ]
+}
+
+/**
+ * The card under the pointer moves with it, so the mouseup often lands on the
+ * same accordion toggle that received the mousedown, and the browser then
+ * "clicks" it. Swallow that one click right after a drag ends.
+ */
+function swallowNextClick() {
+  const stop = (e: Event) => {
+    e.stopPropagation()
+    e.preventDefault()
+  }
+  window.addEventListener('click', stop, { capture: true, once: true })
+  setTimeout(() => window.removeEventListener('click', stop, { capture: true }), 0)
+}
+
+/**
+ * Drag-and-drop list built on dnd-kit. Dragging starts from anywhere on an item:
+ * - Touch: press and hold ~250 ms first. Without the hold, every swipe over a
+ *   card would drag it, and the page could not scroll (it is almost all cards).
+ * - Mouse: after moving a few px, so a click is still a click.
  * Why not the HTML5 drag-and-drop API: it does not fire for touch on iOS Safari.
- * Dragging starts only from the handle, so the rest of the card scrolls normally,
- * and the keyboard sensor gives the same reordering with Space + arrow keys.
+ * Keyboard and screen reader users get Move up / Move down buttons instead
+ * (a whole card cannot be a focusable "button" when it contains inputs).
  */
 export function SortableList<T extends { id: string }>({
   items,
@@ -46,6 +93,8 @@ export function SortableList<T extends { id: string }>({
   renderItem,
   getLabel,
 }: Props<T>) {
+  const [announcement, setAnnouncement] = useState('')
+
   // dnd-kit's default announcements read out raw ids (UUIDs here); say names and positions.
   const label = (id: UniqueIdentifier) => {
     const item = items.find((i) => i.id === id)
@@ -67,13 +116,22 @@ export function SortableList<T extends { id: string }>({
   }
 
   const sensors = useSensors(
-    // A few px of movement before dragging, so a tap on the handle is not a drag.
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(CardMouseSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(CardTouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
   )
 
   function onDragEnd(e: DragEndEvent) {
+    swallowNextClick()
     if (e.over && e.active.id !== e.over.id) onReorder(String(e.active.id), String(e.over.id))
+  }
+
+  function move(index: number, dir: -1 | 1) {
+    const target = items[index + dir]
+    if (!target) return
+    onReorder(items[index].id, target.id)
+    setAnnouncement(
+      `${getLabel(items[index])} moved to position ${index + dir + 1} of ${items.length}.`,
+    )
   }
 
   return (
@@ -82,21 +140,27 @@ export function SortableList<T extends { id: string }>({
       collisionDetection={closestCenter}
       modifiers={[lockX]}
       onDragEnd={onDragEnd}
-      accessibility={{
-        announcements,
-        screenReaderInstructions: {
-          draggable:
-            'To reorder, press Space or Enter, move with the arrow keys, then press Space or Enter again. Press Escape to cancel.',
-        },
-      }}
+      onDragCancel={swallowNextClick}
+      accessibility={{ announcements }}
     >
       <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
-        {items.map((item) => (
+        {items.map((item, index) => (
           <SortableItem key={item.id} id={item.id}>
-            {(handle, isDragging) => renderItem(item, handle, isDragging)}
+            {(dragRef, dragListeners, isDragging) =>
+              renderItem(item, {
+                dragRef,
+                dragListeners,
+                isDragging,
+                moveUp: index > 0 ? () => move(index, -1) : undefined,
+                moveDown: index < items.length - 1 ? () => move(index, 1) : undefined,
+              })
+            }
           </SortableItem>
         ))}
       </SortableContext>
+      <div className="sr-only" role="status" aria-live="polite" data-testid="reorder-status">
+        {announcement}
+      </div>
     </DndContext>
   )
 }
@@ -106,17 +170,16 @@ function SortableItem({
   children,
 }: {
   id: string
-  children: (handle: HandleProps, isDragging: boolean) => ReactNode
+  children: (
+    dragRef: (el: HTMLElement | null) => void,
+    dragListeners: Record<string, unknown>,
+    isDragging: boolean,
+  ) => ReactNode
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    setActivatorNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id })
+  // `attributes` (role="button", tabIndex) are deliberately not used: the
+  // activator is a whole card full of inputs, which must not become one button.
+  const { listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
+    useSortable({ id })
 
   const style: CSSProperties = {
     transform: CSS.Translate.toString(transform),
@@ -127,23 +190,28 @@ function SortableItem({
 
   return (
     <div ref={setNodeRef} style={style} className={isDragging ? 'sortable dragging' : 'sortable'}>
-      {children({ ref: setActivatorNodeRef, ...attributes, ...listeners }, isDragging)}
+      {children(setActivatorNodeRef, listeners ?? {}, isDragging)}
     </div>
   )
 }
 
-/** The ⠿ grip used as drag handle everywhere. */
-export function DragHandle({ handle, label }: { handle: HandleProps; label: string }) {
-  const { ref, ...rest } = handle
+/**
+ * Move up / Move down for keyboard and screen reader users. Visually hidden
+ * until focused, so touch users never see them.
+ */
+export function MoveButtons({ controls, label }: { controls: ItemControls; label: string }) {
   return (
-    <button type="button" className="drag-handle" aria-label={label} ref={ref} {...rest}>
-      <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true">
-        {[3, 8, 13].map((y) =>
-          [5.5, 10.5].map((x) => (
-            <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" fill="currentColor" />
-          )),
-        )}
-      </svg>
-    </button>
+    <div className="move-buttons">
+      {controls.moveUp && (
+        <button type="button" className="btn small" onClick={controls.moveUp}>
+          Move {label} up
+        </button>
+      )}
+      {controls.moveDown && (
+        <button type="button" className="btn small" onClick={controls.moveDown}>
+          Move {label} down
+        </button>
+      )}
+    </div>
   )
 }
