@@ -1,5 +1,5 @@
-import type { ReactNode } from 'react'
-import { NavLink, Outlet } from 'react-router'
+import { useLayoutEffect, type ReactNode } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { supabase } from '../../lib/supabase'
 import { useDraft } from '../../features/workout/draftStore'
 
@@ -52,6 +52,15 @@ const icons = {
 
 export function Layout() {
   const draft = useDraft()
+  const { pathname } = useLocation()
+
+  // BrowserRouter keeps the window scroll position across navigations, so
+  // "Start" near the bottom of Home used to open the workout half-way down.
+  // Every new page starts at the top (useLayoutEffect: before it paints).
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   return (
     <div className="app">
       <div className="content">
@@ -62,12 +71,14 @@ export function Layout() {
           {icons.workout}
           Workout
         </NavLink>
-        {draft && (
-          <NavLink to="/workout">
-            <span className="tab-icon tab-live">{icons.active}</span>
-            Active
-          </NavLink>
-        )}
+        {/* Always present, so the bar never shifts; the dot shows a workout in progress. */}
+        <NavLink
+          to="/workout"
+          aria-label={draft ? 'Active workout (in progress)' : 'Active workout'}
+        >
+          <span className={draft ? 'tab-icon tab-live' : 'tab-icon'}>{icons.active}</span>
+          Active
+        </NavLink>
         <NavLink to="/history">
           {icons.history}
           History

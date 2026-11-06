@@ -139,7 +139,7 @@ test('the home 3D scene is torn down on navigation (no leaked canvases)', async 
   for (let i = 0; i < 3; i++) {
     await page.getByRole('link', { name: 'History' }).click()
     await expect(canvases).toHaveCount(0)
-    await page.getByRole('link', { name: 'Workout' }).click()
+    await page.getByRole('link', { name: 'Workout', exact: true }).click()
     await expect(canvases).toHaveCount(1)
   }
   expect(await page.locator('canvas').count()).toBe(1)
@@ -429,4 +429,98 @@ test.describe('exercise filters', () => {
     await page.getByRole('button', { name: 'Calves', exact: true }).click()
     await expect(page.getByRole('button', { name: 'No exercises match' })).toBeDisabled()
   })
+})
+
+test.describe('body map hover regression', () => {
+  // A real pointer, so (hover: hover) matches and the mouse stays over the
+  // tapped region: this reproduced "only one side lights up".
+  test.use({ isMobile: false, hasTouch: false })
+
+  test('both sides of a selected muscle light up, even under the pointer', async ({ page }) => {
+    await mockSupabase(page, {
+      exercises: [
+        {
+          id: 'e1',
+          user_id: null,
+          name: 'Bench Press',
+          muscle_group: 'chest',
+          equipment: 'barbell',
+          kind: 'weight_reps',
+          image_path: null,
+        },
+      ],
+    })
+    await page.goto('/exercises')
+    const chest = page.locator('[data-testid="body-map-front"] [data-region="chest"]')
+    await chest.first().click() // the pointer now rests on this polygon
+
+    const accent = await page.evaluate(() => {
+      const probe = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+      probe.style.fill = 'var(--accent)'
+      document.querySelector('svg.body-map')!.appendChild(probe)
+      const value = getComputedStyle(probe).fill
+      probe.remove()
+      return value
+    })
+    // Poll: the fill has a 0.2 s transition, so read it once it has settled.
+    await expect
+      .poll(() => chest.evaluateAll((els) => els.map((el) => getComputedStyle(el).fill)))
+      .toEqual([accent, accent])
+  })
+})
+
+test.describe('home', () => {
+  test('the tab bar always has all five tabs', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await page.goto('/')
+    const tabs = page.getByRole('navigation', { name: 'Main' }).locator('a, button')
+    await expect(tabs).toHaveCount(5)
+    // No workout yet: the Active tab opens the empty state instead of disappearing.
+    await page.getByRole('link', { name: 'Active workout' }).click()
+    await expect(page.getByText('No workout in progress.')).toBeVisible()
+  })
+
+  test('the week strip marks today and training days, and opens a workout', async ({ page }) => {
+    await page.clock.setFixedTime(new Date(2026, 10, 6, 10, 0)) // Friday 6 November, local
+    await mockSupabase(page, { routines, folders })
+    const iso = (d: number, h: number) => new Date(2026, 10, d, h).toISOString()
+    await page.route(/\/rest\/v1\/workouts\?.*started_at=gte/, (r) =>
+      r.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'w-mon', started_at: iso(2, 7) },
+          { id: 'w-wed-1', started_at: iso(4, 8) },
+          { id: 'w-wed-2', started_at: iso(4, 19) },
+        ]),
+      }),
+    )
+    await page.goto('/')
+
+    const strip = page.getByRole('region', { name: 'This week' })
+    await expect(strip).toContainText('3 workouts')
+    await expect(strip.locator('[aria-current="date"]')).toHaveAttribute(
+      'aria-label',
+      /6.*today$/, // date format follows the browser locale
+    )
+    await expect(strip.locator('.day')).toHaveCount(28)
+    await expect(strip.locator('.day.trained')).toHaveCount(2)
+
+    // One workout that day → opens it; several → the history list.
+    await strip.getByRole('link', { name: '1 workout' }).click()
+    await expect(page).toHaveURL(/\/history\/w-mon$/)
+    await page.goBack()
+    await page.getByRole('link', { name: '2 workouts' }).click()
+    await expect(page).toHaveURL(/\/history$/)
+  })
+})
+
+test('a new page always opens at the top', async ({ page }) => {
+  await mockSupabase(page, { routines, folders })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Push 2 exercises', exact: true }).click()
+  await page.getByRole('button', { name: 'Start Push' }).click() // scrolls Home down to reach it
+  await expect(page).toHaveURL(/\/workout$/)
+  // The reset runs when React commits the new page; poll instead of reading once.
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0)
 })

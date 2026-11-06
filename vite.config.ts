@@ -60,5 +60,8 @@ export default defineConfig({
   ],
   test: {
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
+    // A zone with daylight saving, so date tests really cover the DST change
+    // (Vietnam has none, which would make them pass for the wrong reason).
+    env: { TZ: 'Europe/Berlin' },
   },
 })
