@@ -7,6 +7,7 @@ import { reorder } from '../../shared/reorder'
 export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & {
   image_path?: string | null
   user_id?: string | null
+  equipment?: string
 }
 
 export interface DraftSet {
@@ -30,6 +31,8 @@ export interface DraftExercise {
   imagePath?: string | null
   /** User-created exercise: has no built-in instructions. Missing in old drafts = built-in. */
   custom?: boolean
+  /** For load suggestions (plate steps). Missing in old drafts: a 2.5 kg step is assumed. */
+  equipment?: string
   restSeconds: number
   notes: string
   sets: DraftSet[]
@@ -76,6 +79,7 @@ export function draftExercise(
     kind: exercise.kind,
     imagePath: exercise.image_path ?? null,
     custom: !!exercise.user_id,
+    equipment: exercise.equipment,
     restSeconds,
     notes: '',
     sets: Array.from({ length: Math.max(1, sets) }, () => emptySet()),
@@ -126,6 +130,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
       kind: we.exercise.kind,
       imagePath: we.exercise.image_path,
       custom: !!we.exercise.user_id,
+      equipment: we.exercise.equipment,
       restSeconds: DEFAULT_REST,
       notes: we.notes ?? '',
       sets: we.sets.map((s) => ({
@@ -183,6 +188,31 @@ export function updateSet(
   return mapExercise(d, exId, (e) => ({
     ...e,
     sets: e.sets.map((s) => (s.id === setId ? { ...s, ...patch } : s)),
+  }))
+}
+
+/**
+ * Fills the suggested targets into the sets of one exercise, by position.
+ * Only empty fields of unticked sets: anything typed or logged is kept.
+ */
+export function applySuggestions(
+  d: WorkoutDraft,
+  exId: string,
+  suggestions: ({ weight: number | null; reps: number | null; duration: number | null } | null)[],
+): WorkoutDraft {
+  const str = (n: number | null) => (n == null ? '' : String(n))
+  return mapExercise(d, exId, (e) => ({
+    ...e,
+    sets: e.sets.map((s, i) => {
+      const t = suggestions[i]
+      if (!t || s.completed) return s
+      return {
+        ...s,
+        weight: s.weight || str(t.weight),
+        reps: s.reps || str(t.reps),
+        duration: s.duration || str(t.duration),
+      }
+    }),
   }))
 }
 

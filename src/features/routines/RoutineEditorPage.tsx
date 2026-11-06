@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { reorder } from '../../shared/reorder'
+import { useConfirm } from '../../shared/ui/confirmContext'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { QueryState } from '../../shared/ui/QueryState'
 import { MoveButtons, SortableList } from '../../shared/ui/SortableList'
@@ -32,6 +33,7 @@ interface Row {
 
 function RoutineForm({ initial }: { initial?: Routine }) {
   const navigate = useNavigate()
+  const confirm = useConfirm()
   // "+ Routine" inside a folder on the home page links to /routines/new?folder=<id>.
   const [params] = useSearchParams()
   const folders = useFolders()
@@ -177,10 +179,15 @@ function RoutineForm({ initial }: { initial?: Routine }) {
             type="button"
             className="btn danger"
             disabled={del.isPending}
-            onClick={() =>
-              confirm(`Delete routine "${initial.name}"? Past workouts are kept.`) &&
-              del.mutate(initial.id, { onSuccess: () => navigate('/') })
-            }
+            onClick={async () => {
+              const ok = await confirm({
+                title: `Delete routine "${initial.name}"?`,
+                message: 'Past workouts are kept.',
+                confirmLabel: 'Delete',
+                danger: true,
+              })
+              if (ok) del.mutate(initial.id, { onSuccess: () => navigate('/') })
+            }}
           >
             Delete routine
           </button>

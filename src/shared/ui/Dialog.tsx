@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 
 interface Props {
   open: boolean
@@ -13,6 +13,8 @@ interface Props {
  */
 export function Dialog({ open, onClose, title, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
+  // Unique per dialog: two can be in the page at once (e.g. a picker and a confirm).
+  const titleId = useId()
 
   useEffect(() => {
     const el = ref.current
@@ -22,9 +24,9 @@ export function Dialog({ open, onClose, title, children }: Props) {
   }, [open])
 
   return (
-    <dialog ref={ref} className="sheet" onClose={onClose} aria-labelledby="dialog-title">
+    <dialog ref={ref} className="sheet" onClose={onClose} aria-labelledby={titleId}>
       <header className="sheet-header">
-        <h2 id="dialog-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <button type="button" className="btn ghost" onClick={onClose} aria-label="Close">
           ✕
         </button>

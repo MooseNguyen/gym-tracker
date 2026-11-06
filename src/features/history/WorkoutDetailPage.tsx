@@ -1,5 +1,6 @@
 import { Link, useNavigate, useParams } from 'react-router'
 import { estimate1RM } from '../../shared/calc'
+import { useConfirm } from '../../shared/ui/confirmContext'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { QueryState } from '../../shared/ui/QueryState'
 import { muscleLabel, type SetRow, type Workout, type WorkoutExerciseRow } from '../../types/db'
@@ -26,6 +27,7 @@ function WorkoutDetail({ w }: { w: Workout }) {
   const del = useDeleteWorkout()
   const draft = useDraft()
   const navigate = useNavigate()
+  const confirm = useConfirm()
   const stats = workoutStats(w)
   const muscles = setsPerMuscle(w)
   const maxSets = Math.max(1, ...muscles.map((m) => m.sets))
@@ -92,12 +94,15 @@ function WorkoutDetail({ w }: { w: Workout }) {
         <button
           className="btn danger"
           disabled={del.isPending}
-          onClick={() =>
-            confirm('Delete this workout permanently?') &&
-            del.mutate(w.id, {
-              onSuccess: () => navigate('/history', { replace: true }),
+          onClick={async () => {
+            const ok = await confirm({
+              title: 'Delete this workout?',
+              message: 'It is removed permanently, with all its sets.',
+              confirmLabel: 'Delete',
+              danger: true,
             })
-          }
+            if (ok) del.mutate(w.id, { onSuccess: () => navigate('/history', { replace: true }) })
+          }}
         >
           Delete
         </button>
