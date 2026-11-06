@@ -19,7 +19,7 @@ test('logs a workout, survives a reload and saves only completed sets', async ({
   await page.getByRole('button', { name: 'Add 1 exercise' }).click()
 
   const card = page.getByRole('region', { name: bench.name })
-  await expect(card.getByRole('cell', { name: '80×8' })).toBeVisible()
+  await expect(card.getByRole('cell', { name: '80 kg × 8' })).toBeVisible()
 
   // Comma decimal, as typed on an iPhone with a Vietnamese keyboard; reps left empty.
   await card.getByLabel('Set 1 weight').fill('82,5')

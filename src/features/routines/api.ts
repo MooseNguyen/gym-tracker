@@ -1,12 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, unwrap } from '../../lib/supabase'
-import type { Routine } from '../../types/db'
+import type { Routine, RoutineFolder } from '../../types/db'
 
 const ROUTINE_SELECT = `
-  id, name, notes, created_at,
+  id, name, notes, folder_id, created_at,
   routine_exercises (
     id, exercise_id, position, target_sets, rest_seconds,
-    exercise:exercises (id, user_id, name, muscle_group, equipment, kind)
+    exercise:exercises (id, user_id, name, muscle_group, equipment, kind, image_path)
   )`
 
 export function useRoutines() {
@@ -43,6 +43,7 @@ export interface RoutineInput {
   id?: string
   name: string
   notes: string | null
+  folder_id: string | null
   exercises: { exercise_id: string; target_sets: number; rest_seconds: number }[]
 }
 
@@ -63,4 +64,65 @@ export function useDeleteRoutine() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['routines'] }),
   })
+}
+
+// ---------------------------------------------------------------------------
+// Folders
+// ---------------------------------------------------------------------------
+
+export function useFolders() {
+  return useQuery({
+    queryKey: ['folders'],
+    queryFn: async () =>
+      unwrap(
+        await supabase.from('routine_folders').select('id, name, created_at').order('created_at'),
+      ) as RoutineFolder[],
+  })
+}
+
+export function useSaveFolder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, name }: { id?: string; name: string }) => {
+      if (id) unwrap(await supabase.from('routine_folders').update({ name }).eq('id', id))
+      else unwrap(await supabase.from('routine_folders').insert({ name }))
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['folders'] }),
+  })
+}
+
+export function useDeleteFolder() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (id: string) => {
+      unwrap(await supabase.from('routine_folders').delete().eq('id', id))
+    },
+    // Routines in the folder become unfiled (on delete set null), so refetch both.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['folders'] })
+      qc.invalidateQueries({ queryKey: ['routines'] })
+    },
+  })
+}
+
+export interface FolderGroup {
+  folder: RoutineFolder | null // null = "Unfiled"
+  routines: Routine[]
+}
+
+/**
+ * Groups routines under their folders, keeping folder order.
+ * Empty folders are kept (the user just created them); the unfiled group is
+ * only added when it has routines. A routine pointing at an unknown folder
+ * (deleted in another tab) falls back to unfiled instead of disappearing.
+ */
+export function groupByFolder(folders: RoutineFolder[], routines: Routine[]): FolderGroup[] {
+  const known = new Set(folders.map((f) => f.id))
+  const groups: FolderGroup[] = folders.map((folder) => ({
+    folder,
+    routines: routines.filter((r) => r.folder_id === folder.id),
+  }))
+  const unfiled = routines.filter((r) => !r.folder_id || !known.has(r.folder_id))
+  if (unfiled.length > 0) groups.push({ folder: null, routines: unfiled })
+  return groups
 }

@@ -13,8 +13,8 @@ export default defineConfig({
         name: 'Gym Tracker',
         short_name: 'Gym',
         description: 'Personal workout tracker',
-        theme_color: '#111827',
-        background_color: '#111827',
+        theme_color: '#0e1116',
+        background_color: '#0e1116',
         display: 'standalone',
         start_url: '/',
         icons: [
@@ -23,9 +23,38 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Cache only the app shell. Workout data always comes from Supabase.
+        // Precache only the app shell. Workout data always comes from Supabase.
+        // Exercise photos (.webp) are left out of the precache on purpose:
+        // installing the app should not download ~1 MB of images up front.
         globPatterns: ['**/*.{js,css,html,svg,png}'],
         navigateFallback: '/index.html',
+        runtimeCaching: [
+          {
+            // Google Fonts: the CSS can change, the font files never do.
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'google-fonts-css' },
+          },
+          {
+            urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-files',
+              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Cached the first time each photo is shown, then served offline.
+            // The files never change in place, so cache-first is safe.
+            urlPattern: /\/exercises\/[^/]+\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-images',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            },
+          },
+        ],
       },
     }),
   ],

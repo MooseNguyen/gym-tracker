@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
+import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { MUSCLE_GROUPS, type Exercise } from '../../types/db'
 
 interface Props {
@@ -47,7 +48,8 @@ export function ExerciseList({ exercises, renderAction }: Props) {
         <ul className="list">
           {filtered.map((e) => (
             <li key={e.id} className="list-item">
-              <div>
+              <ExerciseThumb imagePath={e.image_path} name={e.name} size={48} />
+              <div className="grow">
                 <div>{e.name}</div>
                 <small className="muted">
                   {e.muscle_group} · {e.equipment}

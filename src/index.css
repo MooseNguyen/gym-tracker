@@ -1,27 +1,41 @@
+/* ==========================================================================
+   Tokens
+   ========================================================================== */
 :root {
-  --bg: #0b0f17;
-  --surface: #151b26;
-  --surface-2: #1e2633;
-  --border: #2a3342;
-  --text: #e5e7eb;
-  --muted: #9ca3af;
+  --bg: #0e1116;
+  --surface: #171b22;
+  --raised: #1f2530;
+  --line: #2b3240;
+  --text: #edeff3;
+  --muted: #8c95a6;
   --accent: #f97316;
-  --accent-text: #111827;
+  --accent-soft: #fdba74;
+  --accent-ink: #1a0d03;
   --success: #22c55e;
-  --danger: #ef4444;
-  --radius: 12px;
+  --success-ink: #052e16;
+  --danger: #f87171;
+
+  /* Kept for the chart, which reads these names */
+  --border: var(--line);
+
+  --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
+
+  /* Radius follows hierarchy: containers > controls > chips */
+  --r-card: 14px;
+  --r-control: 10px;
+  --r-pill: 999px;
   --tap: 44px; /* Apple's minimum touch target */
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
   color-scheme: dark;
-  font-family:
-    system-ui,
-    -apple-system,
-    'Segoe UI',
-    Roboto,
-    sans-serif;
-  line-height: 1.4;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.45;
   color: var(--text);
   background: var(--bg);
   -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 * {
@@ -34,19 +48,28 @@ body {
   overscroll-behavior-y: none;
 }
 
-h1 {
-  font-size: 1.6rem;
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
   margin: 0;
 }
+h1 {
+  font-size: 2.1rem;
+}
 h2 {
-  font-size: 1.1rem;
-  margin: 0;
+  font-size: 1.3rem;
 }
 a {
   color: inherit;
 }
+p {
+  margin: 0;
+}
 
-/* iOS zooms into any input under 16px on focus, so keep inputs at 16px. */
+/* iOS zooms into any input under 16px on focus, so inputs stay at 16px. */
 input,
 select,
 textarea,
@@ -62,9 +85,16 @@ textarea {
   width: 100%;
   min-height: var(--tap);
   padding: 8px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--raised);
+  transition: border-color 0.15s;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  outline: none;
 }
 
 :focus-visible {
@@ -81,20 +111,22 @@ textarea {
   white-space: nowrap;
 }
 
-/* Layout ---------------------------------------------------------------- */
+/* ==========================================================================
+   Layout helpers
+   ========================================================================== */
 .app {
   min-height: 100dvh;
 }
 .content {
-  padding-bottom: calc(72px + env(safe-area-inset-bottom));
+  padding-bottom: calc(76px + env(safe-area-inset-bottom));
 }
 .page {
   max-width: 640px;
   margin: 0 auto;
-  padding: calc(16px + env(safe-area-inset-top)) 16px 24px;
+  padding: calc(16px + env(safe-area-inset-top)) 16px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 .stack {
   display: flex;
@@ -111,6 +143,7 @@ textarea {
 }
 .grow {
   flex: 1;
+  min-width: 0;
 }
 .center {
   text-align: center;
@@ -128,15 +161,12 @@ textarea {
 .card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 14px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
   text-decoration: none;
-}
-.card.resume {
-  border-color: var(--accent);
 }
 
 .list {
@@ -145,22 +175,20 @@ textarea {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 .list-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
-  padding: 8px 4px;
-  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
   text-decoration: none;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   flex: 1;
 }
 .field > span {
@@ -168,29 +196,50 @@ textarea {
   color: var(--muted);
 }
 
-/* Buttons ---------------------------------------------------------------- */
+.badge {
+  min-width: 24px;
+  padding: 1px 8px;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   min-height: var(--tap);
   padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--raised);
+  font-weight: 500;
   text-decoration: none;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    transform 0.1s,
+    background 0.15s;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
 }
 .btn:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 .btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
+  color: var(--accent-ink);
+  font-weight: 700;
 }
 .btn.danger {
   color: var(--danger);
@@ -201,8 +250,8 @@ textarea {
 }
 .btn.small {
   min-height: 36px;
-  min-width: 36px;
-  padding: 0 10px;
+  padding: 0 12px;
+  font-size: 0.9rem;
 }
 .btn.block {
   width: 100%;
@@ -214,16 +263,88 @@ button.link {
   cursor: pointer;
 }
 
-/* Bottom tab bar ---------------------------------------------------------- */
+/* Square icon-only button; 40px visual, the row padding brings it to 44px. */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border: none;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--muted);
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+.icon-btn:active {
+  background: var(--raised);
+}
+.icon-btn.danger {
+  color: var(--danger);
+}
+
+/* ==========================================================================
+   Hero (Home / Login) — the one loud element
+   ========================================================================== */
+.hero {
+  position: relative;
+  min-height: 168px;
+  margin: calc(-16px - env(safe-area-inset-top)) -16px 0;
+  padding: calc(28px + env(safe-area-inset-top)) 20px 20px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+  /* Shown immediately and kept if WebGL is unavailable. */
+  background:
+    radial-gradient(120% 90% at 85% 30%, rgb(249 115 22 / 0.22), transparent 60%),
+    linear-gradient(180deg, #151a22 0%, var(--bg) 100%);
+}
+.hero-tall {
+  min-height: 260px;
+}
+.hero-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.hero-canvas canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hero-text {
+  position: relative; /* above the canvas */
+  max-width: 62%;
+}
+.hero-tall .hero-text {
+  max-width: none;
+}
+.hero h1 {
+  font-size: 2.6rem;
+  text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
+}
+.eyebrow {
+  color: var(--accent-soft);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* ==========================================================================
+   Bottom tab bar
+   ========================================================================== */
 .tabbar {
   position: fixed;
   inset: auto 0 0 0;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
-  background: var(--surface);
-  border-top: 1px solid var(--border);
+  padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+  background: rgb(23 27 34 / 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
   z-index: 10;
 }
 .tabbar a,
@@ -231,27 +352,35 @@ button.link {
   min-height: var(--tap);
   display: flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  font-weight: 500;
 }
 .tabbar a.active {
   color: var(--accent);
-  font-weight: 600;
+  background: rgb(249 115 22 / 0.12);
 }
 
-/* Dialog as a bottom sheet ------------------------------------------------ */
+/* ==========================================================================
+   Dialog as a bottom sheet
+   ========================================================================== */
 .sheet {
   width: 100%;
   max-width: 640px;
   max-height: 90dvh;
   margin: auto auto 0;
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
-  border: 1px solid var(--border);
-  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 20px 20px 0 0;
   background: var(--surface);
   color: var(--text);
+}
+.sheet[open] {
+  animation: sheet-up 0.28s var(--ease);
 }
 .sheet::backdrop {
   background: rgb(0 0 0 / 0.6);
@@ -268,58 +397,308 @@ button.link {
   padding-top: 8px;
   background: var(--surface);
 }
+@keyframes sheet-up {
+  from {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+}
 
-/* Active workout ---------------------------------------------------------- */
+/* ==========================================================================
+   Thumbnails, drag handles, sortable
+   ========================================================================== */
+.thumb {
+  flex: none;
+  display: block;
+  border-radius: var(--r-control);
+  object-fit: cover;
+  background: var(--raised);
+}
+.thumb.placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.drag-handle {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 44px;
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--muted);
+  cursor: grab;
+  /* The handle owns touch: dragging it must not scroll the page. */
+  touch-action: none;
+}
+.drag-handle:active {
+  cursor: grabbing;
+  color: var(--accent);
+}
+.sortable.dragging > .card {
+  border-color: var(--accent);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.55);
+  transform: scale(1.02);
+}
+
+/* ==========================================================================
+   Accordion (folders, routines)
+   ========================================================================== */
+.disclosure-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.disclosure-toggle {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.chevron {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.25s var(--ease);
+}
+.disclosure.open > .disclosure-head .chevron {
+  transform: rotate(90deg);
+}
+/* 0fr → 1fr animates to the content's natural height with no JS measuring. */
+.disclosure-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  /* visibility flips only after the close animation, so closed content is
+     hidden from screen readers and Tab in every browser (with or without inert). */
+  visibility: hidden;
+  transition:
+    grid-template-rows 0.3s var(--ease),
+    visibility 0s 0.3s;
+}
+.disclosure.open > .disclosure-panel {
+  grid-template-rows: 1fr;
+  visibility: visible;
+  transition:
+    grid-template-rows 0.3s var(--ease),
+    visibility 0s;
+}
+.disclosure-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Folder: an open section, not a box, so routines (the cards) stay the focus. */
+.folder > .disclosure-panel > .disclosure-inner {
+  padding-left: 4px;
+}
+.folder.open > .disclosure-panel > .disclosure-inner {
+  padding-top: 8px;
+  padding-bottom: 6px;
+}
+.folder-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+.folder-title svg {
+  color: var(--accent);
+  flex: none;
+}
+.folder-actions {
+  gap: 0;
+}
+.folder-empty {
+  padding: 4px 0 8px 26px;
+}
+
+.routine.card {
+  padding: 4px 14px;
+  gap: 0;
+}
+.routine.open {
+  border-color: rgb(249 115 22 / 0.45);
+}
+.routine.open > .disclosure-panel > .disclosure-inner {
+  padding-bottom: 12px;
+}
+.routine-summary {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.routine-summary strong {
+  font-size: 1.05rem;
+}
+.routine-exercises {
+  list-style: none;
+  margin: 4px 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.routine-exercises li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.card.resume {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  border-color: var(--accent);
+  background: linear-gradient(90deg, rgb(249 115 22 / 0.14), var(--surface) 70%);
+}
+.resume-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px rgb(249 115 22 / 0.25);
+}
+.start-empty {
+  margin-top: 6px;
+}
+
+/* ==========================================================================
+   Routine editor
+   ========================================================================== */
+.routine-row {
+  gap: 8px;
+}
+.exercise-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   Active workout
+   ========================================================================== */
 .workout {
-  padding-bottom: 96px; /* room for the rest timer */
+  padding-bottom: 110px; /* room for the rest timer */
+}
+.workout-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .title-input {
-  font-size: 1.4rem;
+  font-family: var(--font-display);
+  font-size: 2rem;
   font-weight: 700;
   background: transparent;
   border-color: transparent;
   padding-left: 0;
 }
+.workout-stats {
+  display: flex;
+  gap: 28px;
+}
+.stat-label {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.exercise-card {
+  gap: 10px;
+}
+.exercise-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.25rem;
+  color: var(--accent-soft);
+}
 .note-input {
   min-height: 36px;
   background: transparent;
+  border-color: transparent;
+  padding-left: 2px;
+  color: var(--muted);
 }
-.exercise-title {
-  color: var(--accent);
+.note-input:focus {
+  color: var(--text);
 }
 
 .sets {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0 4px;
   text-align: center;
 }
 .sets th {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--muted);
-  padding: 4px 2px;
+  padding: 0 2px;
 }
 .sets td {
-  padding: 3px 2px;
+  padding: 2px;
+  transition: background 0.25s;
+}
+.sets td:first-child {
+  border-radius: var(--r-control) 0 0 var(--r-control);
+}
+.sets td:last-child {
+  border-radius: 0 var(--r-control) var(--r-control) 0;
 }
 .sets tr.done td {
-  background: rgb(34 197 94 / 0.12);
+  background: rgb(34 197 94 / 0.13);
+}
+.sets .prev {
+  color: var(--muted);
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 .num-input {
-  width: 64px;
+  width: 62px;
   min-height: 40px;
-  text-align: center;
   padding: 4px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.num-input::placeholder {
+  color: #5b6474;
+  font-weight: 500;
 }
 .set-type,
 .check {
   width: 40px;
   height: 40px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  background: var(--raised);
   cursor: pointer;
-  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
 }
 .set-type.warmup {
   color: #facc15;
@@ -333,33 +712,108 @@ button.link {
 .check.on {
   background: var(--success);
   border-color: var(--success);
-  color: #052e16;
+  color: var(--success-ink);
+  animation: check-pop 0.25s var(--ease);
+}
+@keyframes check-pop {
+  50% {
+    transform: scale(1.15);
+  }
 }
 
 .rest-timer {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: calc(64px + env(safe-area-inset-bottom));
+  left: 12px;
+  right: 12px;
+  bottom: calc(68px + env(safe-area-inset-bottom));
+  max-width: 616px;
+  margin: 0 auto;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: rgb(31 37 48 / 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
   z-index: 9;
 }
 .rest-timer.done {
   background: var(--accent);
-  color: var(--accent-text);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 .rest-time {
-  font-size: 1.5rem;
+  min-width: 5ch;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  min-width: 5ch;
   text-align: center;
+}
+
+/* "Beat last time" banner */
+.pr-banner-slot {
+  position: fixed;
+  top: calc(10px + env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 30;
+}
+.pr-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px 10px 12px;
+  border-radius: var(--r-pill);
+  background: linear-gradient(90deg, var(--accent), #fb923c);
+  color: var(--accent-ink);
+  box-shadow: 0 12px 32px rgb(249 115 22 / 0.4);
+  animation: pr-in 2.6s var(--ease) forwards;
+}
+.pr-banner strong {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+}
+.pr-banner-detail {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+.pr-banner-icon {
+  font-size: 1.6rem;
+}
+@keyframes pr-in {
+  0% {
+    transform: translateY(-140%) scale(0.9);
+    opacity: 0;
+  }
+  12% {
+    transform: translateY(0) scale(1.04);
+    opacity: 1;
+  }
+  18%,
+  85% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-140%);
+    opacity: 0;
+  }
+}
+.pr-burst-canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
+  pointer-events: none;
+  z-index: 29;
 }
 
 .set-list {
@@ -368,28 +822,33 @@ button.link {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
-/* Stats ------------------------------------------------------------------- */
+/* ==========================================================================
+   Stats
+   ========================================================================== */
 .segmented {
   display: flex;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--surface);
 }
 .segmented button {
   flex: 1;
-  min-height: 40px;
+  min-height: 38px;
   border: none;
-  background: var(--surface);
+  border-radius: var(--r-pill);
+  background: transparent;
   color: var(--muted);
   cursor: pointer;
   font-size: 0.875rem;
 }
 .segmented button.on {
   background: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
+  color: var(--accent-ink);
+  font-weight: 700;
 }
 .chart {
   margin: 0;
@@ -403,8 +862,31 @@ button.link {
 .prs dd {
   margin: 0;
 }
+.prs strong {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+}
 
+/* ==========================================================================
+   Login
+   ========================================================================== */
 .login {
   min-height: 100dvh;
-  justify-content: center;
+}
+
+/* ==========================================================================
+   Reduced motion: keep feedback (colour changes), drop movement.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .pr-banner {
+    /* Without motion the banner would vanish instantly; keep it readable. */
+    animation: none;
+  }
 }

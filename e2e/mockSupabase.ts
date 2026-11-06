@@ -14,6 +14,7 @@ export const bench = {
   muscle_group: 'chest',
   equipment: 'barbell',
   kind: 'weight_reps',
+  image_path: 'bench-press.webp',
 }
 
 const user = {
@@ -92,7 +93,13 @@ export interface SavedWorkout {
   exercises: { exercise_id: string; notes: string | null; sets: SavedSet[] }[]
 }
 
-export async function mockSupabase(page: Page, opts: { previous?: Partial<SavedSet> } = {}) {
+export interface MockOptions {
+  previous?: Partial<SavedSet>
+  routines?: unknown[]
+  folders?: unknown[]
+}
+
+export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   const saved: SavedWorkout[] = []
 
   const json = (route: Route, body: unknown, status = 200) =>
@@ -118,7 +125,8 @@ export async function mockSupabase(page: Page, opts: { previous?: Partial<SavedS
     const single = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object')
 
     if (path === '/rest/v1/exercises') return json(route, single ? bench : [bench])
-    if (path === '/rest/v1/routines') return json(route, [])
+    if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
+    if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
       const prev = opts.previous
       return json(
@@ -157,3 +165,62 @@ export async function mockSupabase(page: Page, opts: { previous?: Partial<SavedS
 
   return { saved }
 }
+
+// ---------------------------------------------------------------------------
+// Fixtures for routines and folders, shaped like the PostgREST embed.
+// ---------------------------------------------------------------------------
+const exercise = (id: string, name: string, image_path: string, kind = 'weight_reps') => ({
+  id,
+  user_id: null,
+  name,
+  muscle_group: 'chest',
+  equipment: 'barbell',
+  kind,
+  image_path,
+})
+export const overheadPress = exercise('ex-ohp', 'Overhead Press', 'overhead-press.webp')
+export const pullUp = exercise('ex-pull', 'Pull Up', 'pull-up.webp', 'bodyweight_reps')
+
+const routineExercise = (id: string, e: { id: string }, position: number) => ({
+  id,
+  exercise_id: e.id,
+  position,
+  target_sets: 3,
+  rest_seconds: 90,
+  exercise: e,
+})
+
+export const folders = [
+  { id: 'f-ppl', name: 'Push Pull Legs', created_at: '2026-01-01' },
+  { id: 'f-empty', name: 'Upper Lower', created_at: '2026-01-02' },
+]
+
+export const routines = [
+  {
+    id: 'r-push',
+    name: 'Push',
+    notes: null,
+    folder_id: 'f-ppl',
+    created_at: '2026-01-01',
+    routine_exercises: [
+      routineExercise('re-1', bench, 0),
+      routineExercise('re-2', overheadPress, 1),
+    ],
+  },
+  {
+    id: 'r-pull',
+    name: 'Pull',
+    notes: null,
+    folder_id: 'f-ppl',
+    created_at: '2026-01-02',
+    routine_exercises: [routineExercise('re-3', pullUp, 0)],
+  },
+  {
+    id: 'r-mobility',
+    name: 'Mobility',
+    notes: null,
+    folder_id: null,
+    created_at: '2026-01-03',
+    routine_exercises: [],
+  },
+]

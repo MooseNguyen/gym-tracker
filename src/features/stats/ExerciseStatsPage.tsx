@@ -31,7 +31,10 @@ export default function ExerciseStatsPage() {
   const q = useExerciseHistory(id)
   const kind = q.data?.exercise.kind
   const metrics: Metric[] =
-    kind === 'weight_reps' ? ['bestE1RM', 'heaviestKg', 'volume'] : ['bestReps']
+    kind === 'weight_reps'
+      ? ['bestE1RM', 'heaviestKg', 'volume']
+      : // Bodyweight: reps first, then added weight (weighted pull-ups etc.).
+        ['bestReps', 'heaviestKg']
   const [picked, setPicked] = useState<Metric | null>(null)
   const metric = picked && metrics.includes(picked) ? picked : metrics[0]
 
@@ -110,6 +113,9 @@ export default function ExerciseStatsPage() {
               <PrCard label="Heaviest weight" value={prs.heaviestKg} unit="kg" />
               <PrCard label="Best session volume" value={prs.bestSessionVolume} unit="kg" />
             </>
+          )}
+          {kind === 'bodyweight_reps' && (
+            <PrCard label="Most added weight" value={prs.heaviestKg} unit="kg" />
           )}
           {kind !== 'duration' && (
             <PrCard label="Most reps in a set" value={prs.bestReps} unit="" />

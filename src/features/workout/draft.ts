@@ -1,6 +1,10 @@
 // The workout in progress lives only on the device until "Finish".
 // Everything here is pure so it can be unit tested; the store is in draftStore.ts.
 import type { Exercise, ExerciseKind, PreviousSet, SetType, Workout } from '../../types/db'
+import { reorder } from '../../shared/reorder'
+
+/** What a draft needs to know about an exercise. Tests can omit the image. */
+export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & { image_path?: string | null }
 
 export interface DraftSet {
   id: string
@@ -19,6 +23,8 @@ export interface DraftExercise {
   exerciseId: string
   name: string
   kind: ExerciseKind
+  /** Optional: drafts saved before images existed do not have it. */
+  imagePath?: string | null
   restSeconds: number
   notes: string
   sets: DraftSet[]
@@ -54,7 +60,7 @@ export function emptySet(from?: DraftSet): DraftSet {
 }
 
 export function draftExercise(
-  exercise: Pick<Exercise, 'id' | 'name' | 'kind'>,
+  exercise: ExerciseRef,
   sets = 1,
   restSeconds = DEFAULT_REST,
 ): DraftExercise {
@@ -63,6 +69,7 @@ export function draftExercise(
     exerciseId: exercise.id,
     name: exercise.name,
     kind: exercise.kind,
+    imagePath: exercise.image_path ?? null,
     restSeconds,
     notes: '',
     sets: Array.from({ length: Math.max(1, sets) }, () => emptySet()),
@@ -74,7 +81,7 @@ export function newDraft(
     name: string
     routineId?: string | null
     exercises?: {
-      exercise: Pick<Exercise, 'id' | 'name' | 'kind'>
+      exercise: ExerciseRef
       sets: number
       restSeconds: number
     }[]
@@ -111,6 +118,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
       exerciseId: we.exercise_id,
       name: we.exercise.name,
       kind: we.exercise.kind,
+      imagePath: we.exercise.image_path,
       restSeconds: DEFAULT_REST,
       notes: we.notes ?? '',
       sets: we.sets.map((s) => ({
@@ -138,10 +146,7 @@ function mapExercise(
   return { ...d, exercises: d.exercises.map((e) => (e.id === exId ? fn(e) : e)) }
 }
 
-export function addExercises(
-  d: WorkoutDraft,
-  exercises: Pick<Exercise, 'id' | 'name' | 'kind'>[],
-): WorkoutDraft {
+export function addExercises(d: WorkoutDraft, exercises: ExerciseRef[]): WorkoutDraft {
   return { ...d, exercises: [...d.exercises, ...exercises.map((e) => draftExercise(e))] }
 }
 
@@ -149,13 +154,8 @@ export function removeExercise(d: WorkoutDraft, exId: string): WorkoutDraft {
   return { ...d, exercises: d.exercises.filter((e) => e.id !== exId) }
 }
 
-export function moveExercise(d: WorkoutDraft, exId: string, dir: -1 | 1): WorkoutDraft {
-  const i = d.exercises.findIndex((e) => e.id === exId)
-  const j = i + dir
-  if (i < 0 || j < 0 || j >= d.exercises.length) return d
-  const exercises = [...d.exercises]
-  ;[exercises[i], exercises[j]] = [exercises[j], exercises[i]]
-  return { ...d, exercises }
+export function reorderExercises(d: WorkoutDraft, fromId: string, toId: string): WorkoutDraft {
+  return { ...d, exercises: reorder(d.exercises, fromId, toId) }
 }
 
 /** New set copies the previous set's numbers: you usually repeat the same weight. */
@@ -219,6 +219,41 @@ export function toggleSetComplete(
   return { ...next, restEndsAt: ex.restSeconds > 0 ? now + ex.restSeconds * 1000 : null }
 }
 
+export interface Improvement {
+  kg: number
+  reps: number
+  seconds: number
+}
+
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/**
+ * How a completed set beats the set at the same position last time, or null if
+ * it does not. "Beats" = more kg OR more reps (OR more seconds for timed sets),
+ * as asked: fewer reps at a heavier weight still counts as progress.
+ * Warm-ups never count, and without a previous set there is nothing to beat.
+ */
+export function improvementOver(set: DraftSet, prev: PreviousSet | undefined): Improvement | null {
+  if (!prev || set.setType === 'warmup' || prev.set_type === 'warmup') return null
+  const gain = (now: number | null, before: number | null) =>
+    now != null && before != null ? Math.max(0, round2(now - before)) : 0
+
+  // Missing weight means bodyweight only, i.e. 0 kg added: going from BW to +5 kg is progress.
+  const kg = gain(parseNumber(set.weight) ?? 0, prev.weight_kg ?? 0)
+  const reps = gain(parseNumber(set.reps), prev.reps)
+  const seconds = gain(parseNumber(set.duration), prev.duration_s)
+  return kg > 0 || reps > 0 || seconds > 0 ? { kg, reps, seconds } : null
+}
+
+export function describeImprovement(i: Improvement): string {
+  const parts = [
+    i.kg > 0 && `+${i.kg} kg`,
+    i.reps > 0 && `+${i.reps} rep${i.reps === 1 ? '' : 's'}`,
+    i.seconds > 0 && `+${i.seconds}s`,
+  ].filter(Boolean)
+  return parts.join(' · ')
+}
+
 // ---------------------------------------------------------------------------
 // Saving
 // ---------------------------------------------------------------------------
@@ -280,7 +315,9 @@ export function toSavePayload(d: WorkoutDraft, now = new Date()): SaveWorkoutPay
           .filter((s) => s.completed)
           .map((s) => ({
             set_type: s.setType,
-            weight_kg: e.kind === 'weight_reps' ? parseNumber(s.weight) : null,
+            // Every kind can carry weight: a weighted pull-up, a plate on a plank.
+            // For bodyweight exercises it is the added weight; empty = bodyweight only.
+            weight_kg: parseNumber(s.weight),
             reps: e.kind === 'duration' ? null : int(s.reps),
             duration_s: e.kind === 'duration' ? int(s.duration) : null,
             rpe: rpe(s.rpe),
