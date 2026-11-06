@@ -62,6 +62,13 @@ export default defineConfig({
     include: ['src/**/*.test.ts', 'scripts/**/*.test.mjs'],
     // A zone with daylight saving, so date tests really cover the DST change
     // (Vietnam has none, which would make them pass for the wrong reason).
-    env: { TZ: 'Europe/Berlin' },
+    env: {
+      TZ: 'Europe/Berlin',
+      // Modules that import src/lib/supabase.ts throw without these. Unit
+      // tests never call Supabase, so placeholders keep them independent of
+      // a developer's .env.local (and of CI, which has none).
+      VITE_SUPABASE_URL: 'https://unit-tests.invalid',
+      VITE_SUPABASE_ANON_KEY: 'unit-test-anon-key',
+    },
   },
 })
