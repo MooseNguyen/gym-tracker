@@ -257,6 +257,8 @@ test.describe('how to', () => {
     await page.goto('/')
     await page.getByRole('button', { name: 'Start empty workout' }).click()
     await page.getByRole('button', { name: '+ Add exercises' }).click()
+    // The picker opens on the filter step; skip it.
+    await page.getByRole('button', { name: /^Show all/ }).click()
     await page.getByRole('button', { name: 'Select Bench Press' }).click()
     await page.getByRole('button', { name: 'Select My Cable Curl' }).click()
     await page.getByRole('button', { name: 'Add 2 exercises' }).click()
@@ -338,5 +340,93 @@ test.describe('compact card', () => {
     const card = page.getByRole('region', { name: bench.name })
     await expect(card.getByRole('button', { name: /Reorder/ })).toHaveCount(0)
     await expect(card.getByText(/\d+\/\d+ sets/)).toHaveCount(0)
+  })
+})
+
+test.describe('exercise filters', () => {
+  const ex = (id: string, name: string, muscle_group: string, equipment: string) => ({
+    id,
+    user_id: null,
+    name,
+    muscle_group,
+    equipment,
+    kind: 'weight_reps',
+    image_path: null,
+  })
+  const library = [
+    ex('e1', 'Bench Press', 'chest', 'barbell'),
+    ex('e2', 'Pec Deck', 'chest', 'machine'),
+    ex('e3', 'Lateral Raise', 'shoulders', 'dumbbell'),
+    ex('e4', 'Leg Press', 'quads', 'machine'),
+    ex('e5', 'Pull Up', 'back', 'bodyweight'),
+  ]
+
+  test('chips and the body map select the same muscle group', async ({ page }) => {
+    await mockSupabase(page, { exercises: library })
+    await page.goto('/exercises')
+    const chest = page.getByRole('button', { name: 'Chest', exact: true })
+
+    // Tapping the chest on the drawing ticks the Chest chip and lights the region.
+    await page.locator('[data-testid="body-map-front"] [data-region="chest"]').first().click()
+    await expect(chest).toHaveAttribute('aria-pressed', 'true')
+    await expect(
+      page.locator('[data-testid="body-map-front"] [data-region="chest"].on'),
+    ).toHaveCount(2)
+
+    // Back is on the other side of the body.
+    await page.getByRole('button', { name: 'Back', exact: true }).last().click()
+    await page.locator('[data-testid="body-map-back"] [data-region="upper-back"]').first().click()
+    await expect(page.getByRole('button', { name: 'Back', exact: true }).first()).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(page.getByRole('button', { name: 'Show 3 exercises' })).toBeVisible()
+
+    // Decorative parts (head) select nothing.
+    await page.locator('[data-testid="body-map-back"] [data-region="head"]').click()
+    await expect(page.getByRole('button', { name: 'Show 3 exercises' })).toBeVisible()
+  })
+
+  test('muscles AND equipment, with removable filter chips on the results', async ({ page }) => {
+    await mockSupabase(page, { exercises: library })
+    await page.goto('/exercises')
+    await page.getByRole('button', { name: 'Chest', exact: true }).click()
+    await page.getByRole('button', { name: 'Quads', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Show 3 exercises' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Equipment' }).click()
+    const machine = page.getByRole('button', { name: 'Machine' })
+    await machine.click()
+    await expect(machine).toHaveAttribute('aria-pressed', 'true')
+    await page.getByRole('button', { name: 'Show 2 exercises' }).click()
+
+    const results = page.locator('.list-item')
+    await expect(results).toHaveCount(2)
+    await expect(results).toContainText(['Pec Deck', 'Leg Press'])
+
+    await page.getByRole('button', { name: 'Remove filter machine' }).click()
+    await expect(results).toHaveCount(3)
+
+    // Back to the filters: the selection is kept.
+    await page.getByRole('button', { name: '← Filters' }).click()
+    await expect(page.getByRole('button', { name: 'Chest', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  test('typing a name jumps straight to the results', async ({ page }) => {
+    await mockSupabase(page, { exercises: library })
+    await page.goto('/exercises')
+    await page.getByLabel('Search exercises').fill('press')
+    await expect(page.locator('.list-item')).toHaveCount(2)
+    await expect(page.getByRole('button', { name: '← Filters' })).toBeVisible()
+  })
+
+  test('no match disables the show button', async ({ page }) => {
+    await mockSupabase(page, { exercises: library })
+    await page.goto('/exercises')
+    await page.getByRole('button', { name: 'Calves', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'No exercises match' })).toBeDisabled()
   })
 })
