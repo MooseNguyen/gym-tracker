@@ -12,6 +12,14 @@ export interface Exercise {
   muscle_group: string
   equipment: string
   kind: ExerciseKind
+  /** File name under /exercises/ (built-in exercises only). */
+  image_path: string | null
+}
+
+export interface RoutineFolder {
+  id: string
+  name: string
+  created_at: string
 }
 
 export interface RoutineExercise {
@@ -27,6 +35,7 @@ export interface Routine {
   id: string
   name: string
   notes: string | null
+  folder_id: string | null
   created_at: string
   routine_exercises: RoutineExercise[]
 }

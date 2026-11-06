@@ -14,6 +14,7 @@ export const bench = {
   muscle_group: 'chest',
   equipment: 'barbell',
   kind: 'weight_reps',
+  image_path: 'bench-press.webp',
 }
 
 const user = {
@@ -92,7 +93,13 @@ export interface SavedWorkout {
   exercises: { exercise_id: string; notes: string | null; sets: SavedSet[] }[]
 }
 
-export async function mockSupabase(page: Page, opts: { previous?: Partial<SavedSet> } = {}) {
+export interface MockOptions {
+  previous?: Partial<SavedSet>
+  routines?: unknown[]
+  folders?: unknown[]
+}
+
+export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   const saved: SavedWorkout[] = []
 
   const json = (route: Route, body: unknown, status = 200) =>
@@ -118,7 +125,8 @@ export async function mockSupabase(page: Page, opts: { previous?: Partial<SavedS
     const single = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object')
 
     if (path === '/rest/v1/exercises') return json(route, single ? bench : [bench])
-    if (path === '/rest/v1/routines') return json(route, [])
+    if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
+    if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
       const prev = opts.previous
       return json(

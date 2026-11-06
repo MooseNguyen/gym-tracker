@@ -22,7 +22,7 @@ export function useExerciseHistory(exerciseId: string | undefined) {
       const [exercise, rows] = await Promise.all([
         supabase
           .from('exercises')
-          .select('id, user_id, name, muscle_group, equipment, kind')
+          .select('id, user_id, name, muscle_group, equipment, kind, image_path')
           .eq('id', exerciseId!)
           .single(),
         // !inner turns the embed into an inner join; RLS still limits it to own workouts.

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, unwrap } from '../../lib/supabase'
 import type { Exercise, ExerciseKind } from '../../types/db'
 
-const EXERCISE_COLUMNS = 'id, user_id, name, muscle_group, equipment, kind'
+const EXERCISE_COLUMNS = 'id, user_id, name, muscle_group, equipment, kind, image_path'
 
 export function useExercises() {
   return useQuery({

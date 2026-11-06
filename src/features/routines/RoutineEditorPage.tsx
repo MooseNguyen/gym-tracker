@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
+import { reorder } from '../../shared/reorder'
+import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { QueryState } from '../../shared/ui/QueryState'
+import { DragHandle, SortableList } from '../../shared/ui/SortableList'
 import type { Exercise, Routine } from '../../types/db'
-import { useDeleteRoutine, useRoutine, useSaveRoutine } from './api'
+import { useDeleteRoutine, useFolders, useRoutine, useSaveRoutine } from './api'
 
 /** /routines/new and /routines/:id share one editor. */
 export function RoutineEditorPage() {
@@ -20,7 +23,8 @@ export function RoutineEditorPage() {
 }
 
 interface Row {
-  key: string
+  // Named `id` so the row can go straight into SortableList and reorder().
+  id: string
   exercise: Exercise
   target_sets: number
   rest_seconds: number
@@ -28,13 +32,17 @@ interface Row {
 
 function RoutineForm({ initial }: { initial?: Routine }) {
   const navigate = useNavigate()
+  // "+ Routine" inside a folder on the home page links to /routines/new?folder=<id>.
+  const [params] = useSearchParams()
+  const folders = useFolders()
   const save = useSaveRoutine()
   const del = useDeleteRoutine()
   const [name, setName] = useState(initial?.name ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [folderId, setFolderId] = useState(initial?.folder_id ?? params.get('folder') ?? '')
   const [rows, setRows] = useState<Row[]>(
     initial?.routine_exercises.map((re) => ({
-      key: re.id,
+      id: re.id,
       exercise: re.exercise,
       target_sets: re.target_sets,
       rest_seconds: re.rest_seconds,
@@ -42,17 +50,8 @@ function RoutineForm({ initial }: { initial?: Routine }) {
   )
   const [picking, setPicking] = useState(false)
 
-  const update = (key: string, patch: Partial<Row>) =>
-    setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)))
-
-  const move = (index: number, dir: -1 | 1) =>
-    setRows((rs) => {
-      const target = index + dir
-      if (target < 0 || target >= rs.length) return rs
-      const next = [...rs]
-      ;[next[index], next[target]] = [next[target], next[index]]
-      return next
-    })
+  const update = (id: string, patch: Partial<Row>) =>
+    setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)))
 
   function submit(e: FormEvent) {
     e.preventDefault()
@@ -61,6 +60,7 @@ function RoutineForm({ initial }: { initial?: Routine }) {
         id: initial?.id,
         name: name.trim(),
         notes: notes.trim() || null,
+        folder_id: folderId || null,
         exercises: rows.map((r) => ({
           exercise_id: r.exercise.id,
           target_sets: r.target_sets,
@@ -85,73 +85,71 @@ function RoutineForm({ initial }: { initial?: Routine }) {
           />
         </label>
         <label className="field">
+          <span>Folder</span>
+          <select value={folderId} onChange={(e) => setFolderId(e.target.value)}>
+            <option value="">No folder</option>
+            {folders.data?.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
           <span>Notes</span>
           <textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </label>
 
+        <h2>Exercises</h2>
         {rows.length === 0 && <p className="muted center">No exercises yet.</p>}
-        <ol className="list">
-          {rows.map((r, i) => (
-            <li key={r.key} className="card stack">
-              <div className="row between">
-                <strong>{r.exercise.name}</strong>
-                <div className="row">
+        <div className="stack">
+          <SortableList
+            items={rows}
+            onReorder={(from, to) => setRows((rs) => reorder(rs, from, to))}
+            renderItem={(r, handle) => (
+              <div className="card routine-row">
+                <div className="exercise-head">
+                  <DragHandle handle={handle} label={`Reorder ${r.exercise.name}`} />
+                  <ExerciseThumb imagePath={r.exercise.image_path} name={r.exercise.name} size={40} />
+                  <strong className="grow">{r.exercise.name}</strong>
                   <button
                     type="button"
-                    className="btn small"
-                    aria-label="Move up"
-                    onClick={() => move(i, -1)}
-                    disabled={i === 0}
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className="btn small"
-                    aria-label="Move down"
-                    onClick={() => move(i, 1)}
-                    disabled={i === rows.length - 1}
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    className="btn small danger"
+                    className="icon-btn danger"
                     aria-label={`Remove ${r.exercise.name}`}
-                    onClick={() => setRows((rs) => rs.filter((x) => x.key !== r.key))}
+                    onClick={() => setRows((rs) => rs.filter((x) => x.id !== r.id))}
                   >
                     ✕
                   </button>
                 </div>
+                <div className="row">
+                  <label className="field">
+                    <span>Sets</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={20}
+                      value={r.target_sets}
+                      onChange={(e) => update(r.id, { target_sets: Number(e.target.value) || 1 })}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>Rest (s)</span>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={900}
+                      step={15}
+                      value={r.rest_seconds}
+                      onChange={(e) => update(r.id, { rest_seconds: Number(e.target.value) || 0 })}
+                    />
+                  </label>
+                </div>
               </div>
-              <div className="row">
-                <label className="field">
-                  <span>Sets</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={20}
-                    value={r.target_sets}
-                    onChange={(e) => update(r.key, { target_sets: Number(e.target.value) || 1 })}
-                  />
-                </label>
-                <label className="field">
-                  <span>Rest (s)</span>
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={900}
-                    step={15}
-                    value={r.rest_seconds}
-                    onChange={(e) => update(r.key, { rest_seconds: Number(e.target.value) || 0 })}
-                  />
-                </label>
-              </div>
-            </li>
-          ))}
-        </ol>
+            )}
+          />
+        </div>
 
         <button type="button" className="btn" onClick={() => setPicking(true)}>
           + Add exercises
@@ -187,7 +185,7 @@ function RoutineForm({ initial }: { initial?: Routine }) {
           setRows((rs) => [
             ...rs,
             ...picked.map((exercise) => ({
-              key: crypto.randomUUID(),
+              id: crypto.randomUUID(),
               exercise,
               target_sets: 3,
               rest_seconds: 90,
