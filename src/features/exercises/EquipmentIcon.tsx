@@ -59,12 +59,26 @@ export function EquipmentIcon({ type }: { type: string }) {
           <path d="M12 7v7M7 9.5l5-1.5 5 1.5M12 14l-3 7M12 14l3 7" />
         </svg>
       )
-    default:
-      // "Other": kettlebell-ish shape.
+    case 'kettlebell':
       return (
         <svg {...common}>
           <path d="M9 7a3 3 0 0 1 6 0" />
           <path d="M7.5 9h9a3 3 0 0 1 2.8 4l-1.3 4.5A3 3 0 0 1 15.1 20H8.9A3 3 0 0 1 6 17.5L4.7 13a3 3 0 0 1 2.8-4Z" />
+        </svg>
+      )
+    case 'band':
+      // A resistance loop band.
+      return (
+        <svg {...common}>
+          <path d="M7 4c-2 0-3 2-3 8s1 8 3 8 3-2 5-8 3-8 5-8 3 2 3 8-1 8-3 8-3-2-5-8-3-8-5-8Z" />
+        </svg>
+      )
+    default:
+      // "Other": a medicine ball, standing in for sleds, plates and friends.
+      return (
+        <svg {...common}>
+          <circle cx="12" cy="12" r="8" />
+          <path d="M4.5 9.5c5 2 10 2 15 0M4.5 14.5c5-2 10-2 15 0" />
         </svg>
       )
   }

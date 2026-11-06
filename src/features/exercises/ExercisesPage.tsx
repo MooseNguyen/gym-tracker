@@ -2,7 +2,13 @@ import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Dialog } from '../../shared/ui/Dialog'
 import { QueryState } from '../../shared/ui/QueryState'
-import { EQUIPMENT, MUSCLE_GROUPS, type ExerciseKind } from '../../types/db'
+import {
+  EQUIPMENT,
+  MUSCLE_GROUPS,
+  MUSCLE_SUBGROUPS,
+  muscleLabel,
+  type ExerciseKind,
+} from '../../types/db'
 import { useCreateExercise, useDeleteExercise, useExercises } from './api'
 import { ExerciseList } from './ExerciseList'
 import { HowToButton } from './HowTo'
@@ -81,9 +87,20 @@ function NewExerciseForm({ onDone }: { onDone: () => void }) {
       <label className="field">
         <span>Muscle group</span>
         <select value={muscle} onChange={(e) => setMuscle(e.target.value)}>
-          {MUSCLE_GROUPS.map((m) => (
-            <option key={m}>{m}</option>
-          ))}
+          {MUSCLE_GROUPS.map((m) => {
+            const subs = MUSCLE_SUBGROUPS[m]
+            if (!subs) return <option key={m}>{m}</option>
+            return (
+              <optgroup key={m} label={m}>
+                <option value={m}>{m} (general)</option>
+                {subs.map((s) => (
+                  <option key={s} value={s}>
+                    {muscleLabel(s)}
+                  </option>
+                ))}
+              </optgroup>
+            )
+          })}
         </select>
       </label>
       <label className="field">

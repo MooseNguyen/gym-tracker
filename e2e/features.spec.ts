@@ -415,6 +415,37 @@ test.describe('exercise filters', () => {
     )
   })
 
+  test('a picked group can be narrowed to its sub-muscles', async ({ page }) => {
+    await mockSupabase(page, {
+      exercises: [
+        ex('b1', 'Lat Pulldown', 'lats', 'cable'),
+        ex('b2', 'Barbell Row', 'upper-back', 'barbell'),
+        ex('b3', 'Barbell Shrug', 'traps', 'barbell'),
+        ex('b4', 'My Old Row', 'back', 'machine'), // custom value from before the split
+        ex('c1', 'Incline Bench Press', 'upper-chest', 'barbell'),
+      ],
+    })
+    await page.goto('/exercises')
+    const targets = page.getByRole('list', { name: 'Back targets' })
+    await expect(targets).toHaveCount(0)
+
+    // The whole group, legacy "back" included.
+    await page.getByRole('button', { name: 'Back', exact: true }).first().click()
+    await expect(page.getByRole('button', { name: 'Show 4 exercises' })).toBeVisible()
+
+    // Narrow to lats + traps; the group chip stays ticked.
+    await targets.getByRole('button', { name: 'Lats' }).click()
+    await targets.getByRole('button', { name: 'Traps' }).click()
+    await expect(page.getByRole('button', { name: 'Back', exact: true }).first()).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await page.getByRole('button', { name: 'Show 2 exercises' }).click()
+    const results = page.locator('.list-item')
+    await expect(results).toContainText(['Lat Pulldown', 'Barbell Shrug'])
+    await expect(results.first()).toContainText('lats · cable')
+  })
+
   test('typing a name jumps straight to the results', async ({ page }) => {
     await mockSupabase(page, { exercises: library })
     await page.goto('/exercises')

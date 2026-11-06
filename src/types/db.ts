@@ -94,4 +94,37 @@ export const MUSCLE_GROUPS = [
   'cardio',
 ] as const
 
-export const EQUIPMENT = ['barbell', 'dumbbell', 'machine', 'cable', 'bodyweight', 'other'] as const
+/**
+ * Finer targets inside some groups, stored in `exercises.muscle_group` in
+ * place of the group itself (one primary target per exercise). The plain
+ * group value stays valid and means "this group, no specific target" (e.g.
+ * custom exercises created before the split).
+ */
+export const MUSCLE_SUBGROUPS: Partial<Record<(typeof MUSCLE_GROUPS)[number], readonly string[]>> =
+  {
+    chest: ['upper-chest', 'mid-chest', 'lower-chest'],
+    back: ['lats', 'upper-back', 'traps', 'lower-back'],
+    shoulders: ['front-delts', 'side-delts', 'rear-delts'],
+  }
+
+/** The top-level group of a stored muscle value ('lats' → 'back', 'biceps' → 'biceps'). */
+export function muscleParent(muscle: string): string {
+  for (const [group, subs] of Object.entries(MUSCLE_SUBGROUPS)) {
+    if (subs?.includes(muscle)) return group
+  }
+  return muscle
+}
+
+/** Human label for a stored muscle value: 'upper-chest' → 'upper chest'. */
+export const muscleLabel = (muscle: string) => muscle.replace(/-/g, ' ')
+
+export const EQUIPMENT = [
+  'barbell',
+  'dumbbell',
+  'machine',
+  'cable',
+  'bodyweight',
+  'kettlebell',
+  'band',
+  'other',
+] as const

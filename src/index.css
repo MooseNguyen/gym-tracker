@@ -1210,6 +1210,18 @@ button.link {
 .muscle-chips .chip {
   width: 100%;
 }
+/* Sub-muscle chips, indented under their group chip. */
+.sub-chips {
+  list-style: none;
+  margin: 6px 0 4px;
+  padding: 0 0 0 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.muscle-chips .sub-chips .chip {
+  width: auto;
+}
 .body-map-wrap {
   position: sticky;
   top: 0;
