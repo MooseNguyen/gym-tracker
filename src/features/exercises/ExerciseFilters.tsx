@@ -1,22 +1,35 @@
 import { useState } from 'react'
-import { EQUIPMENT, MUSCLE_GROUPS } from '../../types/db'
+import { EQUIPMENT, MUSCLE_GROUPS, MUSCLE_SUBGROUPS, muscleLabel } from '../../types/db'
 import { BodyMap } from './bodyMap/BodyMap'
 import { EquipmentIcon } from './EquipmentIcon'
-import { toggle, type ExerciseFilters as Filters } from './filters'
+import {
+  activeGroups,
+  toggle,
+  toggleGroup,
+  toggleSubgroup,
+  type ExerciseFilters as Filters,
+} from './filters'
 
 interface Props {
   filters: Filters
   onChange: (next: Filters) => void
 }
 
-const label = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
+const label = (s: string) => {
+  const l = muscleLabel(s)
+  return l.charAt(0).toUpperCase() + l.slice(1)
+}
 
 /** Step 1 of finding an exercise: pick muscle groups and/or equipment. */
 export function ExerciseFilters({ filters, onChange }: Props) {
   const [tab, setTab] = useState<'muscles' | 'equipment'>('muscles')
   const [side, setSide] = useState<'front' | 'back'>('front')
 
-  const toggleMuscle = (m: string) => onChange({ ...filters, muscles: toggle(filters.muscles, m) })
+  const groups = activeGroups(filters.muscles)
+  const toggleMuscle = (m: string) =>
+    onChange({ ...filters, muscles: toggleGroup(filters.muscles, m) })
+  const toggleSub = (s: string) =>
+    onChange({ ...filters, muscles: toggleSubgroup(filters.muscles, s) })
   const toggleEquipment = (e: string) =>
     onChange({ ...filters, equipment: toggle(filters.equipment, e) })
 
@@ -43,7 +56,8 @@ export function ExerciseFilters({ filters, onChange }: Props) {
         <div className="muscle-picker">
           <ul className="muscle-chips" aria-label="Muscle groups">
             {MUSCLE_GROUPS.map((m) => {
-              const on = filters.muscles.has(m)
+              const on = groups.has(m)
+              const subs = MUSCLE_SUBGROUPS[m]
               return (
                 <li key={m}>
                   <button
@@ -57,6 +71,27 @@ export function ExerciseFilters({ filters, onChange }: Props) {
                     </span>
                     {label(m)}
                   </button>
+                  {/* Picked group with targets: narrow it right under its chip.
+                      None picked = the whole group. */}
+                  {on && subs && (
+                    <ul className="sub-chips" aria-label={`${label(m)} targets`}>
+                      {subs.map((s) => {
+                        const subOn = filters.muscles.has(s)
+                        return (
+                          <li key={s}>
+                            <button
+                              type="button"
+                              className={subOn ? 'chip small on' : 'chip small'}
+                              aria-pressed={subOn}
+                              onClick={() => toggleSub(s)}
+                            >
+                              {label(s)}
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
                 </li>
               )
             })}
@@ -78,7 +113,7 @@ export function ExerciseFilters({ filters, onChange }: Props) {
                 Back
               </button>
             </div>
-            <BodyMap side={side} selected={filters.muscles} onToggle={toggleMuscle} />
+            <BodyMap side={side} selected={groups} onToggle={toggleMuscle} />
           </div>
         </div>
       ) : (

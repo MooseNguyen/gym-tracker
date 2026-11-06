@@ -1,4 +1,4 @@
-import type { Exercise } from '../../types/db'
+import { MUSCLE_SUBGROUPS, muscleParent, type Exercise } from '../../types/db'
 import type { BodyPart } from './bodyMap/data'
 
 /**
@@ -40,15 +40,53 @@ export const NO_FILTERS: ExerciseFilters = { muscles: new Set(), equipment: new 
 /**
  * Any of the picked muscles AND any of the picked equipment AND the name
  * contains the query. An empty selection in a category means "all".
+ * A picked group ('back') also matches its sub-muscles ('lats', ...); a
+ * picked sub-muscle matches only itself.
  */
 export function filterExercises(list: Exercise[], f: ExerciseFilters): Exercise[] {
   const q = f.query.trim().toLowerCase()
   return list.filter(
     (e) =>
-      (f.muscles.size === 0 || f.muscles.has(e.muscle_group)) &&
+      (f.muscles.size === 0 ||
+        f.muscles.has(e.muscle_group) ||
+        f.muscles.has(muscleParent(e.muscle_group))) &&
       (f.equipment.size === 0 || f.equipment.has(e.equipment)) &&
       (!q || e.name.toLowerCase().includes(q)),
   )
+}
+
+/** Groups that are picked directly or through one of their sub-muscles. */
+export function activeGroups(muscles: ReadonlySet<string>): Set<string> {
+  return new Set([...muscles].map(muscleParent))
+}
+
+/**
+ * Tapping a group chip (or the body map): off → the whole group; on (whole
+ * group or narrowed to sub-muscles) → off, sub-muscles included.
+ */
+export function toggleGroup(muscles: ReadonlySet<string>, group: string): Set<string> {
+  const next = new Set(muscles)
+  if (activeGroups(muscles).has(group)) {
+    next.delete(group)
+    for (const s of MUSCLE_SUBGROUPS[group as keyof typeof MUSCLE_SUBGROUPS] ?? []) next.delete(s)
+  } else {
+    next.add(group)
+  }
+  return next
+}
+
+/**
+ * Tapping a sub-muscle chip narrows its group: the group itself is replaced
+ * by the picked sub-muscles, and un-picking the last one goes back to the
+ * whole group (so the group stays selected until its own chip is tapped).
+ */
+export function toggleSubgroup(muscles: ReadonlySet<string>, sub: string): Set<string> {
+  const group = muscleParent(sub)
+  const next = toggle(muscles, sub)
+  next.delete(group)
+  const subs = MUSCLE_SUBGROUPS[group as keyof typeof MUSCLE_SUBGROUPS] ?? []
+  if (!subs.some((s) => next.has(s))) next.add(group)
+  return next
 }
 
 /** Returns a new set with `value` added or removed (immutable, for React state). */

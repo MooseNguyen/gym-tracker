@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
-import type { Exercise } from '../../types/db'
+import { muscleLabel, type Exercise } from '../../types/db'
 import { ExerciseFilters } from './ExerciseFilters'
 import { filterExercises, NO_FILTERS, toggle, type ExerciseFilters as Filters } from './filters'
 
@@ -81,10 +81,10 @@ export function ExerciseList({ exercises, renderAction }: Props) {
                 key={v}
                 type="button"
                 className="chip on small"
-                aria-label={`Remove filter ${v}`}
+                aria-label={`Remove filter ${muscleLabel(v)}`}
                 onClick={() => removeChip(v)}
               >
-                {v} ✕
+                {muscleLabel(v)} ✕
               </button>
             ))}
             <small className="muted results-count">{filtered.length} found</small>
@@ -99,7 +99,7 @@ export function ExerciseList({ exercises, renderAction }: Props) {
                   <div className="grow">
                     <div>{e.name}</div>
                     <small className="muted">
-                      {e.muscle_group} · {e.equipment}
+                      {muscleLabel(e.muscle_group)} · {e.equipment}
                       {e.user_id && ' · custom'}
                     </small>
                   </div>

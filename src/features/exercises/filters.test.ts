@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
-import { MUSCLE_GROUPS, type Exercise } from '../../types/db'
+import { MUSCLE_GROUPS, MUSCLE_SUBGROUPS, muscleParent, type Exercise } from '../../types/db'
 import { BACK, FRONT } from './bodyMap/data'
-import { filterExercises, GROUP_REGIONS, groupForRegion, NO_FILTERS, toggle } from './filters'
+import {
+  activeGroups,
+  filterExercises,
+  GROUP_REGIONS,
+  groupForRegion,
+  NO_FILTERS,
+  toggle,
+  toggleGroup,
+  toggleSubgroup,
+} from './filters'
 
 const ex = (name: string, muscle_group: string, equipment: string): Exercise => ({
   id: name,
@@ -85,6 +94,63 @@ describe('body map mapping', () => {
     expect(groupForRegion('left-soleus')).toBe('calves')
     expect(groupForRegion('head')).toBeNull()
     expect(groupForRegion('knees')).toBeNull()
+  })
+})
+
+describe('sub-muscles', () => {
+  const back = [
+    ex('Lat Pulldown', 'lats', 'cable'),
+    ex('Barbell Row', 'upper-back', 'barbell'),
+    ex('Barbell Shrug', 'traps', 'barbell'),
+    ex('My Old Row', 'back', 'machine'), // custom, created before the split
+    ex('Cable Curl', 'biceps', 'cable'),
+  ]
+
+  it('knows the parent of every value, plain groups included', () => {
+    expect(muscleParent('lats')).toBe('back')
+    expect(muscleParent('upper-chest')).toBe('chest')
+    expect(muscleParent('rear-delts')).toBe('shoulders')
+    expect(muscleParent('back')).toBe('back')
+    expect(muscleParent('biceps')).toBe('biceps')
+  })
+
+  it('every sub-muscle belongs to exactly one existing group', () => {
+    const all = Object.values(MUSCLE_SUBGROUPS).flat()
+    expect(new Set(all).size).toBe(all.length)
+    for (const g of Object.keys(MUSCLE_SUBGROUPS)) expect(MUSCLE_GROUPS).toContain(g)
+  })
+
+  it('a picked group matches its sub-muscles and its legacy plain value', () => {
+    expect(names(filterExercises(back, f(['back'])))).toEqual([
+      'Lat Pulldown',
+      'Barbell Row',
+      'Barbell Shrug',
+      'My Old Row',
+    ])
+  })
+
+  it('a picked sub-muscle matches only itself', () => {
+    expect(names(filterExercises(back, f(['lats', 'traps'])))).toEqual([
+      'Lat Pulldown',
+      'Barbell Shrug',
+    ])
+  })
+
+  it('narrowing a group replaces it; un-picking the last target restores it', () => {
+    const picked = toggleSubgroup(new Set(['back', 'biceps']), 'lats')
+    expect([...picked].sort()).toEqual(['biceps', 'lats'])
+    const both = toggleSubgroup(picked, 'traps')
+    expect([...both].sort()).toEqual(['biceps', 'lats', 'traps'])
+    expect([...toggleSubgroup(toggleSubgroup(both, 'lats'), 'traps')].sort()).toEqual([
+      'back',
+      'biceps',
+    ])
+  })
+
+  it('tapping a group chip clears the group and its targets, or picks it whole', () => {
+    expect([...toggleGroup(new Set(['lats', 'traps', 'biceps']), 'back')]).toEqual(['biceps'])
+    expect([...toggleGroup(new Set(['biceps']), 'back')]).toEqual(['biceps', 'back'])
+    expect([...activeGroups(new Set(['lats', 'mid-chest']))]).toEqual(['back', 'chest'])
   })
 })
 
