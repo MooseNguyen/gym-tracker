@@ -3,15 +3,22 @@
 Personal workout tracker: routines, set logging with "last time" values, rest timer, history and per-exercise progress charts.
 Installable on iPhone as a PWA.
 
-**Stack:** Vite + React 19 + TypeScript, React Router, TanStack Query, Supabase (Postgres, Auth, RLS), Recharts, vite-plugin-pwa. Tests: Vitest + Playwright.
+**Stack:** Vite + React 19 + TypeScript, React Router, TanStack Query, Supabase (Postgres, Auth, RLS), Recharts, dnd-kit, three.js, vite-plugin-pwa. Tests: Vitest + Playwright.
 
 ## Setup
 
 ### 1. Supabase project
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **SQL Editor** → run [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql), then [`supabase/seed.sql`](supabase/seed.sql).
+2. **SQL Editor** → run, in this order:
+   1. [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql)
+   2. [`supabase/seed.sql`](supabase/seed.sql)
+   3. [`supabase/migrations/20261107000000_folders_images.sql`](supabase/migrations/20261107000000_folders_images.sql) (folders + exercise photos; it must run **after** the seed, because it sets the photo of each built-in exercise)
+
    Or with the CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push --include-seed`.
+
+   > **Upgrading an existing database?** Run only the migrations you have not run yet. Never edit a migration that already ran: add a new one.
+
 3. **Authentication → Sign In / Providers → Email**: keep Email enabled.
    - "Confirm email" **on**: after creating the account, click the link in the confirmation email once (opening it in Safari is fine), then sign in.
    - "Confirm email" **off**: you are signed in right after creating the account. Fine for a personal app.
@@ -48,14 +55,15 @@ Then open the app from the home screen and sign in with it.
 
 ## Scripts
 
-| Command            | What it does                                                                   |
-| ------------------ | ------------------------------------------------------------------------------ |
-| `npm run dev`      | Dev server                                                                     |
-| `npm run build`    | Type-check + production build                                                  |
-| `npm run lint`     | ESLint                                                                         |
-| `npm test`         | Unit tests (calc + workout draft logic)                                        |
-| `npm run test:e2e` | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                |
-| `npm run db:types` | Generate TS types from the linked Supabase project (replace `src/types/db.ts`) |
+| Command                                  | What it does                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `npm run dev`                            | Dev server                                                                     |
+| `npm run build`                          | Type-check + production build                                                  |
+| `npm run lint`                           | ESLint                                                                         |
+| `npm test`                               | Unit tests (calc + workout draft logic)                                        |
+| `npm run test:e2e`                       | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                |
+| `npm run db:types`                       | Generate TS types from the linked Supabase project (replace `src/types/db.ts`) |
+| `node scripts/fetch-exercise-images.mjs` | Re-download exercise photos (only when `scripts/exercise-images.json` changes) |
 
 ## Architecture notes
 
@@ -66,6 +74,20 @@ Then open the app from the home screen and sign in with it.
 - **Derived numbers are not stored.** Volume, e1RM (Epley) and PRs are computed from sets ([`shared/calc`](src/shared/calc/index.ts)), so editing an old set can never leave stale stats.
 - **Rest timer** stores `restEndsAt` (a timestamp), not a counter, so it stays correct after the app is backgrounded.
   The screen is kept awake during a workout (Wake Lock API). iOS PWAs cannot schedule a notification for when the rest ends.
+
+- **Drag and drop** uses dnd-kit ([`SortableList`](src/shared/ui/SortableList.tsx)): the HTML5 drag-and-drop API does not fire for touch on iOS.
+  Only the ⠿ handle starts a drag (the card still scrolls), and Space + arrow keys reorder with the keyboard, announced by exercise name.
+- **three.js is decoration, never required.** It lives in its own lazy chunk ([`src/three`](src/three)):
+  - [`heroScene.ts`](src/three/heroScene.ts): dumbbell behind the Home / Login header. ~30 fps, pixel ratio ≤ 1.5, stops when the page is hidden or scrolled away, a still frame with Reduce Motion, and full disposal on unmount.
+  - [`prBurst.ts`](src/three/prBurst.ts): 1.4 s particle burst when a set beats last time. One renderer per burst, released (`forceContextLoss`) right after: iOS allows few live WebGL contexts.
+  - No WebGL, Reduce Motion, or chunk not loaded → a CSS gradient / the text banner only.
+  - The chunk (~130 kB gzip) is precached by the service worker, so the burst also works offline.
+
+## Exercise photos
+
+From [free-exercise-db](https://github.com/yuhonas/free-exercise-db), released into the public domain (Unlicense).
+The original photos look like commercial stock photography whose origin the dataset does not document:
+fine for a personal app, but **check the provenance before using them in a client or commercial product.**
 
 ## Testing checklist that needs a real Supabase project
 
@@ -78,3 +100,12 @@ The E2E tests mock the network, so they do not cover SQL. After setting up Supab
 - [ ] Finish a workout, then start the same routine again → the "Previous" column shows the last values.
 - [ ] Edit an old workout → the "Previous" column shows the workout _before_ it, not itself.
 - [ ] Delete a custom exercise that is used in history → you get a clear error, not a silent delete.
+- [ ] Create a folder, add a routine with "+" → it is saved in that folder. Delete the folder → the routine moves to "Unfiled".
+- [ ] As user B, try to put a routine in one of user A's folders (`save_routine` with A's `folder_id`) → RLS error.
+
+## Checklist on the iPhone
+
+- [ ] Leave the phone on the bench during rest: the screen stays on (Wake Lock; broken in home-screen apps on some older iOS versions).
+- [ ] Lock the phone with the side button during rest, unlock after a minute: the timer shows the right time left, ticked sets are still there.
+- [ ] Drag an exercise by its ⠿ handle: it moves; dragging elsewhere on the card scrolls the page.
+- [ ] Beat a set from last time: banner + particles. With Settings → Accessibility → Motion → Reduce Motion on: banner only.
