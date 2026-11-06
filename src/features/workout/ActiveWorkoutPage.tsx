@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
+import { HowToButton } from '../exercises/HowTo'
 import { formatSetValues } from '../history/format'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
@@ -302,16 +303,24 @@ function ExerciseCard({
           </span>
         }
         actions={
-          <button
-            className="icon-btn danger"
-            aria-label={`Remove ${ex.name}`}
-            onClick={() =>
-              confirm(`Remove ${ex.name} from this workout?`) &&
-              setDraft((d) => removeExercise(d, ex.id))
-            }
-          >
-            ✕
-          </button>
+          <>
+            {/* Mid-set "how was this done again?": the most useful place for it. */}
+            {!ex.custom && (
+              <HowToButton
+                exercise={{ id: ex.exerciseId, name: ex.name, imagePath: ex.imagePath }}
+              />
+            )}
+            <button
+              className="icon-btn danger"
+              aria-label={`Remove ${ex.name}`}
+              onClick={() =>
+                confirm(`Remove ${ex.name} from this workout?`) &&
+                setDraft((d) => removeExercise(d, ex.id))
+              }
+            >
+              ✕
+            </button>
+          </>
         }
       >
         <div className="exercise-body">

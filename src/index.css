@@ -864,6 +864,38 @@ button.link {
 }
 
 /* ==========================================================================
+   How to (instructions)
+   ========================================================================== */
+.how-to .thumb {
+  align-self: center;
+  border-radius: var(--r-card);
+}
+.how-to-steps {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 65ch;
+  line-height: 1.5;
+}
+.how-to-steps li::marker {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+.how-to-card {
+  padding: 4px 14px;
+  gap: 0;
+}
+.how-to-card.open > .disclosure-panel > .disclosure-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
+/* ==========================================================================
    Stats
    ========================================================================== */
 .segmented {

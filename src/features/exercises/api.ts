@@ -14,6 +14,26 @@ export function useExercises() {
   })
 }
 
+/**
+ * Step-by-step instructions, fetched only when the "How to" sheet opens.
+ * Deliberately not part of EXERCISE_COLUMNS: lists, routines and history embed
+ * exercises many times, and ~1 kB of text each would ride along for nothing.
+ * The text never changes at runtime, so it is cached for the whole session.
+ */
+export function useExerciseInstructions(exerciseId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ['exercise-instructions', exerciseId],
+    enabled,
+    staleTime: Infinity,
+    queryFn: async () => {
+      const row = unwrap(
+        await supabase.from('exercises').select('instructions').eq('id', exerciseId).single(),
+      ) as { instructions: string[] | null }
+      return row.instructions ?? []
+    },
+  })
+}
+
 export interface NewExercise {
   name: string
   muscle_group: string

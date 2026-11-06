@@ -13,7 +13,11 @@ Installable on iPhone as a PWA.
 2. **SQL Editor** → run, in this order:
    1. [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql)
    2. [`supabase/seed.sql`](supabase/seed.sql)
-   3. [`supabase/migrations/20261107000000_folders_images.sql`](supabase/migrations/20261107000000_folders_images.sql) (folders + exercise photos; it must run **after** the seed, because it sets the photo of each built-in exercise)
+   3. [`supabase/migrations/20261107000000_folders_images.sql`](supabase/migrations/20261107000000_folders_images.sql) (folders + exercise photos)
+   4. [`supabase/migrations/20261108000000_exercise_instructions.sql`](supabase/migrations/20261108000000_exercise_instructions.sql) (step-by-step instructions)
+
+   Steps 3 and 4 must run **after** the seed: they update the built-in exercises it creates.
+   If step 4 is missing, the app still works; the "How to" sheet just shows no steps.
 
    Or with the CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push --include-seed`.
 
@@ -55,15 +59,16 @@ Then open the app from the home screen and sign in with it.
 
 ## Scripts
 
-| Command                                  | What it does                                                                   |
-| ---------------------------------------- | ------------------------------------------------------------------------------ |
-| `npm run dev`                            | Dev server                                                                     |
-| `npm run build`                          | Type-check + production build                                                  |
-| `npm run lint`                           | ESLint                                                                         |
-| `npm test`                               | Unit tests (calc + workout draft logic)                                        |
-| `npm run test:e2e`                       | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                |
-| `npm run db:types`                       | Generate TS types from the linked Supabase project (replace `src/types/db.ts`) |
-| `node scripts/fetch-exercise-images.mjs` | Re-download exercise photos (only when `scripts/exercise-images.json` changes) |
+| Command                                         | What it does                                                                    |
+| ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run dev`                                   | Dev server                                                                      |
+| `npm run build`                                 | Type-check + production build                                                   |
+| `npm run lint`                                  | ESLint                                                                          |
+| `npm test`                                      | Unit tests (calc + workout draft logic)                                         |
+| `npm run test:e2e`                              | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                 |
+| `npm run db:types`                              | Generate TS types from the linked Supabase project (replace `src/types/db.ts`)  |
+| `node scripts/fetch-exercise-images.mjs`        | Re-download exercise photos (only when `scripts/exercise-images.json` changes)  |
+| `node scripts/build-instructions-migration.mjs` | Regenerate the instructions migration from free-exercise-db (same mapping file) |
 
 ## Architecture notes
 
@@ -83,9 +88,10 @@ Then open the app from the home screen and sign in with it.
   - No WebGL, Reduce Motion, or chunk not loaded → a CSS gradient / the text banner only.
   - The chunk (~130 kB gzip) is precached by the service worker, so the burst also works offline.
 
-## Exercise photos
+## Exercise photos and instructions
 
-From [free-exercise-db](https://github.com/yuhonas/free-exercise-db), released into the public domain (Unlicense).
+Both from [free-exercise-db](https://github.com/yuhonas/free-exercise-db), released into the public domain (Unlicense).
+Instructions are loaded only when the "How to" sheet opens, so lists and history do not carry ~1 kB of text per exercise.
 The original photos look like commercial stock photography whose origin the dataset does not document:
 fine for a personal app, but **check the provenance before using them in a client or commercial product.**
 

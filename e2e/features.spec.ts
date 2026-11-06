@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { bench, fakeLogin, folders, mockSupabase, routines } from './mockSupabase'
+import { bench, customCurl, fakeLogin, folders, mockSupabase, routines } from './mockSupabase'
 
 test.beforeEach(async ({ page }) => {
   await fakeLogin(page)
@@ -232,4 +232,52 @@ test('a set cannot be ticked without reps: the empty field is flagged and focuse
   expect(api.saved[0].exercises[0].sets).toEqual([
     { set_type: 'normal', weight_kg: 60, reps: 10, duration_s: null, rpe: null },
   ])
+})
+
+test.describe('how to', () => {
+  test('opens the steps from an exercise card without losing the workout', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByLabel('Set 1 weight').fill('70')
+
+    await card.getByRole('button', { name: 'How to do Bench Press' }).click()
+    const sheet = page.getByRole('dialog', { name: 'How to: Bench Press' })
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByRole('listitem')).toHaveText([
+      'Lie back on a flat bench and unrack the bar.',
+      "Lower it to your mid chest; don't bounce.",
+      'Press back up and lock your arms.',
+    ])
+    await expect(sheet.getByRole('link', { name: 'free-exercise-db' })).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+    await expect(card.getByLabel('Set 1 weight')).toHaveValue('70')
+  })
+
+  test('custom exercises have no how-to button', async ({ page }) => {
+    await mockSupabase(page, { routines, folders, exercises: [bench, customCurl] })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Start empty workout' }).click()
+    await page.getByRole('button', { name: '+ Add exercises' }).click()
+    await page.getByRole('button', { name: 'Select Bench Press' }).click()
+    await page.getByRole('button', { name: 'Select My Cable Curl' }).click()
+    await page.getByRole('button', { name: 'Add 2 exercises' }).click()
+
+    await expect(page.getByRole('button', { name: 'How to do Bench Press' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'How to do My Cable Curl' })).toHaveCount(0)
+  })
+
+  test('the stats page shows the steps even before any history', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await page.route('**/rest/v1/workout_exercises*', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    )
+    await page.goto(`/exercises/${bench.id}`)
+    await expect(page.getByRole('heading', { name: 'Bench Press', level: 1 })).toBeVisible()
+    await expect(page.getByText('No history yet.')).toBeVisible()
+    await page.getByRole('button', { name: 'How to do it' }).click()
+    await expect(page.getByRole('listitem')).toHaveCount(3)
+  })
 })

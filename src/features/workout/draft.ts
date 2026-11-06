@@ -4,7 +4,10 @@ import type { Exercise, ExerciseKind, PreviousSet, SetType, Workout } from '../.
 import { reorder } from '../../shared/reorder'
 
 /** What a draft needs to know about an exercise. Tests can omit the image. */
-export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & { image_path?: string | null }
+export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & {
+  image_path?: string | null
+  user_id?: string | null
+}
 
 export interface DraftSet {
   id: string
@@ -25,6 +28,8 @@ export interface DraftExercise {
   kind: ExerciseKind
   /** Optional: drafts saved before images existed do not have it. */
   imagePath?: string | null
+  /** User-created exercise: has no built-in instructions. Missing in old drafts = built-in. */
+  custom?: boolean
   restSeconds: number
   notes: string
   sets: DraftSet[]
@@ -70,6 +75,7 @@ export function draftExercise(
     name: exercise.name,
     kind: exercise.kind,
     imagePath: exercise.image_path ?? null,
+    custom: !!exercise.user_id,
     restSeconds,
     notes: '',
     sets: Array.from({ length: Math.max(1, sets) }, () => emptySet()),
@@ -119,6 +125,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
       name: we.exercise.name,
       kind: we.exercise.kind,
       imagePath: we.exercise.image_path,
+      custom: !!we.exercise.user_id,
       restSeconds: DEFAULT_REST,
       notes: we.notes ?? '',
       sets: we.sets.map((s) => ({
