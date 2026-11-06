@@ -625,12 +625,46 @@ button.link {
 }
 
 .exercise-card {
+  gap: 0;
+  padding: 6px 10px 6px 4px;
+}
+.exercise-card .disclosure-toggle {
+  gap: 8px;
+}
+.exercise-summary {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.set-count {
+  flex: none;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.set-count.done {
+  background: rgb(34 197 94 / 0.16);
+  color: var(--success);
+}
+.exercise-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 0 8px 6px;
 }
 .exercise-title {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-display);
   font-size: 1.25rem;
+  font-weight: 700;
   color: var(--accent-soft);
 }
 .note-input {
@@ -683,6 +717,10 @@ button.link {
   font-size: 1.15rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
+}
+.num-input.invalid {
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px rgb(248 113 113 / 0.2);
 }
 .num-input::placeholder {
   color: #5b6474;
@@ -823,6 +861,38 @@ button.link {
   flex-direction: column;
   gap: 4px;
   font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   How to (instructions)
+   ========================================================================== */
+.how-to .thumb {
+  align-self: center;
+  border-radius: var(--r-card);
+}
+.how-to-steps {
+  margin: 0;
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 65ch;
+  line-height: 1.5;
+}
+.how-to-steps li::marker {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+.how-to-card {
+  padding: 4px 14px;
+  gap: 0;
+}
+.how-to-card.open > .disclosure-panel > .disclosure-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
 }
 
 /* ==========================================================================

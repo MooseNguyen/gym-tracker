@@ -4,6 +4,8 @@ interface Props {
   imagePath: string | null | undefined
   name: string
   size?: number
+  /** Next to the exercise name (e.g. inside a button): empty alt, so it is not read twice. */
+  decorative?: boolean
 }
 
 /**
@@ -11,7 +13,7 @@ interface Props {
  * when it loads) and lazy loading. Custom exercises have no image, and a missing
  * file falls back to the same placeholder instead of a broken-image icon.
  */
-export function ExerciseThumb({ imagePath, name, size = 48 }: Props) {
+export function ExerciseThumb({ imagePath, name, size = 48, decorative = false }: Props) {
   const [failed, setFailed] = useState(false)
   const style = { width: size, height: size }
 
@@ -34,7 +36,7 @@ export function ExerciseThumb({ imagePath, name, size = 48 }: Props) {
     <img
       className="thumb"
       src={`/exercises/${imagePath}`}
-      alt={`${name} demonstration`}
+      alt={decorative ? '' : `${name} demonstration`}
       width={size}
       height={size}
       loading="lazy"

@@ -5,6 +5,7 @@ import { QueryState } from '../../shared/ui/QueryState'
 import { EQUIPMENT, MUSCLE_GROUPS, type ExerciseKind } from '../../types/db'
 import { useCreateExercise, useDeleteExercise, useExercises } from './api'
 import { ExerciseList } from './ExerciseList'
+import { HowToButton } from './HowTo'
 
 export function ExercisesPage() {
   const { data = [], isPending, error, refetch } = useExercises()
@@ -29,6 +30,9 @@ export function ExercisesPage() {
           exercises={data}
           renderAction={(e) => (
             <div className="row">
+              {!e.user_id && (
+                <HowToButton exercise={{ id: e.id, name: e.name, imagePath: e.image_path }} />
+              )}
               <Link className="btn small" to={`/exercises/${e.id}`}>
                 Stats
               </Link>

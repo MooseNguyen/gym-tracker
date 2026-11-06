@@ -4,7 +4,10 @@ import type { Exercise, ExerciseKind, PreviousSet, SetType, Workout } from '../.
 import { reorder } from '../../shared/reorder'
 
 /** What a draft needs to know about an exercise. Tests can omit the image. */
-export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & { image_path?: string | null }
+export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & {
+  image_path?: string | null
+  user_id?: string | null
+}
 
 export interface DraftSet {
   id: string
@@ -25,6 +28,8 @@ export interface DraftExercise {
   kind: ExerciseKind
   /** Optional: drafts saved before images existed do not have it. */
   imagePath?: string | null
+  /** User-created exercise: has no built-in instructions. Missing in old drafts = built-in. */
+  custom?: boolean
   restSeconds: number
   notes: string
   sets: DraftSet[]
@@ -70,6 +75,7 @@ export function draftExercise(
     name: exercise.name,
     kind: exercise.kind,
     imagePath: exercise.image_path ?? null,
+    custom: !!exercise.user_id,
     restSeconds,
     notes: '',
     sets: Array.from({ length: Math.max(1, sets) }, () => emptySet()),
@@ -119,6 +125,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
       name: we.exercise.name,
       kind: we.exercise.kind,
       imagePath: we.exercise.image_path,
+      custom: !!we.exercise.user_id,
       restSeconds: DEFAULT_REST,
       notes: we.notes ?? '',
       sets: we.sets.map((s) => ({
@@ -192,9 +199,25 @@ export function nextSetType(t: SetType): SetType {
   return SET_TYPE_CYCLE[(SET_TYPE_CYCLE.indexOf(t) + 1) % SET_TYPE_CYCLE.length]
 }
 
+/** The value a set cannot be logged without: reps, or seconds for timed exercises. */
+export function requiredField(kind: ExerciseKind): 'reps' | 'duration' {
+  return kind === 'duration' ? 'duration' : 'reps'
+}
+
+/** A set is loggable only with a positive rep count (or duration). Weight is optional. */
+export function hasRequiredValue(kind: ExerciseKind, set: DraftSet): boolean {
+  const n = parseNumber(set[requiredField(kind)])
+  return n != null && n > 0
+}
+
 /**
  * Ticks a set on or off. Completing a set fills empty fields from last time
  * (tap ✓ to "repeat what I did last week") and starts the rest timer.
+ *
+ * Refuses to complete a set that still has no reps (or duration) after that
+ * fill and returns the draft unchanged: an empty ticked set used to be saved
+ * and then shown as "BW × 0" in Previous. The caller detects the refusal
+ * (the set is still not completed) and points the user at the empty field.
  */
 export function toggleSetComplete(
   d: WorkoutDraft,
@@ -210,12 +233,16 @@ export function toggleSetComplete(
   if (set.completed) return updateSet(d, exId, setId, { completed: false })
 
   const str = (n: number | null | undefined) => (n == null ? '' : String(n))
-  const next = updateSet(d, exId, setId, {
+  const filled: DraftSet = {
+    ...set,
     completed: true,
     weight: set.weight || str(previous?.weight_kg),
     reps: set.reps || str(previous?.reps),
     duration: set.duration || str(previous?.duration_s),
-  })
+  }
+  if (!hasRequiredValue(ex.kind, filled)) return d
+
+  const next = updateSet(d, exId, setId, filled)
   return { ...next, restEndsAt: ex.restSeconds > 0 ? now + ex.restSeconds * 1000 : null }
 }
 
@@ -312,7 +339,9 @@ export function toSavePayload(d: WorkoutDraft, now = new Date()): SaveWorkoutPay
         exercise_id: e.exerciseId,
         notes: e.notes.trim() || null,
         sets: e.sets
-          .filter((s) => s.completed)
+          // Second check: a draft saved before ticking was validated (or edited
+          // afterwards) can still hold a ticked set with no reps. Never save it.
+          .filter((s) => s.completed && hasRequiredValue(e.kind, s))
           .map((s) => ({
             set_type: s.setType,
             // Every kind can carry weight: a weighted pull-up, a plate on a plank.

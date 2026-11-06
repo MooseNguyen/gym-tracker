@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { bench, fakeLogin, folders, mockSupabase, routines } from './mockSupabase'
+import { bench, customCurl, fakeLogin, folders, mockSupabase, routines } from './mockSupabase'
 
 test.beforeEach(async ({ page }) => {
   await fakeLogin(page)
@@ -143,4 +143,141 @@ test('the home 3D scene is torn down on navigation (no leaked canvases)', async 
     await expect(canvases).toHaveCount(1)
   }
   expect(await page.locator('canvas').count()).toBe(1)
+})
+
+test.describe('collapsible exercise cards', () => {
+  test('a card folds to its header, keeps its sets, and shows progress', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByLabel('Set 1 weight').fill('60')
+    await card.getByLabel('Set 1 reps').fill('10')
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+    const toggle = card.getByRole('button', { name: /Bench Press 1\/3 sets/ })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(card.getByLabel('Set 1 weight')).toBeHidden()
+
+    await toggle.click()
+    await expect(card.getByLabel('Set 1 weight')).toHaveValue('60') // nothing lost
+  })
+
+  test('collapse all, reorder while folded, expand all', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const titles = page.locator('.exercise-title')
+
+    await page.getByRole('button', { name: 'Collapse all' }).click()
+    await expect(
+      page.locator('.exercise-card .disclosure-toggle[aria-expanded="false"]'),
+    ).toHaveCount(2)
+    await expect(page.getByLabel('Set 1 weight')).toHaveCount(2) // still in the DOM…
+    await expect(page.getByLabel('Set 1 weight').first()).toBeHidden() // …but folded away
+
+    const live = page.locator('[id^="DndLiveRegion"]')
+    await page.getByRole('button', { name: 'Reorder Bench Press' }).focus()
+    await page.keyboard.press('Space')
+    await expect(live).toContainText('Bench Press moved to position 1 of 2.')
+    await page.keyboard.press('ArrowDown')
+    await expect(live).toContainText('Bench Press moved to position 2 of 2.')
+    await page.keyboard.press('Space')
+    await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
+
+    // Still folded after the move; the toggle label flips back.
+    await expect(
+      page.locator('.exercise-card .disclosure-toggle[aria-expanded="false"]'),
+    ).toHaveCount(2)
+    await page.getByRole('button', { name: 'Expand all' }).click()
+    await expect(
+      page.locator('.exercise-card .disclosure-toggle[aria-expanded="true"]'),
+    ).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Collapse all' })).toBeVisible()
+  })
+})
+
+test('a set cannot be ticked without reps: the empty field is flagged and focused', async ({
+  page,
+}) => {
+  // No previous workout, so nothing can be filled in automatically.
+  const api = await mockSupabase(page, { routines, folders })
+  await startPush(page)
+  const card = page.getByRole('region', { name: bench.name })
+  const reps = card.getByLabel('Set 1 reps')
+
+  await card.getByLabel('Set 1 weight').fill('60')
+  await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+  await expect(card.getByRole('button', { name: 'Set 1 done' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
+  await expect(card.getByRole('alert')).toHaveText('Enter reps for set 1, then tick it.')
+  await expect(reps).toHaveAttribute('aria-invalid', 'true')
+  await expect(reps).toBeFocused()
+  await expect(page.getByRole('timer')).toHaveCount(0) // no rest started for a refused tick
+
+  await reps.fill('10')
+  await expect(card.getByRole('alert')).toHaveCount(0)
+  await expect(reps).not.toHaveAttribute('aria-invalid', 'true')
+  await card.getByRole('button', { name: 'Set 1 done' }).click()
+  await expect(card.getByRole('button', { name: 'Set 1 done' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
+  await page.getByRole('button', { name: 'Finish workout' }).click()
+  await expect(page).toHaveURL(/\/history\//)
+  expect(api.saved[0].exercises[0].sets).toEqual([
+    { set_type: 'normal', weight_kg: 60, reps: 10, duration_s: null, rpe: null },
+  ])
+})
+
+test.describe('how to', () => {
+  test('opens the steps from an exercise card without losing the workout', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByLabel('Set 1 weight').fill('70')
+
+    await card.getByRole('button', { name: 'How to do Bench Press' }).click()
+    const sheet = page.getByRole('dialog', { name: 'How to: Bench Press' })
+    await expect(sheet).toBeVisible()
+    await expect(sheet.getByRole('listitem')).toHaveText([
+      'Lie back on a flat bench and unrack the bar.',
+      "Lower it to your mid chest; don't bounce.",
+      'Press back up and lock your arms.',
+    ])
+    await expect(sheet.getByRole('link', { name: 'free-exercise-db' })).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(sheet).toBeHidden()
+    await expect(card.getByLabel('Set 1 weight')).toHaveValue('70')
+  })
+
+  test('custom exercises have no how-to button', async ({ page }) => {
+    await mockSupabase(page, { routines, folders, exercises: [bench, customCurl] })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Start empty workout' }).click()
+    await page.getByRole('button', { name: '+ Add exercises' }).click()
+    await page.getByRole('button', { name: 'Select Bench Press' }).click()
+    await page.getByRole('button', { name: 'Select My Cable Curl' }).click()
+    await page.getByRole('button', { name: 'Add 2 exercises' }).click()
+
+    await expect(page.getByRole('button', { name: 'How to do Bench Press' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'How to do My Cable Curl' })).toHaveCount(0)
+  })
+
+  test('the stats page shows the steps even before any history', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await page.route('**/rest/v1/workout_exercises*', (r) =>
+      r.fulfill({ status: 200, contentType: 'application/json', body: '[]' }),
+    )
+    await page.goto(`/exercises/${bench.id}`)
+    await expect(page.getByRole('heading', { name: 'Bench Press', level: 1 })).toBeVisible()
+    await expect(page.getByText('No history yet.')).toBeVisible()
+    await page.getByRole('button', { name: 'How to do it' }).click()
+    await expect(page.getByRole('listitem')).toHaveCount(3)
+  })
 })

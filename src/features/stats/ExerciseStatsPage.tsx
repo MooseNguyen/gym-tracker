@@ -10,7 +10,9 @@ import {
   YAxis,
 } from 'recharts'
 import { personalRecords, type SessionSummary } from '../../shared/calc'
+import { Disclosure } from '../../shared/ui/Disclosure'
 import { QueryState } from '../../shared/ui/QueryState'
+import { HowToSteps } from '../exercises/HowTo'
 import { formatDate } from '../history/format'
 import { useExerciseHistory } from './api'
 
@@ -44,16 +46,24 @@ export default function ExerciseStatsPage() {
     .filter((s) => s[metric] != null)
     .map((s) => ({ date: shortDate.format(new Date(s.date)), value: s[metric] as number }))
 
+  const exercise = q.data?.exercise
+
   return (
     <main className="page">
+      {exercise && <h1>{exercise.name}</h1>}
+      {/* Above the history, so it is there even before the first session. */}
+      {exercise && !exercise.user_id && (
+        <Disclosure className="card how-to-card" summary={<strong>How to do it</strong>}>
+          <HowToSteps exerciseId={exercise.id} />
+        </Disclosure>
+      )}
       <QueryState
         isPending={q.isPending}
         error={q.error}
         onRetry={q.refetch}
         isEmpty={sessions.length === 0}
-        empty={<p>{q.data?.exercise.name}: no history yet. Log it in a workout and come back.</p>}
+        empty={<p>No history yet. Log it in a workout and come back.</p>}
       >
-        <h1>{q.data?.exercise.name}</h1>
         <p className="muted">
           {sessions.length} session{sessions.length === 1 ? '' : 's'}
         </p>

@@ -95,6 +95,8 @@ export interface SavedWorkout {
 
 export interface MockOptions {
   previous?: Partial<SavedSet>
+  /** Exercise library; defaults to [bench]. */
+  exercises?: { id: string }[]
   routines?: unknown[]
   folders?: unknown[]
 }
@@ -124,7 +126,14 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     const path = url.pathname
     const single = (req.headers()['accept'] ?? '').includes('vnd.pgrst.object')
 
-    if (path === '/rest/v1/exercises') return json(route, single ? bench : [bench])
+    if (path === '/rest/v1/exercises') {
+      const library = opts.exercises ?? [bench]
+      if (!single) return json(route, library)
+      // .single() by id: the stats page and the instructions sheet.
+      const id = url.searchParams.get('id')?.replace('eq.', '')
+      const found = [bench, overheadPress, pullUp, ...library].find((e) => e.id === id) ?? bench
+      return json(route, { ...found, instructions: INSTRUCTIONS[found.id] ?? null })
+    }
     if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
     if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
@@ -224,3 +233,21 @@ export const routines = [
     routine_exercises: [],
   },
 ]
+
+export const customCurl = {
+  id: 'ex-custom',
+  user_id: '00000000-0000-0000-0000-00000000a5e1',
+  name: 'My Cable Curl',
+  muscle_group: 'biceps',
+  equipment: 'cable',
+  kind: 'weight_reps',
+  image_path: null,
+}
+
+const INSTRUCTIONS: Record<string, string[]> = {
+  [bench.id]: [
+    'Lie back on a flat bench and unrack the bar.',
+    "Lower it to your mid chest; don't bounce.",
+    'Press back up and lock your arms.',
+  ],
+}

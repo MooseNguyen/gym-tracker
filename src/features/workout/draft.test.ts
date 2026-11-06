@@ -89,10 +89,64 @@ describe('toggleSetComplete', () => {
   it('un-ticks without touching the rest timer', () => {
     let d = draftWith(bench)
     const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { reps: '5' })
     d = toggleSetComplete(d, ex.id, ex.sets[0].id, undefined, 1_000)
     d = toggleSetComplete(d, ex.id, ex.sets[0].id, undefined, 5_000)
     expect(d.exercises[0].sets[0].completed).toBe(false)
     expect(d.restEndsAt).toBe(121_000)
+  })
+
+  it('refuses to tick a set with no reps and nothing to fill from', () => {
+    const d = draftWith(pullUp)
+    const ex = d.exercises[0]
+    const next = toggleSetComplete(d, ex.id, ex.sets[0].id, undefined)
+    expect(next).toBe(d) // unchanged: no tick, no rest timer
+  })
+
+  it('refuses zero reps, including a bad "0 reps" previous set', () => {
+    let d = draftWith(pullUp)
+    const ex = d.exercises[0]
+    const badPrev = {
+      exercise_id: 'ex-pullup',
+      position: 0,
+      set_type: 'normal' as const,
+      weight_kg: null,
+      reps: 0,
+      duration_s: null,
+      rpe: null,
+    }
+    expect(toggleSetComplete(d, ex.id, ex.sets[0].id, badPrev)).toBe(d)
+    d = updateSet(d, ex.id, ex.sets[0].id, { reps: '0' })
+    expect(toggleSetComplete(d, ex.id, ex.sets[0].id, undefined)).toBe(d)
+  })
+
+  it('ticks when reps come from the previous workout', () => {
+    const d = draftWith(pullUp)
+    const ex = d.exercises[0]
+    const prev = {
+      exercise_id: 'ex-pullup',
+      position: 0,
+      set_type: 'normal' as const,
+      weight_kg: null,
+      reps: 8,
+      duration_s: null,
+      rpe: null,
+    }
+    expect(toggleSetComplete(d, ex.id, ex.sets[0].id, prev).exercises[0].sets[0]).toMatchObject({
+      completed: true,
+      reps: '8',
+    })
+  })
+
+  it('requires a duration (not reps) for timed exercises; weight is never required', () => {
+    let d = draftWith(plank)
+    const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { reps: '10', weight: '5' })
+    expect(toggleSetComplete(d, ex.id, ex.sets[0].id, undefined)).toBe(d)
+    d = updateSet(d, ex.id, ex.sets[0].id, { duration: '45', weight: '' })
+    expect(
+      toggleSetComplete(d, ex.id, ex.sets[0].id, undefined).exercises[0].sets[0].completed,
+    ).toBe(true)
   })
 })
 
@@ -225,5 +279,17 @@ describe('describeImprovement', () => {
   it('lists only what improved', () => {
     expect(describeImprovement({ kg: 2.5, reps: 1, seconds: 0 })).toBe('+2.5 kg · +1 rep')
     expect(describeImprovement({ kg: 0, reps: 3, seconds: 0 })).toBe('+3 reps')
+  })
+})
+
+describe('toSavePayload with an old draft', () => {
+  it('drops ticked sets that have no reps (drafts saved before ticking was validated)', () => {
+    let d = draftWith(pullUp)
+    const [p] = d.exercises
+    // Bypasses toggleSetComplete on purpose: this is what an old localStorage draft can hold.
+    d = updateSet(d, p.id, p.sets[0].id, { reps: '', completed: true })
+    d = updateSet(d, p.id, p.sets[1].id, { reps: '6', completed: true })
+    expect(toSavePayload(d).exercises[0].sets).toHaveLength(1)
+    expect(toSavePayload(d).exercises[0].sets[0].reps).toBe(6)
   })
 })
