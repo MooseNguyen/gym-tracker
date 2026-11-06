@@ -1,23 +1,31 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
+import { formatSetValues } from '../history/format'
+import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
+import { DragHandle, SortableList, type HandleProps } from '../../shared/ui/SortableList'
 import type { PreviousSet, SetType } from '../../types/db'
 import {
   addExercises,
   addSet,
   completedSetCount,
-  moveExercise,
+  describeImprovement,
+  improvementOver,
   nextSetType,
   removeExercise,
   removeSet,
+  reorderExercises,
   toSavePayload,
   toggleSetComplete,
   updateExercise,
   updateSet,
   type DraftExercise,
+  type DraftSet,
 } from './draft'
 import { setDraft, useDraft } from './draftStore'
 import { usePreviousSets, useSaveWorkout } from './api'
+import { PrBanner, type Celebration } from './PrBanner'
+import { playCelebration } from './celebrate'
 import { RestTimer } from './RestTimer'
 import { formatDuration, useNow } from './useNow'
 import { useWakeLock } from './useWakeLock'
@@ -27,6 +35,8 @@ export function ActiveWorkoutPage() {
   const navigate = useNavigate()
   const save = useSaveWorkout()
   const [picking, setPicking] = useState(false)
+  const [celebration, setCelebration] = useState<Celebration | null>(null)
+  const clearCelebration = useCallback(() => setCelebration(null), [])
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
   useWakeLock(isNew)
@@ -50,6 +60,21 @@ export function ActiveWorkoutPage() {
     )
 
   const completed = completedSetCount(draft)
+
+  function toggleDone(ex: DraftExercise, set: DraftSet, prev: PreviousSet | undefined) {
+    let completedSet: DraftSet | undefined
+    setDraft((d) => {
+      const next = toggleSetComplete(d, ex.id, set.id, prev)
+      completedSet = next.exercises.find((e) => e.id === ex.id)?.sets.find((s) => s.id === set.id)
+      return next
+    })
+    // Only when ticking on (not off), and not while editing an old workout.
+    if (!isNew || set.completed || !completedSet?.completed) return
+    const gain = improvementOver(completedSet, prev)
+    if (!gain) return
+    setCelebration({ id: Date.now(), exercise: ex.name, text: describeImprovement(gain) })
+    playCelebration()
+  }
 
   function finish() {
     if (!draft) return
@@ -87,22 +112,24 @@ export function ActiveWorkoutPage() {
 
   return (
     <main className="page workout">
-      <header className="stack">
+      <header className="workout-header">
         <input
           className="title-input"
           aria-label="Workout name"
           value={draft.name}
           onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
         />
-        <div className="row between muted">
-          <span>
-            {isNew
-              ? formatDuration((now - Date.parse(draft.startedAt)) / 1000)
-              : 'Editing saved workout'}
-          </span>
-          <span>
-            {completed} set{completed === 1 ? '' : 's'} done
-          </span>
+        <div className="workout-stats">
+          <div>
+            <span className="stat-label">Duration</span>
+            <span className="stat-value">
+              {isNew ? formatDuration((now - Date.parse(draft.startedAt)) / 1000) : 'Editing'}
+            </span>
+          </div>
+          <div>
+            <span className="stat-label">Sets done</span>
+            <span className="stat-value">{completed}</span>
+          </div>
         </div>
       </header>
 
@@ -114,15 +141,20 @@ export function ActiveWorkoutPage() {
         <p className="muted center">Add an exercise to get started.</p>
       )}
 
-      {draft.exercises.map((ex, i) => (
-        <ExerciseCard
-          key={ex.id}
-          ex={ex}
-          isFirst={i === 0}
-          isLast={i === draft.exercises.length - 1}
-          previous={previous.data?.get(ex.exerciseId) ?? []}
+      <div className="stack">
+        <SortableList
+          items={draft.exercises}
+          onReorder={(from, to) => setDraft((d) => reorderExercises(d, from, to))}
+          renderItem={(ex, handle) => (
+            <ExerciseCard
+              ex={ex}
+              handle={handle}
+              previous={previous.data?.get(ex.exerciseId) ?? []}
+              onToggleDone={toggleDone}
+            />
+          )}
         />
-      ))}
+      </div>
 
       <button className="btn block" onClick={() => setPicking(true)}>
         + Add exercises
@@ -153,6 +185,7 @@ export function ActiveWorkoutPage() {
       </div>
 
       {isNew && draft.restEndsAt && <RestTimer endsAt={draft.restEndsAt} />}
+      <PrBanner celebration={celebration} onDone={clearCelebration} />
 
       <ExercisePicker
         open={picking}
@@ -172,56 +205,34 @@ const restOptions = (current: number) =>
 
 function ExerciseCard({
   ex,
+  handle,
   previous,
-  isFirst,
-  isLast,
+  onToggleDone,
 }: {
   ex: DraftExercise
+  handle: HandleProps
   previous: PreviousSet[]
-  isFirst: boolean
-  isLast: boolean
+  onToggleDone: (ex: DraftExercise, set: DraftSet, prev: PreviousSet | undefined) => void
 }) {
   let normalCount = 0
-
-  const formatPrevious = (p: PreviousSet | undefined) => {
-    if (!p) return '—'
-    if (ex.kind === 'duration') return p.duration_s != null ? `${p.duration_s}s` : '—'
-    if (ex.kind === 'bodyweight_reps') return p.reps != null ? `${p.reps} reps` : '—'
-    return p.weight_kg != null && p.reps != null ? `${p.weight_kg}×${p.reps}` : '—'
-  }
+  const timed = ex.kind === 'duration'
 
   return (
-    <section className="card stack" aria-label={ex.name}>
-      <div className="row between">
+    <section className="card exercise-card" aria-label={ex.name}>
+      <div className="exercise-head">
+        <DragHandle handle={handle} label={`Reorder ${ex.name}`} />
+        <ExerciseThumb imagePath={ex.imagePath} name={ex.name} size={44} />
         <h2 className="exercise-title">{ex.name}</h2>
-        <div className="row">
-          <button
-            className="btn small"
-            aria-label="Move up"
-            disabled={isFirst}
-            onClick={() => setDraft((d) => moveExercise(d, ex.id, -1))}
-          >
-            ↑
-          </button>
-          <button
-            className="btn small"
-            aria-label="Move down"
-            disabled={isLast}
-            onClick={() => setDraft((d) => moveExercise(d, ex.id, 1))}
-          >
-            ↓
-          </button>
-          <button
-            className="btn small danger"
-            aria-label={`Remove ${ex.name}`}
-            onClick={() =>
-              confirm(`Remove ${ex.name} from this workout?`) &&
-              setDraft((d) => removeExercise(d, ex.id))
-            }
-          >
-            ✕
-          </button>
-        </div>
+        <button
+          className="icon-btn danger"
+          aria-label={`Remove ${ex.name}`}
+          onClick={() =>
+            confirm(`Remove ${ex.name} from this workout?`) &&
+            setDraft((d) => removeExercise(d, ex.id))
+          }
+        >
+          ✕
+        </button>
       </div>
 
       <input
@@ -237,8 +248,8 @@ function ExerciseCard({
           <tr>
             <th scope="col">Set</th>
             <th scope="col">Previous</th>
-            {ex.kind === 'weight_reps' && <th scope="col">kg</th>}
-            {ex.kind === 'duration' ? <th scope="col">sec</th> : <th scope="col">Reps</th>}
+            <th scope="col">{ex.kind === 'bodyweight_reps' ? '+kg' : 'kg'}</th>
+            <th scope="col">{timed ? 'sec' : 'Reps'}</th>
             <th scope="col">
               <span className="sr-only">Done</span>
             </th>
@@ -254,7 +265,7 @@ function ExerciseCard({
             const prev = previous[i]
             const field = (
               key: 'weight' | 'reps' | 'duration',
-              placeholder: string | null | undefined,
+              placeholder: string,
               decimal: boolean,
             ) => (
               <td>
@@ -262,7 +273,7 @@ function ExerciseCard({
                   className="num-input"
                   inputMode={decimal ? 'decimal' : 'numeric'}
                   aria-label={`Set ${i + 1} ${key}`}
-                  placeholder={placeholder ?? ''}
+                  placeholder={placeholder}
                   value={s[key]}
                   onChange={(e) =>
                     setDraft((d) => updateSet(d, ex.id, s.id, { [key]: e.target.value }))
@@ -285,24 +296,28 @@ function ExerciseCard({
                     {label}
                   </button>
                 </td>
-                <td className="muted">{formatPrevious(prev)}</td>
-                {ex.kind === 'weight_reps' && field('weight', prev?.weight_kg?.toString(), true)}
-                {ex.kind === 'duration'
-                  ? field('duration', prev?.duration_s?.toString(), false)
-                  : field('reps', prev?.reps?.toString(), false)}
+                <td className="prev">{prev ? formatSetValues(ex.kind, prev) : '—'}</td>
+                {field(
+                  'weight',
+                  prev?.weight_kg ? String(prev.weight_kg) : ex.kind === 'weight_reps' ? '' : 'BW',
+                  true,
+                )}
+                {timed
+                  ? field('duration', prev?.duration_s?.toString() ?? '', false)
+                  : field('reps', prev?.reps?.toString() ?? '', false)}
                 <td>
                   <button
                     className={s.completed ? 'check on' : 'check'}
                     aria-pressed={s.completed}
                     aria-label={`Set ${i + 1} done`}
-                    onClick={() => setDraft((d) => toggleSetComplete(d, ex.id, s.id, prev))}
+                    onClick={() => onToggleDone(ex, s, prev)}
                   >
                     ✓
                   </button>
                 </td>
                 <td>
                   <button
-                    className="btn ghost small"
+                    className="icon-btn"
                     aria-label={`Remove set ${i + 1}`}
                     onClick={() => setDraft((d) => removeSet(d, ex.id, s.id))}
                   >
