@@ -26,7 +26,9 @@ const exists = (p) =>
     () => false,
   )
 
-const mapping = JSON.parse(await readFile(path.join(root, 'scripts', 'exercise-images.json'), 'utf8'))
+const mapping = JSON.parse(
+  await readFile(path.join(root, 'scripts', 'exercise-images.json'), 'utf8'),
+)
 delete mapping._source
 await mkdir(outDir, { recursive: true })
 

@@ -173,9 +173,21 @@ describe('improvementOver', () => {
   })
 
   it('reports more kg, more reps, or both', () => {
-    expect(improvementOver(set('82,5', '8'), prev({ weight_kg: 80, reps: 8 }))).toEqual({ kg: 2.5, reps: 0, seconds: 0 })
-    expect(improvementOver(set('80', '10'), prev({ weight_kg: 80, reps: 8 }))).toEqual({ kg: 0, reps: 2, seconds: 0 })
-    expect(improvementOver(set('85', '9'), prev({ weight_kg: 80, reps: 8 }))).toEqual({ kg: 5, reps: 1, seconds: 0 })
+    expect(improvementOver(set('82,5', '8'), prev({ weight_kg: 80, reps: 8 }))).toEqual({
+      kg: 2.5,
+      reps: 0,
+      seconds: 0,
+    })
+    expect(improvementOver(set('80', '10'), prev({ weight_kg: 80, reps: 8 }))).toEqual({
+      kg: 0,
+      reps: 2,
+      seconds: 0,
+    })
+    expect(improvementOver(set('85', '9'), prev({ weight_kg: 80, reps: 8 }))).toEqual({
+      kg: 5,
+      reps: 1,
+      seconds: 0,
+    })
   })
 
   it('counts heavier with fewer reps as progress, as specified', () => {
@@ -188,13 +200,19 @@ describe('improvementOver', () => {
   })
 
   it('treats empty weight as bodyweight (0 kg added)', () => {
-    expect(improvementOver(set('', '10'), prev({ reps: 8 }))).toEqual({ kg: 0, reps: 2, seconds: 0 })
+    expect(improvementOver(set('', '10'), prev({ reps: 8 }))).toEqual({
+      kg: 0,
+      reps: 2,
+      seconds: 0,
+    })
     expect(improvementOver(set('5', '8'), prev({ reps: 8 }))?.kg).toBe(5)
   })
 
   it('ignores warm-ups and sets with no previous', () => {
     expect(improvementOver(set('100', '10', 'warmup'), prev({ weight_kg: 60, reps: 5 }))).toBeNull()
-    expect(improvementOver(set('100', '10'), prev({ weight_kg: 60, reps: 5, set_type: 'warmup' }))).toBeNull()
+    expect(
+      improvementOver(set('100', '10'), prev({ weight_kg: 60, reps: 5, set_type: 'warmup' })),
+    ).toBeNull()
     expect(improvementOver(set('100', '10'), undefined)).toBeNull()
   })
 

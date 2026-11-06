@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { supabase } from '../../lib/supabase'
+import { HeroCanvas } from '../../shared/ui/HeroCanvas'
 import { useAuth } from './AuthProvider'
 
 type Mode = 'signin' | 'signup' | 'forgot'
@@ -72,8 +73,13 @@ export function LoginPage() {
 
   return (
     <main className="page login">
-      <h1>Gym Tracker</h1>
-      <h2>{title}</h2>
+      <header className="hero hero-tall">
+        <HeroCanvas />
+        <div className="hero-text">
+          <p className="eyebrow">Gym Tracker</p>
+          <h1>{title}</h1>
+        </div>
+      </header>
       <form onSubmit={submit} className="stack">
         <label className="field">
           <span>Email</span>

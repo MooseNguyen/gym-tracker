@@ -106,11 +106,16 @@ function RoutineForm({ initial }: { initial?: Routine }) {
           <SortableList
             items={rows}
             onReorder={(from, to) => setRows((rs) => reorder(rs, from, to))}
+            getLabel={(r) => r.exercise.name}
             renderItem={(r, handle) => (
               <div className="card routine-row">
                 <div className="exercise-head">
                   <DragHandle handle={handle} label={`Reorder ${r.exercise.name}`} />
-                  <ExerciseThumb imagePath={r.exercise.image_path} name={r.exercise.name} size={40} />
+                  <ExerciseThumb
+                    imagePath={r.exercise.image_path}
+                    name={r.exercise.name}
+                    size={40}
+                  />
                   <strong className="grow">{r.exercise.name}</strong>
                   <button
                     type="button"

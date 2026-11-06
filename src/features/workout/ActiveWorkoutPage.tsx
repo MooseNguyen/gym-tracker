@@ -61,7 +61,12 @@ export function ActiveWorkoutPage() {
 
   const completed = completedSetCount(draft)
 
-  function toggleDone(ex: DraftExercise, set: DraftSet, prev: PreviousSet | undefined) {
+  function toggleDone(
+    ex: DraftExercise,
+    set: DraftSet,
+    prev: PreviousSet | undefined,
+    origin: { x: number; y: number },
+  ) {
     let completedSet: DraftSet | undefined
     setDraft((d) => {
       const next = toggleSetComplete(d, ex.id, set.id, prev)
@@ -73,7 +78,7 @@ export function ActiveWorkoutPage() {
     const gain = improvementOver(completedSet, prev)
     if (!gain) return
     setCelebration({ id: Date.now(), exercise: ex.name, text: describeImprovement(gain) })
-    playCelebration()
+    playCelebration(origin)
   }
 
   function finish() {
@@ -145,6 +150,7 @@ export function ActiveWorkoutPage() {
         <SortableList
           items={draft.exercises}
           onReorder={(from, to) => setDraft((d) => reorderExercises(d, from, to))}
+          getLabel={(ex) => ex.name}
           renderItem={(ex, handle) => (
             <ExerciseCard
               ex={ex}
@@ -212,7 +218,12 @@ function ExerciseCard({
   ex: DraftExercise
   handle: HandleProps
   previous: PreviousSet[]
-  onToggleDone: (ex: DraftExercise, set: DraftSet, prev: PreviousSet | undefined) => void
+  onToggleDone: (
+    ex: DraftExercise,
+    set: DraftSet,
+    prev: PreviousSet | undefined,
+    origin: { x: number; y: number },
+  ) => void
 }) {
   let normalCount = 0
   const timed = ex.kind === 'duration'
@@ -310,7 +321,14 @@ function ExerciseCard({
                     className={s.completed ? 'check on' : 'check'}
                     aria-pressed={s.completed}
                     aria-label={`Set ${i + 1} done`}
-                    onClick={() => onToggleDone(ex, s, prev)}
+                    onClick={(e) => {
+                      // The burst starts from the ✓ that was tapped.
+                      const r = e.currentTarget.getBoundingClientRect()
+                      onToggleDone(ex, s, prev, {
+                        x: r.left + r.width / 2,
+                        y: r.top + r.height / 2,
+                      })
+                    }}
                   >
                     ✓
                   </button>

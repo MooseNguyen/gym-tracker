@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
+import { HeroCanvas } from '../../shared/ui/HeroCanvas'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { QueryState } from '../../shared/ui/QueryState'
 import type { Routine, RoutineFolder } from '../../types/db'
@@ -44,8 +45,12 @@ export function HomePage() {
 
   return (
     <main className="page home">
-      <header className="page-header">
-        <h1>Workout</h1>
+      <header className="hero">
+        <HeroCanvas />
+        <div className="hero-text">
+          <p className="eyebrow">{todayLabel()}</p>
+          <h1>Ready to train?</h1>
+        </div>
       </header>
 
       {draft && (
@@ -86,8 +91,8 @@ export function HomePage() {
         isEmpty={groups.length === 0}
         empty={
           <p>
-            No routines yet. Create a folder (e.g. "Push Pull Legs") and add the routines you
-            repeat every week.
+            No routines yet. Create a folder (e.g. "Push Pull Legs") and add the routines you repeat
+            every week.
           </p>
         }
       >
@@ -185,7 +190,7 @@ function RoutineItem({ routine, onStart }: { routine: Routine; onStart: () => vo
               <ExerciseThumb imagePath={re.exercise.image_path} name={re.exercise.name} size={40} />
               <span className="grow">{re.exercise.name}</span>
               <small className="muted">
-                {re.target_sets} × set{re.target_sets === 1 ? '' : 's'}
+                {re.target_sets} set{re.target_sets === 1 ? '' : 's'}
               </small>
             </li>
           ))}
@@ -213,3 +218,10 @@ function FolderIcon() {
     </svg>
   )
 }
+
+const dayFmt = new Intl.DateTimeFormat(undefined, {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+})
+const todayLabel = () => dayFmt.format(new Date())

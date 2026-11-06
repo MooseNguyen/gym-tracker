@@ -146,10 +146,7 @@ function mapExercise(
   return { ...d, exercises: d.exercises.map((e) => (e.id === exId ? fn(e) : e)) }
 }
 
-export function addExercises(
-  d: WorkoutDraft,
-  exercises: ExerciseRef[],
-): WorkoutDraft {
+export function addExercises(d: WorkoutDraft, exercises: ExerciseRef[]): WorkoutDraft {
   return { ...d, exercises: [...d.exercises, ...exercises.map((e) => draftExercise(e))] }
 }
 

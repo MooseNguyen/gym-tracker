@@ -16,7 +16,12 @@ describe('groupByFolder', () => {
   it('puts routines under their folder in folder order, unfiled last', () => {
     const groups = groupByFolder(
       [folder('ppl'), folder('upper-lower')],
-      [routine('push', 'ppl'), routine('upper', 'upper-lower'), routine('cardio', null), routine('pull', 'ppl')],
+      [
+        routine('push', 'ppl'),
+        routine('upper', 'upper-lower'),
+        routine('cardio', null),
+        routine('pull', 'ppl'),
+      ],
     )
     expect(groups.map((g) => [g.folder?.id ?? null, g.routines.map((r) => r.id)])).toEqual([
       ['ppl', ['push', 'pull']],
