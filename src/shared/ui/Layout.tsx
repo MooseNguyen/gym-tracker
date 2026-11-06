@@ -1,7 +1,8 @@
-import { useLayoutEffect, type ReactNode } from 'react'
+import { useLayoutEffect, useState, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { supabase } from '../../lib/supabase'
 import { useDraft } from '../../features/workout/draftStore'
+import { Dialog } from './Dialog'
 
 // Inline 24px stroke icons: five small paths don't justify an icon library.
 function Icon({ children }: { children: ReactNode }) {
@@ -53,6 +54,7 @@ const icons = {
 export function Layout() {
   const draft = useDraft()
   const { pathname } = useLocation()
+  const [confirmingLogout, setConfirmingLogout] = useState(false)
 
   // BrowserRouter keeps the window scroll position across navigations, so
   // "Start" near the bottom of Home used to open the workout half-way down.
@@ -87,22 +89,57 @@ export function Layout() {
           {icons.exercises}
           Exercises
         </NavLink>
-        <button
-          onClick={() => {
-            if (
-              draft &&
-              !confirm(
-                'You have an unfinished workout on this phone. It stays saved here. Log out?',
-              )
-            )
-              return
-            supabase.auth.signOut()
-          }}
-        >
+        <button type="button" onClick={() => setConfirmingLogout(true)}>
           {icons.logout}
           Log out
         </button>
       </nav>
+
+      <Dialog open={confirmingLogout} onClose={() => setConfirmingLogout(false)} title="Log out?">
+        <LogoutConfirm hasDraft={!!draft} onCancel={() => setConfirmingLogout(false)} />
+      </Dialog>
+    </div>
+  )
+}
+
+/** Body of the log-out dialog. A failed sign-out keeps the dialog open with the reason. */
+function LogoutConfirm({ hasDraft, onCancel }: { hasDraft: boolean; onCancel: () => void }) {
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function logOut() {
+    setPending(true)
+    setError(null)
+    // On success onAuthStateChange clears the session and RequireAuth sends
+    // the user to /login, which unmounts this dialog.
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      setError(error.message)
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="stack">
+      <p>You will need your email and password to sign in again.</p>
+      {hasDraft && (
+        <p className="muted">
+          Your unfinished workout stays saved on this phone and will be here when you sign back in.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+      <div className="row">
+        <button type="button" className="btn" onClick={onCancel} disabled={pending}>
+          Cancel
+        </button>
+        <button type="button" className="btn danger grow" onClick={logOut} disabled={pending}>
+          {pending ? 'Logging out…' : 'Log out'}
+        </button>
+      </div>
     </div>
   )
 }

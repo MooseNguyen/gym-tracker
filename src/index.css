@@ -1221,6 +1221,86 @@ button.link {
 }
 
 /* ==========================================================================
+   Weekly sets per muscle (Home card and /stats)
+   ========================================================================== */
+.week-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.week-nav-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.muscle-week-card h2 {
+  font-size: 1.15rem;
+}
+.volume-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 10px 12px;
+  font-size: 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+.volume-row {
+  display: contents;
+}
+.volume-track {
+  position: relative;
+  height: 10px;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  overflow: hidden;
+}
+/* The 10–20 sets guideline, shaded behind the fill. */
+.volume-band {
+  position: absolute;
+  inset: 0 auto;
+  background: color-mix(in srgb, var(--success) 22%, transparent);
+}
+.volume-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--muted);
+}
+.volume-row.low .volume-fill {
+  background: var(--warmup);
+}
+.volume-row.ok .volume-fill {
+  background: var(--accent);
+}
+.volume-row.high .volume-fill {
+  background: var(--drop);
+}
+.volume-value small {
+  color: var(--muted);
+}
+.volume-row.none .volume-label,
+.volume-row.none .volume-value {
+  color: var(--muted);
+}
+.volume-subs {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: -4px 0 2px;
+  padding: 0 0 0 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 0.8rem;
+}
+.volume-subs li::first-letter {
+  text-transform: uppercase;
+}
+
+/* ==========================================================================
    How to (instructions)
    ========================================================================== */
 .how-to .thumb {

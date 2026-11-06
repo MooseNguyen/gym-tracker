@@ -30,6 +30,27 @@ export function useWorkouts() {
   })
 }
 
+/**
+ * Full workouts that started in [from, to), for weekly muscle stats.
+ * A week is a handful of workouts, so the full select stays small.
+ */
+export function useWorkoutsBetween(from: Date, to: Date) {
+  const fromIso = from.toISOString()
+  const toIso = to.toISOString()
+  return useQuery({
+    queryKey: ['workouts', 'range', fromIso, toIso],
+    queryFn: async () =>
+      unwrap(
+        await supabase
+          .from('workouts')
+          .select(WORKOUT_SELECT)
+          .gte('started_at', fromIso)
+          .lt('started_at', toIso)
+          .order('started_at'),
+      ) as unknown as Workout[],
+  })
+}
+
 export function useWorkout(id: string | undefined) {
   return useQuery({
     queryKey: ['workouts', 'detail', id],

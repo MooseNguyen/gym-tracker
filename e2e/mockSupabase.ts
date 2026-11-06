@@ -136,6 +136,8 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
       const found = [bench, overheadPress, pullUp, ...library].find((e) => e.id === id) ?? bench
       return json(route, { ...found, instructions: INSTRUCTIONS[found.id] ?? null })
     }
+    // Sign-out: the server only revokes the refresh token, nothing to return.
+    if (path === '/auth/v1/logout') return route.fulfill({ status: 204 })
     if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
     if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
