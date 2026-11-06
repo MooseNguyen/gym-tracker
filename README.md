@@ -12,12 +12,17 @@ Installable on iPhone as a PWA.
 1. Create a free project at [supabase.com](https://supabase.com).
 2. **SQL Editor** → run [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql), then [`supabase/seed.sql`](supabase/seed.sql).
    Or with the CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push --include-seed`.
-3. **Authentication → Sign In / Providers → Email**: keep Email enabled. Turning on "Confirm email" is fine.
-4. **Authentication → Emails → Magic Link** template: make sure the body contains `{{ .Token }}`, so the email shows the 6-digit code.
-   Example body: `<p>Your login code: <strong>{{ .Token }}</strong></p>`
-5. **Authentication → URL Configuration**: set Site URL to your deployed URL (for example `https://gym-tracker.vercel.app`).
+3. **Authentication → Sign In / Providers → Email**: keep Email enabled.
+   - "Confirm email" **on**: after creating the account, click the link in the confirmation email once (opening it in Safari is fine), then sign in.
+   - "Confirm email" **off**: you are signed in right after creating the account. Fine for a personal app.
+   - The default email templates work as they are; no custom SMTP needed.
+4. **Authentication → URL Configuration**:
+   - **Site URL**: your deployed URL, for example `https://gym-tracker.vercel.app`.
+   - **Redirect URLs**: add `https://<your-domain>/reset-password` and `http://localhost:5173/reset-password`, otherwise the reset-password link is rejected.
+5. Once your own account exists: **Authentication → Sign In / Providers → turn off "Allow new users to sign up"**.
+   The URL is public, so anyone could otherwise create an account. RLS keeps your data private either way.
 
-> The built-in email sender is rate-limited (a few emails per hour). That's fine for one user. For more, configure custom SMTP.
+> The built-in email sender is rate-limited (a few emails per hour). Only sign-up confirmation and password reset send email, so that's fine for one user.
 
 ### 2. Local dev
 
@@ -34,8 +39,12 @@ Import the repo in Vercel, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` 
 
 ### 4. Install on iPhone
 
-Open the deployed URL in **Safari** → Share → **Add to Home Screen** → open the app from the icon and log in **there**.
-(The home-screen app has its own storage, separate from Safari. That's why login uses a typed code instead of a magic link.)
+Open the deployed URL in **Safari** → Share → **Add to Home Screen** → open the app from the icon and sign in **there**.
+The home-screen app has its own storage, separate from Safari: signing in inside Safari does not sign in the app.
+That's why login is email + password (with Keychain autofill) and not a magic link.
+
+Forgot your password? Use "Forgot password?". The email link opens in Safari, where you set a new password.
+Then open the app from the home screen and sign in with it.
 
 ## Scripts
 

@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router'
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireAuth } from './features/auth/RequireAuth'
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { ExercisesPage } from './features/exercises/ExercisesPage'
 import { HistoryPage } from './features/history/HistoryPage'
 import { WorkoutDetailPage } from './features/history/WorkoutDetailPage'
@@ -18,6 +19,7 @@ export function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route element={<RequireAuth />}>
           <Route element={<Layout />}>
             <Route index element={<HomePage />} />

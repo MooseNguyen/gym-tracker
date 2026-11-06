@@ -23,6 +23,35 @@ const user = {
   role: 'authenticated',
 }
 
+/**
+ * Fakes Supabase's password grant: accepts exactly one email/password pair.
+ * Register it after mockSupabase(): the most recently added route wins.
+ */
+export async function mockPasswordAuth(page: Page, valid: { email: string; password: string }) {
+  await page.route(`${MOCK_SUPABASE_URL}/auth/v1/token?grant_type=password`, async (route) => {
+    const body = route.request().postDataJSON() as { email: string; password: string }
+    if (body.email === valid.email && body.password === valid.password) {
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          access_token: 'e2e.fake.token',
+          refresh_token: 'e2e-refresh',
+          token_type: 'bearer',
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          user: { ...user, email: valid.email },
+        }),
+      })
+    }
+    return route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'invalid_credentials', msg: 'Invalid login credentials' }),
+    })
+  })
+}
+
 /** Puts a fake, non-expired session where supabase-js looks for it. */
 export async function fakeLogin(page: Page) {
   const ref = new URL(MOCK_SUPABASE_URL).hostname.split('.')[0]
