@@ -4,7 +4,7 @@ import { ExercisePicker } from '../exercises/ExercisePicker'
 import { reorder } from '../../shared/reorder'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { QueryState } from '../../shared/ui/QueryState'
-import { DragHandle, SortableList } from '../../shared/ui/SortableList'
+import { MoveButtons, SortableList } from '../../shared/ui/SortableList'
 import type { Exercise, Routine } from '../../types/db'
 import { useDeleteRoutine, useFolders, useRoutine, useSaveRoutine } from './api'
 
@@ -107,10 +107,14 @@ function RoutineForm({ initial }: { initial?: Routine }) {
             items={rows}
             onReorder={(from, to) => setRows((rs) => reorder(rs, from, to))}
             getLabel={(r) => r.exercise.name}
-            renderItem={(r, handle) => (
-              <div className="card routine-row">
+            renderItem={(r, controls) => (
+              <div
+                ref={controls.dragRef}
+                {...controls.dragListeners}
+                className={controls.isDragging ? 'card routine-row dragging' : 'card routine-row'}
+              >
+                <MoveButtons controls={controls} label={r.exercise.name} />
                 <div className="exercise-head">
-                  <DragHandle handle={handle} label={`Reorder ${r.exercise.name}`} />
                   <ExerciseThumb
                     imagePath={r.exercise.image_path}
                     name={r.exercise.name}

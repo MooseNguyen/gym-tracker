@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { bench, customCurl, fakeLogin, folders, mockSupabase, routines } from './mockSupabase'
 
 test.beforeEach(async ({ page }) => {
@@ -91,24 +91,24 @@ test.describe('beat last time', () => {
   })
 })
 
-test('reorders exercises with the keyboard (same sensor as touch drag)', async ({ page }) => {
+test('reorders with the keyboard via Move buttons, announced by name', async ({ page }) => {
   await mockSupabase(page, { routines, folders })
   await startPush(page)
   const titles = page.locator('.exercise-title')
   await expect(titles).toHaveText(['Bench Press', 'Overhead Press'])
 
-  await page.getByRole('button', { name: 'Reorder Bench Press' }).focus()
-  // dnd-kit announces each step; waiting on the announcement (not a timeout)
-  // makes sure the drop happens after the move was processed.
-  const live = page.locator('[id^="DndLiveRegion"]')
-  await page.keyboard.press('Space')
-  await expect(live).toContainText('Bench Press moved to position 1 of 2.') // picked up, still in place
-  await page.keyboard.press('ArrowDown')
-  await expect(live).toContainText('Bench Press moved to position 2 of 2.')
-  await page.keyboard.press('Space')
-  await expect(live).toContainText('Bench Press dropped at position 2 of 2.')
+  // Visually hidden until focused; reachable with Tab like any button.
+  const moveDown = page.getByRole('button', { name: 'Move Bench Press down' })
+  await moveDown.focus()
+  await page.keyboard.press('Enter')
 
   await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
+  await expect(page.getByTestId('reorder-status')).toHaveText(
+    'Bench Press moved to position 2 of 2.',
+  )
+  // First item has no "up", last item has no "down".
+  await expect(page.getByRole('button', { name: 'Move Bench Press down' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Move Overhead Press up' })).toHaveCount(0)
   // The new order is part of the draft, so it survives a reload.
   await page.reload()
   await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
@@ -154,7 +154,8 @@ test.describe('collapsible exercise cards', () => {
     await card.getByLabel('Set 1 reps').fill('10')
     await card.getByRole('button', { name: 'Set 1 done' }).click()
 
-    const toggle = card.getByRole('button', { name: /Bench Press 1\/3 sets/ })
+    // The header is just the name now (no "1/3 sets" badge).
+    const toggle = card.getByRole('button', { name: 'Bench Press', exact: true })
     await expect(toggle).toHaveAttribute('aria-expanded', 'true')
     await toggle.click()
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -176,13 +177,8 @@ test.describe('collapsible exercise cards', () => {
     await expect(page.getByLabel('Set 1 weight')).toHaveCount(2) // still in the DOM…
     await expect(page.getByLabel('Set 1 weight').first()).toBeHidden() // …but folded away
 
-    const live = page.locator('[id^="DndLiveRegion"]')
-    await page.getByRole('button', { name: 'Reorder Bench Press' }).focus()
-    await page.keyboard.press('Space')
-    await expect(live).toContainText('Bench Press moved to position 1 of 2.')
-    await page.keyboard.press('ArrowDown')
-    await expect(live).toContainText('Bench Press moved to position 2 of 2.')
-    await page.keyboard.press('Space')
+    await page.getByRole('button', { name: 'Move Bench Press down' }).focus()
+    await page.keyboard.press('Enter')
     await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
 
     // Still folded after the move; the toggle label flips back.
@@ -279,5 +275,68 @@ test.describe('how to', () => {
     await expect(page.getByText('No history yet.')).toBeVisible()
     await page.getByRole('button', { name: 'How to do it' }).click()
     await expect(page.getByRole('listitem')).toHaveCount(3)
+  })
+})
+
+test.describe('compact card', () => {
+  test('set type is picked from a list, not cycled', async ({ page }) => {
+    const api = await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    const type = card.getByLabel('Set 1 type')
+    await expect(type).toHaveValue('normal')
+    await expect(type.locator('option')).toHaveText(['Normal', 'Warm-up', 'Drop set', 'Failure'])
+
+    await type.selectOption('drop')
+    await expect(card.locator('.set-type').first()).toContainText('D')
+    // Straight to any type, without cycling through the others.
+    await type.selectOption('warmup')
+    await expect(card.locator('.set-type').first()).toContainText('W')
+
+    await card.getByLabel('Set 1 weight').fill('40')
+    await card.getByLabel('Set 1 reps').fill('12')
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+    await page.getByRole('button', { name: 'Finish workout' }).click()
+    await expect(page).toHaveURL(/\/history\//)
+    expect(api.saved[0].exercises[0].sets[0].set_type).toBe('warmup')
+  })
+
+  test('drags a card from anywhere on it, but not from an input', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const titles = page.locator('.exercise-title')
+
+    const dragTo = async (from: Locator, toY: number) => {
+      const box = (await from.boundingBox())!
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+      await page.mouse.down()
+      // Small steps, so the 6 px activation distance and collision checks run.
+      await page.mouse.move(box.x + box.width / 2, toY, { steps: 15 })
+      await page.mouse.up()
+    }
+    const bottomOf = async (name: string) => {
+      const b = (await page.getByRole('region', { name }).boundingBox())!
+      return b.y + b.height
+    }
+
+    // Pressing on an input and moving does not drag: typing stays safe.
+    const benchCard = page.getByRole('region', { name: bench.name })
+    await dragTo(benchCard.getByLabel('Set 1 weight'), (await bottomOf('Overhead Press')) + 30)
+    await expect(titles).toHaveText(['Bench Press', 'Overhead Press'])
+
+    // Grabbing the name (inside the accordion toggle) drags, and does not toggle it.
+    await page.getByRole('button', { name: 'Collapse all' }).click()
+    const benchToggle = page.getByRole('button', { name: 'Bench Press', exact: true })
+    await dragTo(benchToggle, (await bottomOf('Overhead Press')) - 4)
+    await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
+    await expect(benchToggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  test('the card header has no drag handle and no set counter', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await expect(card.getByRole('button', { name: /Reorder/ })).toHaveCount(0)
+    await expect(card.getByText(/\d+\/\d+ sets/)).toHaveCount(0)
   })
 })
