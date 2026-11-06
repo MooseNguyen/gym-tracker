@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { formatSetValues } from '../history/format'
+import { Disclosure } from '../../shared/ui/Disclosure'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { DragHandle, SortableList, type HandleProps } from '../../shared/ui/SortableList'
 import type { PreviousSet, SetType } from '../../types/db'
@@ -36,6 +37,9 @@ export function ActiveWorkoutPage() {
   const save = useSaveWorkout()
   const [picking, setPicking] = useState(false)
   const [celebration, setCelebration] = useState<Celebration | null>(null)
+  // View state only (not part of the draft): which exercise cards are folded.
+  // A reload simply shows everything expanded again.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set())
   const clearCelebration = useCallback(() => setCelebration(null), [])
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
@@ -60,6 +64,8 @@ export function ActiveWorkoutPage() {
     )
 
   const completed = completedSetCount(draft)
+  const allCollapsed =
+    draft.exercises.length > 0 && draft.exercises.every((e) => collapsed.has(e.id))
 
   function toggleDone(
     ex: DraftExercise,
@@ -146,6 +152,20 @@ export function ActiveWorkoutPage() {
         <p className="muted center">Add an exercise to get started.</p>
       )}
 
+      {draft.exercises.length > 1 && (
+        <div className="row between">
+          <h2>Exercises</h2>
+          <button
+            className="btn small"
+            onClick={() =>
+              setCollapsed(allCollapsed ? new Set() : new Set(draft.exercises.map((e) => e.id)))
+            }
+          >
+            {allCollapsed ? 'Expand all' : 'Collapse all'}
+          </button>
+        </div>
+      )}
+
       <div className="stack">
         <SortableList
           items={draft.exercises}
@@ -157,6 +177,15 @@ export function ActiveWorkoutPage() {
               handle={handle}
               previous={previous.data?.get(ex.exerciseId) ?? []}
               onToggleDone={toggleDone}
+              open={!collapsed.has(ex.id)}
+              onOpenChange={(open) =>
+                setCollapsed((prev) => {
+                  const next = new Set(prev)
+                  if (open) next.delete(ex.id)
+                  else next.add(ex.id)
+                  return next
+                })
+              }
             />
           )}
         />
@@ -214,10 +243,14 @@ function ExerciseCard({
   handle,
   previous,
   onToggleDone,
+  open,
+  onOpenChange,
 }: {
   ex: DraftExercise
   handle: HandleProps
   previous: PreviousSet[]
+  open: boolean
+  onOpenChange: (open: boolean) => void
   onToggleDone: (
     ex: DraftExercise,
     set: DraftSet,
@@ -227,148 +260,169 @@ function ExerciseCard({
 }) {
   let normalCount = 0
   const timed = ex.kind === 'duration'
+  const doneCount = ex.sets.filter((s) => s.completed).length
+  const allDone = ex.sets.length > 0 && doneCount === ex.sets.length
 
   return (
     <section className="card exercise-card" aria-label={ex.name}>
-      <div className="exercise-head">
-        <DragHandle handle={handle} label={`Reorder ${ex.name}`} />
-        <ExerciseThumb imagePath={ex.imagePath} name={ex.name} size={44} />
-        <h2 className="exercise-title">{ex.name}</h2>
-        <button
-          className="icon-btn danger"
-          aria-label={`Remove ${ex.name}`}
-          onClick={() =>
-            confirm(`Remove ${ex.name} from this workout?`) &&
-            setDraft((d) => removeExercise(d, ex.id))
-          }
-        >
-          ✕
-        </button>
-      </div>
-
-      <input
-        className="note-input"
-        placeholder="Notes"
-        aria-label={`Notes for ${ex.name}`}
-        value={ex.notes}
-        onChange={(e) => setDraft((d) => updateExercise(d, ex.id, { notes: e.target.value }))}
-      />
-
-      <table className="sets">
-        <thead>
-          <tr>
-            <th scope="col">Set</th>
-            <th scope="col">Previous</th>
-            <th scope="col">{ex.kind === 'bodyweight_reps' ? '+kg' : 'kg'}</th>
-            <th scope="col">{timed ? 'sec' : 'Reps'}</th>
-            <th scope="col">
-              <span className="sr-only">Done</span>
-            </th>
-            <th scope="col">
-              <span className="sr-only">Remove</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {ex.sets.map((s, i) => {
-            if (s.setType === 'normal') normalCount++
-            const label = SET_LABEL[s.setType] || String(normalCount)
-            const prev = previous[i]
-            const field = (
-              key: 'weight' | 'reps' | 'duration',
-              placeholder: string,
-              decimal: boolean,
-            ) => (
-              <td>
-                <input
-                  className="num-input"
-                  inputMode={decimal ? 'decimal' : 'numeric'}
-                  aria-label={`Set ${i + 1} ${key}`}
-                  placeholder={placeholder}
-                  value={s[key]}
-                  onChange={(e) =>
-                    setDraft((d) => updateSet(d, ex.id, s.id, { [key]: e.target.value }))
-                  }
-                />
-              </td>
-            )
-            return (
-              <tr key={s.id} className={s.completed ? 'done' : undefined}>
-                <td>
-                  <button
-                    className={`set-type ${s.setType}`}
-                    aria-label={`Set ${i + 1} type: ${s.setType}. Tap to change`}
-                    onClick={() =>
-                      setDraft((d) =>
-                        updateSet(d, ex.id, s.id, { setType: nextSetType(s.setType) }),
-                      )
-                    }
-                  >
-                    {label}
-                  </button>
-                </td>
-                <td className="prev">{prev ? formatSetValues(ex.kind, prev) : '—'}</td>
-                {field(
-                  'weight',
-                  prev?.weight_kg ? String(prev.weight_kg) : ex.kind === 'weight_reps' ? '' : 'BW',
-                  true,
-                )}
-                {timed
-                  ? field('duration', prev?.duration_s?.toString() ?? '', false)
-                  : field('reps', prev?.reps?.toString() ?? '', false)}
-                <td>
-                  <button
-                    className={s.completed ? 'check on' : 'check'}
-                    aria-pressed={s.completed}
-                    aria-label={`Set ${i + 1} done`}
-                    onClick={(e) => {
-                      // The burst starts from the ✓ that was tapped.
-                      const r = e.currentTarget.getBoundingClientRect()
-                      onToggleDone(ex, s, prev, {
-                        x: r.left + r.width / 2,
-                        y: r.top + r.height / 2,
-                      })
-                    }}
-                  >
-                    ✓
-                  </button>
-                </td>
-                <td>
-                  <button
-                    className="icon-btn"
-                    aria-label={`Remove set ${i + 1}`}
-                    onClick={() => setDraft((d) => removeSet(d, ex.id, s.id))}
-                  >
-                    ✕
-                  </button>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-
-      <div className="row between">
-        <button className="btn small" onClick={() => setDraft((d) => addSet(d, ex.id))}>
-          + Add set
-        </button>
-        <label className="row muted small-text">
-          Rest
-          <select
-            aria-label={`Rest time for ${ex.name}`}
-            value={ex.restSeconds}
-            onChange={(e) =>
-              setDraft((d) => updateExercise(d, ex.id, { restSeconds: Number(e.target.value) }))
+      <Disclosure
+        className="exercise-disclosure"
+        open={open}
+        onOpenChange={onOpenChange}
+        // The handle stays usable while folded: that is the point of folding.
+        leading={<DragHandle handle={handle} label={`Reorder ${ex.name}`} />}
+        summary={
+          <span className="exercise-summary">
+            <ExerciseThumb imagePath={ex.imagePath} name={ex.name} size={44} decorative />
+            <span className="exercise-title">{ex.name}</span>
+            <small className={allDone ? 'set-count done' : 'set-count'}>
+              {doneCount}/{ex.sets.length} sets
+            </small>
+          </span>
+        }
+        actions={
+          <button
+            className="icon-btn danger"
+            aria-label={`Remove ${ex.name}`}
+            onClick={() =>
+              confirm(`Remove ${ex.name} from this workout?`) &&
+              setDraft((d) => removeExercise(d, ex.id))
             }
           >
-            {restOptions(ex.restSeconds).map((sec) => (
-              <option key={sec} value={sec}>
-                {sec === 0 ? 'Off' : formatDuration(sec)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+            ✕
+          </button>
+        }
+      >
+        <div className="exercise-body">
+          <input
+            className="note-input"
+            placeholder="Notes"
+            aria-label={`Notes for ${ex.name}`}
+            value={ex.notes}
+            onChange={(e) => setDraft((d) => updateExercise(d, ex.id, { notes: e.target.value }))}
+          />
+
+          <table className="sets">
+            <thead>
+              <tr>
+                <th scope="col">Set</th>
+                <th scope="col">Previous</th>
+                <th scope="col">{ex.kind === 'bodyweight_reps' ? '+kg' : 'kg'}</th>
+                <th scope="col">{timed ? 'sec' : 'Reps'}</th>
+                <th scope="col">
+                  <span className="sr-only">Done</span>
+                </th>
+                <th scope="col">
+                  <span className="sr-only">Remove</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {ex.sets.map((s, i) => {
+                if (s.setType === 'normal') normalCount++
+                const label = SET_LABEL[s.setType] || String(normalCount)
+                const prev = previous[i]
+                const field = (
+                  key: 'weight' | 'reps' | 'duration',
+                  placeholder: string,
+                  decimal: boolean,
+                ) => (
+                  <td>
+                    <input
+                      className="num-input"
+                      inputMode={decimal ? 'decimal' : 'numeric'}
+                      aria-label={`Set ${i + 1} ${key}`}
+                      placeholder={placeholder}
+                      value={s[key]}
+                      onChange={(e) =>
+                        setDraft((d) => updateSet(d, ex.id, s.id, { [key]: e.target.value }))
+                      }
+                    />
+                  </td>
+                )
+                return (
+                  <tr key={s.id} className={s.completed ? 'done' : undefined}>
+                    <td>
+                      <button
+                        className={`set-type ${s.setType}`}
+                        aria-label={`Set ${i + 1} type: ${s.setType}. Tap to change`}
+                        onClick={() =>
+                          setDraft((d) =>
+                            updateSet(d, ex.id, s.id, { setType: nextSetType(s.setType) }),
+                          )
+                        }
+                      >
+                        {label}
+                      </button>
+                    </td>
+                    <td className="prev">{prev ? formatSetValues(ex.kind, prev) : '—'}</td>
+                    {field(
+                      'weight',
+                      prev?.weight_kg
+                        ? String(prev.weight_kg)
+                        : ex.kind === 'weight_reps'
+                          ? ''
+                          : 'BW',
+                      true,
+                    )}
+                    {timed
+                      ? field('duration', prev?.duration_s?.toString() ?? '', false)
+                      : field('reps', prev?.reps?.toString() ?? '', false)}
+                    <td>
+                      <button
+                        className={s.completed ? 'check on' : 'check'}
+                        aria-pressed={s.completed}
+                        aria-label={`Set ${i + 1} done`}
+                        onClick={(e) => {
+                          // The burst starts from the ✓ that was tapped.
+                          const r = e.currentTarget.getBoundingClientRect()
+                          onToggleDone(ex, s, prev, {
+                            x: r.left + r.width / 2,
+                            y: r.top + r.height / 2,
+                          })
+                        }}
+                      >
+                        ✓
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="icon-btn"
+                        aria-label={`Remove set ${i + 1}`}
+                        onClick={() => setDraft((d) => removeSet(d, ex.id, s.id))}
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+
+          <div className="row between">
+            <button className="btn small" onClick={() => setDraft((d) => addSet(d, ex.id))}>
+              + Add set
+            </button>
+            <label className="row muted small-text">
+              Rest
+              <select
+                aria-label={`Rest time for ${ex.name}`}
+                value={ex.restSeconds}
+                onChange={(e) =>
+                  setDraft((d) => updateExercise(d, ex.id, { restSeconds: Number(e.target.value) }))
+                }
+              >
+                {restOptions(ex.restSeconds).map((sec) => (
+                  <option key={sec} value={sec}>
+                    {sec === 0 ? 'Off' : formatDuration(sec)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </div>
+      </Disclosure>
     </section>
   )
 }

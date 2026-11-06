@@ -144,3 +144,55 @@ test('the home 3D scene is torn down on navigation (no leaked canvases)', async 
   }
   expect(await page.locator('canvas').count()).toBe(1)
 })
+
+test.describe('collapsible exercise cards', () => {
+  test('a card folds to its header, keeps its sets, and shows progress', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByLabel('Set 1 weight').fill('60')
+    await card.getByLabel('Set 1 reps').fill('10')
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+    const toggle = card.getByRole('button', { name: /Bench Press 1\/3 sets/ })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(card.getByLabel('Set 1 weight')).toBeHidden()
+
+    await toggle.click()
+    await expect(card.getByLabel('Set 1 weight')).toHaveValue('60') // nothing lost
+  })
+
+  test('collapse all, reorder while folded, expand all', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const titles = page.locator('.exercise-title')
+
+    await page.getByRole('button', { name: 'Collapse all' }).click()
+    await expect(
+      page.locator('.exercise-card .disclosure-toggle[aria-expanded="false"]'),
+    ).toHaveCount(2)
+    await expect(page.getByLabel('Set 1 weight')).toHaveCount(2) // still in the DOM…
+    await expect(page.getByLabel('Set 1 weight').first()).toBeHidden() // …but folded away
+
+    const live = page.locator('[id^="DndLiveRegion"]')
+    await page.getByRole('button', { name: 'Reorder Bench Press' }).focus()
+    await page.keyboard.press('Space')
+    await expect(live).toContainText('Bench Press moved to position 1 of 2.')
+    await page.keyboard.press('ArrowDown')
+    await expect(live).toContainText('Bench Press moved to position 2 of 2.')
+    await page.keyboard.press('Space')
+    await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
+
+    // Still folded after the move; the toggle label flips back.
+    await expect(
+      page.locator('.exercise-card .disclosure-toggle[aria-expanded="false"]'),
+    ).toHaveCount(2)
+    await page.getByRole('button', { name: 'Expand all' }).click()
+    await expect(
+      page.locator('.exercise-card .disclosure-toggle[aria-expanded="true"]'),
+    ).toHaveCount(2)
+    await expect(page.getByRole('button', { name: 'Collapse all' })).toBeVisible()
+  })
+})
