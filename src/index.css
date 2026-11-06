@@ -2,18 +2,26 @@
    Tokens
    ========================================================================== */
 :root {
-  --bg: #0e1116;
-  --surface: #171b22;
-  --raised: #1f2530;
-  --line: #2b3240;
-  --text: #edeff3;
-  --muted: #8c95a6;
-  --accent: #f97316;
-  --accent-soft: #fdba74;
-  --accent-ink: #1a0d03;
-  --success: #22c55e;
-  --success-ink: #052e16;
+  /* Olive-tinted darks + lime accent. Contrast (WCAG): text/surface 15:1,
+     muted/raised 5.7:1, accent-ink/accent 11:1. Light text on a light
+     tint fails AA, so lime is a fill under dark ink, never text on light. */
+  --bg: #0f110e;
+  --bg-top: #171a15; /* top of the hero gradient */
+  --surface: #191c17;
+  --raised: #232720;
+  --line: #343a2f;
+  --text: #eef1e8;
+  --muted: #98a18f;
+  --placeholder: #6b7363;
+  --accent: #b5d93a;
+  --accent-soft: #d6eb9a;
+  --accent-ink: #151a03;
+  /* Teal, not green: green would read as the lime accent. */
+  --success: #2dd4bf;
+  --success-ink: #042f2a;
   --danger: #f87171;
+  --warmup: #fb923c;
+  --drop: #a78bfa;
 
   /* Kept for the chart, which reads these names */
   --border: var(--line);
@@ -298,8 +306,8 @@ button.link {
   overflow: hidden;
   /* Shown immediately and kept if WebGL is unavailable. */
   background:
-    radial-gradient(120% 90% at 85% 30%, rgb(249 115 22 / 0.22), transparent 60%),
-    linear-gradient(180deg, #151a22 0%, var(--bg) 100%);
+    radial-gradient(120% 90% at 85% 30%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 60%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 100%);
 }
 .hero-tall {
   min-height: 260px;
@@ -341,7 +349,7 @@ button.link {
   justify-content: space-around;
   align-items: center;
   padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-  background: rgb(23 27 34 / 0.92);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--line);
@@ -361,7 +369,7 @@ button.link {
 }
 .tabbar a.active {
   color: var(--accent);
-  background: rgb(249 115 22 / 0.12);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
 /* ==========================================================================
@@ -546,7 +554,7 @@ button.link {
   gap: 0;
 }
 .routine.open {
-  border-color: rgb(249 115 22 / 0.45);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .routine.open > .disclosure-panel > .disclosure-inner {
   padding-bottom: 12px;
@@ -578,7 +586,7 @@ button.link {
   align-items: center;
   gap: 12px;
   border-color: var(--accent);
-  background: linear-gradient(90deg, rgb(249 115 22 / 0.14), var(--surface) 70%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 12%, transparent), var(--surface) 70%);
 }
 .resume-dot {
   width: 10px;
@@ -586,7 +594,7 @@ button.link {
   flex: none;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 0 4px rgb(249 115 22 / 0.25);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 .start-empty {
   margin-top: 6px;
@@ -690,7 +698,7 @@ button.link {
   font-family: var(--font-display);
   font-size: 1.2rem;
   font-weight: 700;
-  color: var(--accent-soft);
+  color: var(--text);
 }
 .note-input {
   min-height: 36px;
@@ -726,7 +734,7 @@ button.link {
   border-radius: 0 var(--r-control) var(--r-control) 0;
 }
 .sets tr.done td {
-  background: rgb(34 197 94 / 0.13);
+  background: color-mix(in srgb, var(--success) 13%, transparent);
 }
 .sets .prev {
   color: var(--muted);
@@ -747,10 +755,10 @@ button.link {
 }
 .num-input.invalid {
   border-color: var(--danger);
-  box-shadow: 0 0 0 3px rgb(248 113 113 / 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent);
 }
 .num-input::placeholder {
-  color: #5b6474;
+  color: var(--placeholder);
   font-weight: 500;
 }
 /* Small to look at (34px) but ~44px to hit: the invisible ::after / the
@@ -791,10 +799,10 @@ button.link {
   outline-offset: 2px;
 }
 .set-type.warmup {
-  color: #facc15;
+  color: var(--warmup);
 }
 .set-type.drop {
-  color: #a78bfa;
+  color: var(--drop);
 }
 .set-type.failure {
   color: var(--danger);
@@ -825,7 +833,7 @@ button.link {
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: var(--r-card);
-  background: rgb(31 37 48 / 0.95);
+  background: color-mix(in srgb, var(--raised) 95%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
@@ -862,9 +870,9 @@ button.link {
   gap: 12px;
   padding: 10px 18px 10px 12px;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--accent), #fb923c);
+  background: linear-gradient(90deg, var(--accent), var(--accent-soft));
   color: var(--accent-ink);
-  box-shadow: 0 12px 32px rgb(249 115 22 / 0.4);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--accent) 35%, transparent);
   animation: pr-in 2.6s var(--ease) forwards;
 }
 .pr-banner strong {
