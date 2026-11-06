@@ -343,7 +343,7 @@ button.link {
    ========================================================================== */
 .hero {
   position: relative;
-  min-height: 168px;
+  min-height: 230px;
   margin: calc(-16px - env(safe-area-inset-top)) -16px 0;
   padding: calc(28px + env(safe-area-inset-top)) 20px 20px;
   display: flex;
@@ -379,9 +379,85 @@ button.link {
   max-width: none;
 }
 .hero h1 {
-  font-size: 2.6rem;
+  font-size: 3.1rem;
   text-shadow: 0 2px 18px rgb(0 0 0 / 0.5);
 }
+/* ==========================================================================
+   Home week strip
+   ========================================================================== */
+.week-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.week-strip-title {
+  font-size: 1.15rem;
+}
+.week-days {
+  list-style: none;
+  margin: 0 -16px;
+  /* Room for today's ring, which overflow-x would otherwise clip. */
+  padding: 6px 16px 8px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.week-days::-webkit-scrollbar {
+  display: none;
+}
+/* A little extra space before each Monday shows where weeks start. */
+.week-days li.week-start:not(:first-child) {
+  margin-left: 8px;
+}
+.week-days li {
+  flex: none;
+  scroll-snap-align: center;
+}
+.day {
+  width: 44px;
+  height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--muted);
+  text-decoration: none;
+}
+.day-name {
+  font-size: 0.75rem;
+}
+.day-num {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+}
+/* A detached ring (not just the border), so today stays visible when it is
+   also a training day and the whole cell is lime. */
+.day.today {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent);
+}
+.day.trained {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.day.trained .day-num {
+  color: var(--accent-ink);
+}
+.day.future {
+  opacity: 0.45;
+}
+
 .eyebrow {
   color: var(--accent-soft);
   font-weight: 500;
@@ -1288,8 +1364,13 @@ button.link {
 .body-map .region.selectable {
   cursor: pointer;
 }
-.body-map .region.selectable:hover {
-  fill: #4b5244;
+/* Hover only for real pointers, and never over a selected region: iOS keeps
+   :hover on the last tapped element ("sticky hover"), and the hover colour
+   used to win over .on, so only the untapped side looked selected. */
+@media (hover: hover) {
+  .body-map .region.selectable:not(.on):hover {
+    fill: #4b5244;
+  }
 }
 .body-map .region.on {
   fill: var(--accent);
