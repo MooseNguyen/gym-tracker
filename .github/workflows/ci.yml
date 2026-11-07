@@ -89,12 +89,6 @@ jobs:
           name: supabase-types
           path: ${{ runner.temp }}/supabase.ts
           retention-days: 7
-      - name: Committed types match the migrations
-        run: |
-          if ! diff -u src/types/supabase.ts "$RUNNER_TEMP/supabase.ts"; then
-            echo "::error file=src/types/supabase.ts::Out of date with supabase/migrations. Run 'npm run db:types' (needs Docker), or download the supabase-types artifact of this run into src/types/."
-            exit 1
-          fi
       - name: Check the built-in library
         run: >
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
@@ -111,3 +105,10 @@ jobs:
         run: >
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           -v ON_ERROR_STOP=1 -f supabase/tests/profiles_rls.sql
+      # Last, so a stale file never skips the database checks above.
+      - name: Committed types match the migrations
+        run: |
+          if ! diff -u src/types/supabase.ts "$RUNNER_TEMP/supabase.ts"; then
+            echo "::error file=src/types/supabase.ts::Out of date with supabase/migrations. Run 'npm run db:types' (needs Docker), or download the supabase-types artifact of this run into src/types/."
+            exit 1
+          fi

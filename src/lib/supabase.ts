@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '../types/supabase'
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -10,7 +11,8 @@ if (!url || !anonKey) {
 }
 
 // The anon key is public by design: Row Level Security is what protects the data.
-export const supabase = createClient(url, anonKey)
+// Typed by the generated schema: a renamed column or RPC argument is a type error.
+export const supabase = createClient<Database>(url, anonKey)
 
 /** Unwraps a Supabase response so callers (and TanStack Query) see a thrown Error. */
 export function unwrap<T>(res: { data: T; error: { message: string } | null }): T {

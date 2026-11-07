@@ -39,7 +39,8 @@ export function useRoutine(id: string | undefined) {
   })
 }
 
-export interface RoutineInput {
+// A type, not an interface: only type aliases fit the generated Json type of the RPC argument.
+export type RoutineInput = {
   id?: string
   name: string
   notes: string | null
