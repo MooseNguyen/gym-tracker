@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import type { ExerciseKind, PreviousSet } from '../../types/db'
 import {
   addSet,
+  adjustCountdown,
+  completedVolume,
+  startCountdown,
   applySuggestions,
   replaceExercise,
   tooLargeCompletedSets,
@@ -370,5 +373,38 @@ describe('MAX_VALUE validation', () => {
     const ex = d.exercises[0]
     d = updateSet(d, ex.id, ex.sets[0].id, { weight: '8000', reps: '8', completed: true })
     expect(tooLargeCompletedSets(d)).toBe(1)
+  })
+})
+
+describe('countdown and volume', () => {
+  it('ticking a set starts the rest countdown with its total', () => {
+    const d = draftWith(bench)
+    const ex = d.exercises[0]
+    const filled = updateSet(d, ex.id, ex.sets[0].id, { weight: '80', reps: '8' })
+    const next = toggleSetComplete(filled, ex.id, ex.sets[0].id, undefined, 1_000)
+    expect(next.restEndsAt).toBe(1_000 + 120_000)
+    expect(next.restTotalMs).toBe(120_000)
+  })
+
+  it('startCountdown replaces the timer; 0 clears it', () => {
+    const d = startCountdown(draftWith(bench), 60, 5_000)
+    expect(d).toMatchObject({ restEndsAt: 65_000, restTotalMs: 60_000 })
+    expect(startCountdown(d, 0)).toMatchObject({ restEndsAt: null, restTotalMs: undefined })
+  })
+
+  it('±15 moves the end and the total together', () => {
+    const d = startCountdown(draftWith(bench), 60, 0)
+    expect(adjustCountdown(d, 15)).toMatchObject({ restEndsAt: 75_000, restTotalMs: 75_000 })
+    expect(adjustCountdown(d, -15)).toMatchObject({ restEndsAt: 45_000, restTotalMs: 45_000 })
+  })
+
+  it('volume counts ticked working sets only', () => {
+    let d = draftWith(bench)
+    const ex = d.exercises[0]
+    const [a, b] = ex.sets
+    d = updateSet(d, ex.id, a.id, { weight: '80', reps: '8', completed: true })
+    d = updateSet(d, ex.id, b.id, { weight: '40', reps: '10', completed: true, setType: 'warmup' })
+    d = addSet(d, ex.id) // copies 40 × 10 but is not ticked
+    expect(completedVolume(d)).toBe(640)
   })
 })

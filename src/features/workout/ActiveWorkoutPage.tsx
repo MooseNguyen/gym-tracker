@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { HowToSheet } from '../exercises/HowTo'
-import { formatSetValues } from '../history/format'
+import { formatKg, formatSetValues } from '../history/format'
 import { useConfirm } from '../../shared/ui/confirmContext'
 import { Dialog } from '../../shared/ui/Dialog'
 import { Disclosure } from '../../shared/ui/Disclosure'
@@ -14,6 +14,7 @@ import {
   addSet,
   applySuggestions,
   completedSetCount,
+  completedVolume,
   describeImprovement,
   improvementOver,
   MAX_VALUE,
@@ -38,6 +39,8 @@ import { describeReason, headlineSuggestion, suggestSets } from './progression'
 import { playCelebration } from './celebrate'
 import { ReorderSheet } from './ReorderSheet'
 import { RestTimer } from './RestTimer'
+import { RestPickerSheet, TimerSheet } from './TimerSheets'
+import { spokenSeconds, STOPPED, stopwatchElapsed } from './timers'
 import { formatDuration, useNow } from './useNow'
 import { useWakeLock } from './useWakeLock'
 
@@ -60,8 +63,12 @@ export function ActiveWorkoutPage() {
   const [howTo, setHowTo] = useState<DraftExercise | null>(null)
   const [replacing, setReplacing] = useState<DraftExercise | null>(null)
   const [reordering, setReordering] = useState(false)
+  const [timerOpen, setTimerOpen] = useState(false)
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
+  const stopwatch = draft?.stopwatch ?? STOPPED
+  const stopwatchRunning = stopwatch.startedAt != null
+  const stopwatchText = formatDuration(stopwatchElapsed(stopwatch, now) / 1000)
   useWakeLock(isNew)
 
   const previous = usePreviousSets(
@@ -189,26 +196,66 @@ export function ActiveWorkoutPage() {
 
   return (
     <main className="page workout">
-      <header className="workout-header">
-        <input
-          className="title-input"
-          aria-label="Workout name"
-          value={draft.name}
-          onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-        />
-        <div className="workout-stats">
-          <div>
-            <span className="stat-label">Duration</span>
-            <span className="stat-value">
-              {isNew ? formatDuration((now - Date.parse(draft.startedAt)) / 1000) : 'Editing'}
-            </span>
-          </div>
-          <div>
-            <span className="stat-label">Sets done</span>
-            <span className="stat-value">{completed}</span>
-          </div>
+      {/* Sticky: the clock, the totals and Finish stay in reach while scrolling. */}
+      <header className="workout-bar">
+        <div className="workout-bar-top">
+          <input
+            className="title-input"
+            aria-label="Workout name"
+            value={draft.name}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+          />
+          {isNew && (
+            <button
+              type="button"
+              className={stopwatchRunning ? 'timer-btn running' : 'timer-btn'}
+              aria-label={stopwatchRunning ? `Timer (stopwatch at ${stopwatchText})` : 'Timer'}
+              aria-haspopup="dialog"
+              onClick={() => setTimerOpen(true)}
+            >
+              <ClockIcon />
+              {stopwatchRunning && <span>{stopwatchText}</span>}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn primary finish-btn"
+            aria-label={isNew ? 'Finish workout' : 'Save changes'}
+            onClick={finish}
+            disabled={save.isPending}
+          >
+            {save.isPending ? 'Saving…' : isNew ? 'Finish' : 'Save'}
+          </button>
         </div>
+        <dl className="workout-stats">
+          <div>
+            <dt className="stat-label">Duration</dt>
+            <dd className="stat-value">
+              {isNew ? formatDuration((now - Date.parse(draft.startedAt)) / 1000) : 'Editing'}
+            </dd>
+          </div>
+          <div>
+            <dt className="stat-label">Volume</dt>
+            <dd className="stat-value">{formatKg(completedVolume(draft))}</dd>
+          </div>
+          <div>
+            <dt className="stat-label">Sets</dt>
+            <dd className="stat-value">{completed}</dd>
+          </div>
+        </dl>
       </header>
+
+      {/* Next to Finish's new place, at the top. */}
+      {save.error && (
+        <p role="alert" className="error">
+          Saving failed: {save.error.message}. Your workout is still on this phone. Try again.
+        </p>
+      )}
+      {finishHint && completed === 0 && (
+        <p role="alert" className="error">
+          Tick at least one set before finishing, or discard the workout.
+        </p>
+      )}
 
       {previous.error && (
         <p className="muted">Could not load previous sets. Logging still works.</p>
@@ -266,40 +313,19 @@ export function ActiveWorkoutPage() {
         />
       </div>
 
-      <button className="btn block" onClick={() => setPicking(true)}>
+      <button className="btn primary block" onClick={() => setPicking(true)}>
         + Add exercises
       </button>
 
-      <label className="field">
-        <span>Workout notes</span>
-        <textarea
-          rows={2}
-          value={draft.notes}
-          onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-        />
-      </label>
+      {/* Workout notes are no longer edited here; existing ones are kept on save. */}
+      <button className="btn danger block" onClick={discard} disabled={save.isPending}>
+        {isNew ? 'Discard workout' : 'Discard changes'}
+      </button>
 
-      {save.error && (
-        <p role="alert" className="error">
-          Saving failed: {save.error.message}. Your workout is still on this phone. Try again.
-        </p>
+      {isNew && draft.restEndsAt && (
+        <RestTimer endsAt={draft.restEndsAt} totalMs={draft.restTotalMs} />
       )}
-
-      {finishHint && completed === 0 && (
-        <p role="alert" className="error">
-          Tick at least one set before finishing, or discard the workout.
-        </p>
-      )}
-      <div className="row">
-        <button className="btn danger" onClick={discard} disabled={save.isPending}>
-          Discard
-        </button>
-        <button className="btn primary grow" onClick={finish} disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : isNew ? 'Finish workout' : 'Save changes'}
-        </button>
-      </div>
-
-      {isNew && draft.restEndsAt && <RestTimer endsAt={draft.restEndsAt} />}
+      <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} />
       <PrBanner celebration={celebration} onDone={clearCelebration} />
 
       <ExercisePicker
@@ -343,11 +369,6 @@ const SET_TYPES: { value: SetType; label: string }[] = [
   { value: 'failure', label: 'Failure' },
 ]
 
-// A routine can use any 15 s step, so make sure its value is always selectable.
-const REST_PRESETS = [0, 30, 60, 90, 120, 150, 180, 240, 300]
-const restOptions = (current: number) =>
-  [...new Set([...REST_PRESETS, current])].sort((a, b) => a - b)
-
 export interface CardActions {
   onHowTo: () => void
   onReplace: () => void
@@ -387,6 +408,7 @@ function ExerciseCard({
   const [menuOpen, setMenuOpen] = useState(false)
   // Notes stay out of the way until asked for (or already written).
   const [notesOpen, setNotesOpen] = useState(() => ex.notes !== '')
+  const [restOpen, setRestOpen] = useState(false)
   let normalCount = 0
   const timed = ex.kind === 'duration'
   const required = requiredField(ex.kind)
@@ -437,22 +459,16 @@ function ExerciseCard({
           {suggest && <SuggestionLine ex={ex} previous={previous} />}
 
           <div className="exercise-tools">
-            <label className="tool-chip">
+            <button
+              type="button"
+              className="tool-chip"
+              aria-label={`Rest time for ${ex.name}: ${spokenSeconds(ex.restSeconds)}`}
+              aria-haspopup="dialog"
+              onClick={() => setRestOpen(true)}
+            >
               <span aria-hidden="true">⏱</span>
-              <select
-                aria-label={`Rest time for ${ex.name}`}
-                value={ex.restSeconds}
-                onChange={(e) =>
-                  setDraft((d) => updateExercise(d, ex.id, { restSeconds: Number(e.target.value) }))
-                }
-              >
-                {restOptions(ex.restSeconds).map((sec) => (
-                  <option key={sec} value={sec}>
-                    {sec === 0 ? 'Rest off' : `Rest ${formatDuration(sec)}`}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {ex.restSeconds === 0 ? 'Rest off' : `Rest ${formatDuration(ex.restSeconds)}`}
+            </button>
             <button
               type="button"
               className={notesOpen ? 'tool-chip on' : 'tool-chip'}
@@ -612,6 +628,16 @@ function ExerciseCard({
         </div>
       </Disclosure>
 
+      <RestPickerSheet
+        open={restOpen}
+        exerciseName={ex.name}
+        value={ex.restSeconds}
+        onClose={() => setRestOpen(false)}
+        onDone={(sec) => {
+          setDraft((d) => updateExercise(d, ex.id, { restSeconds: sec }))
+          setRestOpen(false)
+        }}
+      />
       <Dialog open={menuOpen} onClose={() => setMenuOpen(false)} title={ex.name}>
         <div className="stack action-sheet">
           {!ex.custom && (
@@ -631,6 +657,24 @@ function ExerciseCard({
         </div>
       </Dialog>
     </section>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2M10 2h4" />
+    </svg>
   )
 }
 

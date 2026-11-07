@@ -2,6 +2,7 @@
 // Everything here is pure so it can be unit tested; the store is in draftStore.ts.
 import type { Exercise, ExerciseKind, PreviousSet, SetType, Workout } from '../../types/db'
 import { reorder } from '../../shared/reorder'
+import type { Stopwatch } from './timers'
 
 /** What a draft needs to know about an exercise. Tests can omit the image. */
 export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & {
@@ -50,6 +51,10 @@ export interface WorkoutDraft {
   exercises: DraftExercise[]
   /** Epoch ms. A timestamp, not a counter: it stays correct after the app is backgrounded. */
   restEndsAt: number | null
+  /** Length of the running countdown in ms, for its progress bar. Missing in old drafts. */
+  restTotalMs?: number
+  /** Free stopwatch from the ⏱ sheet. Missing in old drafts = stopped at 0. */
+  stopwatch?: Stopwatch
 }
 
 const DEFAULT_REST = 90
@@ -309,7 +314,36 @@ export function toggleSetComplete(
   if (!hasRequiredValue(ex.kind, filled) || tooLargeField(filled)) return d
 
   const next = updateSet(d, exId, setId, filled)
-  return { ...next, restEndsAt: ex.restSeconds > 0 ? now + ex.restSeconds * 1000 : null }
+  return startCountdown(next, ex.restSeconds, now)
+}
+
+/** Starts (or replaces) the floating countdown; 0 seconds clears it. */
+export function startCountdown(d: WorkoutDraft, seconds: number, now = Date.now()): WorkoutDraft {
+  if (seconds <= 0) return { ...d, restEndsAt: null, restTotalMs: undefined }
+  return { ...d, restEndsAt: now + seconds * 1000, restTotalMs: seconds * 1000 }
+}
+
+/** −15 / +15 on the running countdown; the total moves too, so the bar stays honest. */
+export function adjustCountdown(d: WorkoutDraft, deltaSeconds: number): WorkoutDraft {
+  if (!d.restEndsAt) return d
+  const delta = deltaSeconds * 1000
+  return {
+    ...d,
+    restEndsAt: d.restEndsAt + delta,
+    restTotalMs: d.restTotalMs != null ? Math.max(1000, d.restTotalMs + delta) : undefined,
+  }
+}
+
+/** kg × reps over ticked working sets (warm-ups excluded), as typed so far. */
+export function completedVolume(d: WorkoutDraft): number {
+  let kg = 0
+  for (const e of d.exercises) {
+    for (const s of e.sets) {
+      if (!s.completed || s.setType === 'warmup') continue
+      kg += (parseNumber(s.weight) ?? 0) * (parseNumber(s.reps) ?? 0)
+    }
+  }
+  return Math.round(kg * 10) / 10
 }
 
 export interface Improvement {

@@ -1019,3 +1019,79 @@ test.describe('exercise card actions', () => {
     await expect(card.getByRole('alert')).toHaveCount(0)
   })
 })
+
+test.describe('workout header and timers', () => {
+  test('the header sticks with the totals and Finish; workout notes are gone', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByLabel('Set 1 weight').fill('80')
+    await card.getByLabel('Set 1 reps').fill('8')
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+    const bar = page.locator('.workout-bar')
+    await expect(bar).toContainText('640 kg')
+    await expect(page.getByLabel('Workout notes')).toHaveCount(0)
+
+    await page.getByRole('button', { name: /^Discard/ }).scrollIntoViewIfNeeded()
+    await expect(page.getByRole('button', { name: 'Finish workout' })).toBeInViewport()
+    await expect(bar).toBeInViewport()
+  })
+
+  test('rest time is picked on a wheel (keyboard works too)', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+
+    await card.getByRole('button', { name: /Rest time for Bench Press/ }).click()
+    const sheet = page.getByRole('dialog', { name: 'Rest timer' })
+    const wheel = sheet.getByRole('spinbutton', { name: 'Rest time for Bench Press' })
+    await expect(wheel).toHaveAttribute('aria-valuetext', '1 min 30 s')
+    await wheel.focus()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('ArrowDown')
+    await expect(wheel).toHaveAttribute('aria-valuetext', '2 min')
+    await sheet.getByRole('button', { name: 'Done' }).click()
+
+    await expect(card.getByRole('button', { name: /Rest time for Bench Press/ })).toHaveText(
+      /Rest 2:00/,
+    )
+  })
+
+  test('the ⏱ sheet starts a countdown and runs a stopwatch', async ({ page }) => {
+    await page.clock.install()
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+
+    await page.getByRole('button', { name: 'Timer', exact: true }).click()
+    const sheet = page.getByRole('dialog', { name: 'Timer' })
+    await sheet.getByRole('button', { name: 'Start 1:00' }).click()
+    const timer = page.locator('.rest-timer')
+    await expect(timer).toContainText('1:00')
+    await expect(timer.locator('.rest-progress')).toBeVisible()
+
+    // The last seconds look different, and rest over is not a solid lime slab.
+    await page.clock.runFor(56_000)
+    await expect(timer).toHaveClass(/ending/)
+    await page.clock.runFor(5_000)
+    await expect(timer).toHaveClass(/done/)
+    await expect(timer).toContainText('Rest over')
+    await timer.getByRole('button', { name: 'Close' }).click()
+
+    await page.getByRole('button', { name: 'Timer', exact: true }).click()
+    await sheet.getByRole('tab', { name: 'Stopwatch' }).click()
+    await sheet.getByRole('button', { name: 'Start' }).click()
+    await page.clock.runFor(3_200)
+    // About 3 s (a few ms pass between the click and the fast-forward).
+    await expect(sheet.getByRole('timer')).toHaveText(/^0:03\.\d$/)
+    await sheet.getByRole('button', { name: 'Pause' }).click()
+    const paused = await sheet.getByRole('timer').textContent()
+    await page.clock.runFor(5_000)
+    await expect(sheet.getByRole('timer')).toHaveText(paused!) // frozen while paused
+
+    // Running in the background shows on the header button.
+    await sheet.getByRole('button', { name: 'Resume' }).click()
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name: /stopwatch at 0:03/ })).toBeVisible()
+  })
+})
