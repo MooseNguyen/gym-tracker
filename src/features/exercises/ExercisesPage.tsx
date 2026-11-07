@@ -1,16 +1,12 @@
-import { useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { useConfirm } from '../../shared/ui/confirmContext'
 import { Dialog } from '../../shared/ui/Dialog'
 import { QueryState } from '../../shared/ui/QueryState'
-import {
-  EQUIPMENT,
-  MUSCLE_GROUPS,
-  MUSCLE_SUBGROUPS,
-  muscleLabel,
-  type ExerciseKind,
-} from '../../types/db'
-import { useCreateExercise, useDeleteExercise, useExercises } from './api'
+import type { Exercise } from '../../types/db'
+import { useIsAdmin } from '../auth/AuthProvider'
+import { useDeleteExercise, useExerciseInstructions, useExercises } from './api'
+import { ExerciseForm } from './ExerciseForm'
 import { ExerciseList } from './ExerciseList'
 import { HowToButton } from './HowTo'
 
@@ -19,6 +15,8 @@ export function ExercisesPage() {
   const del = useDeleteExercise()
   const confirm = useConfirm()
   const [adding, setAdding] = useState(false)
+  const isAdmin = useIsAdmin()
+  const [editing, setEditing] = useState<Exercise | null>(null)
 
   return (
     <main className="page">
@@ -47,6 +45,16 @@ export function ExercisesPage() {
                     imagePathEnd: e.image_path_end,
                   }}
                 />
+              )}
+              {isAdmin && !e.user_id && (
+                <button
+                  className="icon-btn"
+                  aria-label={`Edit ${e.name}`}
+                  title="Edit"
+                  onClick={() => setEditing(e)}
+                >
+                  ✎
+                </button>
               )}
               <Link className="btn small" to={`/exercises/${e.id}`}>
                 Stats
@@ -82,76 +90,41 @@ export function ExercisesPage() {
         .
       </p>
       <Dialog open={adding} onClose={() => setAdding(false)} title="New exercise">
-        <NewExerciseForm onDone={() => setAdding(false)} />
+        <ExerciseForm library={data} onDone={() => setAdding(false)} />
+      </Dialog>
+      <Dialog open={!!editing} onClose={() => setEditing(null)} title="Edit exercise">
+        {editing && (
+          <EditBuiltIn
+            key={editing.id}
+            exercise={editing}
+            library={data}
+            onDone={() => setEditing(null)}
+          />
+        )}
       </Dialog>
     </main>
   )
 }
 
-function NewExerciseForm({ onDone }: { onDone: () => void }) {
-  const create = useCreateExercise()
-  const [name, setName] = useState('')
-  const [muscle, setMuscle] = useState<string>(MUSCLE_GROUPS[0])
-  const [equipment, setEquipment] = useState<string>(EQUIPMENT[0])
-  const [kind, setKind] = useState<ExerciseKind>('weight_reps')
-
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    create.mutate(
-      { name: name.trim(), muscle_group: muscle, equipment, kind },
-      { onSuccess: onDone },
-    )
-  }
-
+/** Loads the steps first, so the form starts with them filled in. */
+function EditBuiltIn({
+  exercise,
+  library,
+  onDone,
+}: {
+  exercise: Exercise
+  library: Exercise[]
+  onDone: () => void
+}) {
+  const steps = useExerciseInstructions(exercise.id, true)
   return (
-    <form className="stack" onSubmit={submit}>
-      <label className="field">
-        <span>Name</span>
-        <input required value={name} onChange={(e) => setName(e.target.value)} />
-      </label>
-      <label className="field">
-        <span>Muscle group</span>
-        <select value={muscle} onChange={(e) => setMuscle(e.target.value)}>
-          {MUSCLE_GROUPS.map((m) => {
-            const subs = MUSCLE_SUBGROUPS[m]
-            if (!subs) return <option key={m}>{m}</option>
-            return (
-              <optgroup key={m} label={m}>
-                <option value={m}>{m} (general)</option>
-                {subs.map((s) => (
-                  <option key={s} value={s}>
-                    {muscleLabel(s)}
-                  </option>
-                ))}
-              </optgroup>
-            )
-          })}
-        </select>
-      </label>
-      <label className="field">
-        <span>Equipment</span>
-        <select value={equipment} onChange={(e) => setEquipment(e.target.value)}>
-          {EQUIPMENT.map((m) => (
-            <option key={m}>{m}</option>
-          ))}
-        </select>
-      </label>
-      <label className="field">
-        <span>Tracked as</span>
-        <select value={kind} onChange={(e) => setKind(e.target.value as ExerciseKind)}>
-          <option value="weight_reps">Weight × reps</option>
-          <option value="bodyweight_reps">Reps only</option>
-          <option value="duration">Duration</option>
-        </select>
-      </label>
-      {create.error && (
-        <p role="alert" className="error">
-          {create.error.message}
-        </p>
-      )}
-      <button className="btn primary" disabled={create.isPending}>
-        {create.isPending ? 'Saving…' : 'Save'}
-      </button>
-    </form>
+    <QueryState isPending={steps.isPending} error={steps.error} onRetry={steps.refetch}>
+      <ExerciseForm
+        exercise={exercise}
+        initialSteps={steps.data}
+        library={library}
+        onDone={onDone}
+      />
+    </QueryState>
   )
 }

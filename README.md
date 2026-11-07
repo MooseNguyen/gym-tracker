@@ -94,6 +94,22 @@ Its license allows in-app use **with a visible credit** (shown on the Exercises 
 Instructions are loaded only when the "How to" sheet opens, so lists and history do not carry ~1 kB of text per exercise.
 Retired built-ins RepDB doesn't cover are hidden: they keep their name for history but have no photo or steps.
 
+### Adding built-ins from the app (admins)
+
+An admin can add a built-in (for every user) from **Exercises → + New → Built-in**, with a start photo, an optional end photo and the steps, and edit or hide any built-in with ✎.
+Photos are cropped to a 320px square JPEG on the phone and stored in the `exercise-images` Storage bucket (`own/<uuid>.jpg`, a new name for every upload, so they can be cached forever).
+Only use photos you have the rights to.
+
+Make an account admin once (SQL Editor), then **sign out and in again** so the new token carries the role:
+
+```sql
+update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}'
+where email = 'you@example.com';
+```
+
+The role lives in `app_metadata`, which users cannot change themselves; RLS (`is_admin()`, [migration](supabase/migrations/20261113000000_admin_exercises.sql)) enforces it, and CI checks it ([`admin_rls.sql`](supabase/tests/admin_rls.sql)).
+Built-ins added this way exist only in that database (not in `seed.sql`): export the `exercises` table now and then as a backup.
+
 ## Testing checklist that needs a real Supabase project
 
 The E2E tests mock the network, so they do not cover SQL. After setting up Supabase, check by hand once:

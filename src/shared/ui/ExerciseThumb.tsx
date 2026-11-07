@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { exerciseImageUrl } from './exerciseImage'
 
 interface Props {
   imagePath: string | null | undefined
@@ -35,7 +36,7 @@ export function ExerciseThumb({ imagePath, name, size = 48, decorative = false }
   return (
     <img
       className="thumb"
-      src={`/exercises/${imagePath}`}
+      src={exerciseImageUrl(imagePath)}
       alt={decorative ? '' : `${name} demonstration`}
       width={size}
       height={size}

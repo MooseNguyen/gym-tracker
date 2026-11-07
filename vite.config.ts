@@ -54,6 +54,17 @@ export default defineConfig({
               expiration: { maxEntries: 400, maxAgeSeconds: 60 * 60 * 24 * 365 },
             },
           },
+          {
+            // Photos an admin uploaded (Storage). A new photo always gets a new
+            // file name, so these never change in place either.
+            urlPattern: /\/storage\/v1\/object\/public\/exercise-images\//,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'exercise-uploads',
+              expiration: { maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
         ],
       },
     }),
