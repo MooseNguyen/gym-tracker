@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
-import { queryClient } from '../../lib/queryClient'
+import { queryClient, queryPersister } from '../../lib/queryClient'
 import { setDraftOwner } from '../workout/draftStore'
 
 interface AuthState {
@@ -25,7 +25,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data } = supabase.auth.onAuthStateChange((event, session) => {
       // Never show one user's cached data to the next user on this device.
-      if (event === 'SIGNED_OUT') queryClient.clear()
+      if (event === 'SIGNED_OUT') {
+        queryClient.clear()
+        void queryPersister.removeClient() // and the copy saved on the phone
+      }
       apply(session)
     })
     return () => data.subscription.unsubscribe()

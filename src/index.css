@@ -1,4 +1,39 @@
 /* ==========================================================================
+   Fonts: self-hosted Latin subsets of Barlow (SIL OFL, public/fonts/OFL.txt).
+   swap: text shows at once in the fallback and switches when the file is in.
+   ========================================================================== */
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/barlow-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/barlow-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/barlow-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/barlow-condensed-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/barlow-condensed-700.woff2') format('woff2');
+}
+
+/* ==========================================================================
    Tokens
    ========================================================================== */
 :root {

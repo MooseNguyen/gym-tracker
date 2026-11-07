@@ -3,6 +3,16 @@ import { supabase, unwrap } from '../../lib/supabase'
 import type { PreviousSet } from '../../types/db'
 import type { SaveWorkoutPayload } from './draft'
 
+function groupByExercise(rows: PreviousSet[]) {
+  const byExercise = new Map<string, PreviousSet[]>()
+  for (const r of rows) {
+    const list = byExercise.get(r.exercise_id) ?? []
+    list.push(r)
+    byExercise.set(r.exercise_id, list)
+  }
+  return byExercise
+}
+
 /** Last time's sets for each exercise, grouped by exercise id. */
 export function usePreviousSets(exerciseIds: string[], excludeWorkoutId?: string) {
   // Sorted so adding exercises in a different order reuses the cache entry.
@@ -10,21 +20,16 @@ export function usePreviousSets(exerciseIds: string[], excludeWorkoutId?: string
   return useQuery({
     queryKey: ['previous-sets', ids, excludeWorkoutId ?? null],
     enabled: ids.length > 0,
-    queryFn: async () => {
-      const rows = unwrap(
+    // The cache keeps the plain rows and the Map is built on read: the cache
+    // is saved to localStorage as JSON, where a Map would come back as {}.
+    queryFn: async () =>
+      unwrap(
         await supabase.rpc('previous_sets', {
           p_exercise_ids: ids,
           p_exclude_workout: excludeWorkoutId ?? null,
         }),
-      ) as PreviousSet[]
-      const byExercise = new Map<string, PreviousSet[]>()
-      for (const r of rows) {
-        const list = byExercise.get(r.exercise_id) ?? []
-        list.push(r)
-        byExercise.set(r.exercise_id, list)
-      }
-      return byExercise
-    },
+      ) as PreviousSet[],
+    select: groupByExercise,
   })
 }
 
