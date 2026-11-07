@@ -26,7 +26,8 @@ export function usePreviousSets(exerciseIds: string[], excludeWorkoutId?: string
       unwrap(
         await supabase.rpc('previous_sets', {
           p_exercise_ids: ids,
-          p_exclude_workout: excludeWorkoutId ?? null,
+          // Left out (not null) when there is none: the function defaults it.
+          p_exclude_workout: excludeWorkoutId,
         }),
       ) as PreviousSet[],
     select: groupByExercise,

@@ -419,7 +419,8 @@ export function parseNumber(value: string): number | null {
   return Number.isFinite(n) && n >= 0 ? n : null
 }
 
-export interface SaveWorkoutPayload {
+// A type, not an interface: only type aliases fit the generated Json type of the RPC argument.
+export type SaveWorkoutPayload = {
   id: string
   routine_id: string | null
   name: string

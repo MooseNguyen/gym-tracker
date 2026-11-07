@@ -1,6 +1,7 @@
-// Hand-written row types matching supabase/migrations.
-// Once a Supabase project exists, these can be replaced by
-// `npx supabase gen types typescript --linked > src/types/supabase.ts`.
+// App-side shapes of the data: rows with their embeds (a workout with its
+// exercises and sets), narrowed unions (ExerciseKind) and docs per field.
+// The raw schema lives in the generated src/types/supabase.ts, which types
+// the Supabase client itself (table, column and RPC names).
 
 export type ExerciseKind = 'weight_reps' | 'bodyweight_reps' | 'duration'
 export type SetType = 'warmup' | 'normal' | 'drop' | 'failure'
