@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Dialog } from '../../shared/ui/Dialog'
+import { exerciseImageUrl } from '../../shared/ui/exerciseImage'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { useExerciseInstructions } from './api'
 
@@ -66,12 +67,12 @@ export function HowToSteps({
  * motion shows the start only (the animation is switched off in CSS).
  */
 function HowToImage({ exercise }: { exercise: Target }) {
-  if (!exercise.imagePathEnd)
+  if (!exercise.imagePath || !exercise.imagePathEnd)
     return <ExerciseThumb imagePath={exercise.imagePath} name={exercise.name} size={200} />
   return (
     <div className="how-to-frames" role="img" aria-label={`${exercise.name}, start and end`}>
-      <img src={`/exercises/${exercise.imagePath}`} alt="" />
-      <img src={`/exercises/${exercise.imagePathEnd}`} alt="" className="how-to-frame-end" />
+      <img src={exerciseImageUrl(exercise.imagePath)} alt="" />
+      <img src={exerciseImageUrl(exercise.imagePathEnd)} alt="" className="how-to-frame-end" />
     </div>
   )
 }

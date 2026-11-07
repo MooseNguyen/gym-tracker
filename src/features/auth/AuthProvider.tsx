@@ -38,3 +38,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext)
 }
+
+/**
+ * Whether the signed-in account may edit built-in exercises. Only for showing
+ * the admin controls: the database (RLS, is_admin()) is what enforces it.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function useIsAdmin() {
+  return useAuth().session?.user.app_metadata?.role === 'admin'
+}

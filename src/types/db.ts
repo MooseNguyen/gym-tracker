@@ -12,7 +12,7 @@ export interface Exercise {
   muscle_group: string
   equipment: string
   kind: ExerciseKind
-  /** File name under /exercises/ (built-in exercises only). */
+  /** Built-ins only: a file under /exercises/, or own/<uuid>.jpg in Storage (exerciseImageUrl). */
   image_path: string | null
   /** Second photo, the end of the movement (RepDB built-ins); null = one photo. */
   image_path_end?: string | null

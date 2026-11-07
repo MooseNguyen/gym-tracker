@@ -352,12 +352,14 @@ export function ActiveWorkoutPage() {
         onClose={() => setReordering(false)}
       />
       <HowToSheet
-        exercise={howTo && {
+        exercise={
+          howTo && {
             id: howTo.exerciseId,
             name: howTo.name,
             imagePath: howTo.imagePath,
             imagePathEnd: howTo.imagePathEnd,
-          }}
+          }
+        }
         onClose={() => setHowTo(null)}
       />
     </main>

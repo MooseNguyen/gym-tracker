@@ -55,7 +55,7 @@ export async function mockPasswordAuth(page: Page, valid: { email: string; passw
 }
 
 /** Puts a fake, non-expired session where supabase-js looks for it. */
-export async function fakeLogin(page: Page) {
+export async function fakeLogin(page: Page, { admin = false }: { admin?: boolean } = {}) {
   const ref = new URL(MOCK_SUPABASE_URL).hostname.split('.')[0]
   const session = {
     access_token: 'e2e.fake.token',
@@ -63,7 +63,8 @@ export async function fakeLogin(page: Page) {
     token_type: 'bearer',
     expires_in: 3600,
     expires_at: Math.floor(Date.now() / 1000) + 3600,
-    user,
+    // Admin rights come from app_metadata (set server-side, see the admin migration).
+    user: admin ? { ...user, app_metadata: { role: 'admin' } } : user,
   }
   await page.addInitScript(
     ([key, value]) => {
