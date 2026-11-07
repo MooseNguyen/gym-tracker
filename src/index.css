@@ -597,6 +597,24 @@ button.link {
     opacity: 0;
   }
 }
+.sheet.sheet-full {
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  padding-top: calc(16px + env(safe-area-inset-top));
+}
+/* Only while open: a closed <dialog> must keep display: none. The body fills
+   the screen so its last row (Done) sits at the bottom. */
+.sheet.sheet-full[open] {
+  display: flex;
+  flex-direction: column;
+}
+.sheet-full > .reorder-sheet {
+  flex: 1;
+}
+.reorder-sheet > .sticky-actions {
+  margin-top: auto;
+}
 .sheet-header {
   display: flex;
   justify-content: space-between;
@@ -840,10 +858,70 @@ button.link {
 .workout {
   padding-bottom: 110px; /* room for the rest timer */
 }
-.workout-header {
+/* Sticky glass bar: name, ⏱, Finish, then Duration / Volume / Sets. Full
+   bleed (the page's side padding is undone) so content scrolls under it. */
+.workout-bar {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  margin: calc(-16px - env(safe-area-inset-top)) -16px 0;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+  border-bottom: 1px solid var(--glass-border);
+  background: color-mix(in srgb, var(--bg) 72%, transparent);
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+}
+.workout-bar-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.workout-bar .title-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 1.5rem;
+}
+.finish-btn {
+  flex: none;
+  min-height: 40px;
+  padding: 0 18px;
+}
+.timer-btn {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.timer-btn.running {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.workout-bar .workout-stats {
+  margin: 0;
+  gap: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.workout-bar .workout-stats dd {
+  margin: 0;
+}
+.workout-bar .stat-value {
+  font-size: 1.25rem;
 }
 .title-input {
   font-family: var(--font-display);
@@ -881,15 +959,46 @@ button.link {
   width: 32px;
   height: 32px;
 }
-/* Footer row ("+ Add set", rest time) matches the compact set rows. */
-.exercise-body > .row .btn.small {
-  min-height: 34px;
-  font-size: 0.875rem;
+/* Rest time and Notes, above the sets: two small pills. */
+.exercise-tools {
+  display: flex;
+  gap: 8px;
 }
-.exercise-body > .row select {
-  width: auto;
+.tool-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 34px;
-  padding: 2px 8px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tool-chip.on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+/* The rest <select> is the chip's text: no box of its own. */
+.tool-chip select {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: inherit;
+  font-weight: inherit;
+}
+.tool-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .exercise-summary {
   display: flex;
@@ -948,9 +1057,26 @@ button.link {
 
 .sets {
   width: 100%;
+  /* Fixed layout: the inputs fill their columns, so kg and reps sit side by
+     side instead of floating apart in whatever width is left. */
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0 4px;
   text-align: center;
+}
+.sets th:nth-child(1) {
+  width: 42px;
+}
+/* kg and reps: room for "102.5" and no more; Previous takes the rest. */
+.sets th:nth-child(3),
+.sets th:nth-child(4) {
+  width: 64px;
+}
+.sets th:nth-child(5) {
+  width: 44px;
+}
+.sets th:nth-child(6) {
+  width: 34px;
 }
 .sets th {
   font-size: 0.78rem;
@@ -963,10 +1089,10 @@ button.link {
   transition: background 0.25s;
 }
 .sets td:first-child {
-  border-radius: var(--r-control) 0 0 var(--r-control);
+  border-radius: 6px 0 0 6px;
 }
 .sets td:last-child {
-  border-radius: 0 var(--r-control) var(--r-control) 0;
+  border-radius: 0 6px 6px 0;
 }
 .sets tr.done td {
   background: color-mix(in srgb, var(--success) 13%, transparent);
@@ -977,14 +1103,15 @@ button.link {
   white-space: nowrap;
 }
 .num-input {
-  width: 54px;
-  min-height: 36px;
-  height: 36px;
+  width: 100%;
+  border-radius: 6px;
+  min-height: 32px;
+  height: 32px;
   padding: 2px;
   text-align: center;
   font-family: var(--font-display);
   /* 16px minimum: anything smaller makes iOS zoom into the field on focus. */
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -1006,7 +1133,7 @@ button.link {
   width: 34px;
   height: 34px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--raised);
   cursor: pointer;
   font-family: var(--font-display);
@@ -1065,26 +1192,73 @@ button.link {
   justify-content: center;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  border: 1px solid var(--glass-border);
-  border-radius: var(--r-card);
-  background: var(--glass-fill-strong);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  min-height: 72px;
+  padding: 12px 14px;
+  overflow: hidden; /* clips the progress bar to the rounded corners */
+  border: 1px solid transparent;
+  border-radius: 20px;
+  /* Frosted glass: a lighter, more saturated blur than the other layers,
+     a sheen from the top, and a gradient hairline as its edge. */
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.1), rgb(255 255 255 / 0.02) 60%) padding-box,
+    color-mix(in srgb, var(--raised) 55%, transparent) padding-box,
+    linear-gradient(160deg, rgb(255 255 255 / 0.28), rgb(255 255 255 / 0.04) 55%) border-box;
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
   box-shadow:
-    var(--glass-highlight),
-    0 10px 30px rgb(0 0 0 / 0.45);
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    0 14px 36px rgb(0 0 0 / 0.5);
   z-index: 9;
 }
-.rest-timer.done {
+.rest-timer .btn.small {
+  position: relative; /* above the progress bar */
+  background: rgb(255 255 255 / 0.06);
+  border-color: rgb(255 255 255 / 0.12);
+}
+/* Time left: a strip along the bottom that shrinks toward the left. */
+.rest-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
   background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-ink);
+  transform-origin: left center;
+  transition: transform 0.25s linear;
+}
+.rest-timer.ending .rest-progress {
+  background: var(--warmup);
+}
+.rest-timer.ending .rest-time {
+  color: var(--warmup);
+  animation: rest-pulse 1s ease-in-out infinite;
+}
+@keyframes rest-pulse {
+  50% {
+    transform: scale(1.08);
+  }
+}
+/* Rest over: a lime glow on the glass, not a solid lime slab, so the
+   buttons and text stay readable. */
+.rest-timer.done {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%)
+      padding-box,
+    color-mix(in srgb, var(--raised) 60%, transparent) padding-box,
+    linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 30%, transparent))
+      border-box;
+  box-shadow:
+    0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 14px 36px rgb(0 0 0 / 0.5);
+}
+.rest-timer.done .rest-time {
+  color: var(--accent);
 }
 .rest-time {
+  position: relative;
   min-width: 5ch;
   font-family: var(--font-display);
-  font-size: 1.8rem;
+  font-size: 2.1rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -1637,7 +1811,7 @@ button.link {
    ========================================================================== */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .tabbar,
-  .rest-timer:not(.done),
+  .rest-timer,
   .sheet,
   .sticky-actions {
     background: var(--raised);
@@ -1651,4 +1825,123 @@ button.link {
   .sticky-actions {
     background: var(--raised);
   }
+}
+
+/* ==========================================================================
+   Reorder sheet
+   ========================================================================== */
+.reorder-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reorder-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-radius: var(--r-control);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.reorder-row.dragging {
+  background: var(--raised);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+}
+.reorder-remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #2a0808;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.reorder-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.05rem;
+}
+.reorder-handle {
+  flex: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+.reorder-row .thumb {
+  border-radius: 50%;
+}
+
+/* ==========================================================================
+   Time wheel (rest time, countdown) and the timer sheet
+   ========================================================================== */
+.time-wheel {
+  position: relative;
+  overflow: hidden;
+  /* Rows fade out toward the edges, like the iOS picker. */
+  mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+  -webkit-mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+}
+.time-wheel-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  translate: 0 -50%;
+  border-radius: var(--r-control);
+  background: rgb(255 255 255 / 0.08);
+  pointer-events: none;
+}
+.time-wheel-scroll {
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.time-wheel-scroll::-webkit-scrollbar {
+  display: none;
+}
+.time-wheel-scroll:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--r-control);
+}
+.time-wheel-item {
+  display: grid;
+  place-items: center;
+  scroll-snap-align: center;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  user-select: none;
+}
+.time-wheel-item.on {
+  color: var(--text);
+}
+.timer-sheet .segmented {
+  margin-bottom: 4px;
+}
+.stopwatch-time {
+  margin: 12px 0;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 3.2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stopwatch-time.running {
+  color: var(--accent);
 }

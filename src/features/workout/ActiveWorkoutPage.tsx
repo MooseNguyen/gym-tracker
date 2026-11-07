@@ -1,26 +1,32 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
-import { HowToButton } from '../exercises/HowTo'
-import { formatSetValues } from '../history/format'
+import { HowToSheet } from '../exercises/HowTo'
+import { formatKg, formatSetValues } from '../history/format'
 import { useConfirm } from '../../shared/ui/confirmContext'
+import { Dialog } from '../../shared/ui/Dialog'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { MoveButtons, SortableList, type ItemControls } from '../../shared/ui/SortableList'
-import type { PreviousSet, SetType } from '../../types/db'
+import type { Exercise, PreviousSet, SetType } from '../../types/db'
 import {
   addExercises,
   addSet,
   applySuggestions,
   completedSetCount,
+  completedVolume,
   describeImprovement,
   improvementOver,
+  MAX_VALUE,
   removeExercise,
   removeSet,
   reorderExercises,
+  replaceExercise,
   requiredField,
   toSavePayload,
   toggleSetComplete,
+  tooLargeCompletedSets,
+  tooLargeField,
   updateExercise,
   updateSet,
   type DraftExercise,
@@ -31,7 +37,10 @@ import { usePreviousSets, useSaveWorkout } from './api'
 import { PrBanner, type Celebration } from './PrBanner'
 import { describeReason, headlineSuggestion, suggestSets } from './progression'
 import { playCelebration } from './celebrate'
+import { ReorderSheet } from './ReorderSheet'
 import { RestTimer } from './RestTimer'
+import { RestPickerSheet, TimerSheet } from './TimerSheets'
+import { spokenSeconds, STOPPED, stopwatchElapsed } from './timers'
 import { formatDuration, useNow } from './useNow'
 import { useWakeLock } from './useWakeLock'
 
@@ -50,8 +59,17 @@ export function ActiveWorkoutPage() {
   const confirm = useConfirm()
   // Finish was pressed with nothing ticked: explain next to the button.
   const [finishHint, setFinishHint] = useState(false)
+  // Sheets opened from an exercise's ⋯ menu.
+  const [howTo, setHowTo] = useState<DraftExercise | null>(null)
+  const [replacing, setReplacing] = useState<DraftExercise | null>(null)
+  const [reordering, setReordering] = useState(false)
+  const [timerOpen, setTimerOpen] = useState(false)
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
+  const stopwatch = draft?.stopwatch ?? STOPPED
+  const stopwatchRunning = stopwatch.startedAt != null
+  // Floor, like any stopwatch: 3.6 s is still "0:03" (formatDuration rounds).
+  const stopwatchText = formatDuration(Math.floor(stopwatchElapsed(stopwatch, now) / 1000))
   useWakeLock(isNew)
 
   const previous = usePreviousSets(
@@ -91,7 +109,8 @@ export function ActiveWorkoutPage() {
     if (!set.completed && !completedSet?.completed) {
       // Refused: point at the field to fill instead of silently doing nothing.
       setMissing(set.id)
-      document.getElementById(fieldId(set.id, requiredField(ex.kind)))?.focus()
+      const field = tooLargeField(set) ?? requiredField(ex.kind)
+      document.getElementById(fieldId(set.id, field))?.focus()
       return
     }
     setMissing(null)
@@ -110,6 +129,7 @@ export function ActiveWorkoutPage() {
       return
     }
     setFinishHint(false)
+    if (tooLargeCompletedSets(draft) > 0) return // the card shows which set and why
     const unfinished = draft.exercises.reduce(
       (n, e) => n + e.sets.filter((s) => !s.completed).length,
       0,
@@ -132,6 +152,36 @@ export function ActiveWorkoutPage() {
     })
   }
 
+  async function removeWithConfirm(ex: DraftExercise) {
+    const ok = await confirm({
+      title: `Remove ${ex.name}?`,
+      message: 'Its sets in this workout are removed too.',
+      confirmLabel: 'Remove',
+      danger: true,
+    })
+    if (ok) setDraft((d) => removeExercise(d, ex.id))
+  }
+
+  /** In the reorder list: instant for an untouched exercise, asks when sets are logged. */
+  async function removeFromList(ex: DraftExercise) {
+    if (ex.sets.some((s) => s.completed)) return removeWithConfirm(ex)
+    setDraft((d) => removeExercise(d, ex.id))
+  }
+
+  async function replaceWith(target: DraftExercise, picked: Exercise) {
+    const logged = target.sets.filter((s) => s.completed).length
+    if (logged > 0) {
+      const ok = await confirm({
+        title: `Replace ${target.name}?`,
+        message: `${logged} logged ${logged === 1 ? 'set is' : 'sets are'} cleared: the numbers belong to ${target.name}.`,
+        confirmLabel: 'Replace',
+        danger: true,
+      })
+      if (!ok) return
+    }
+    setDraft((d) => replaceExercise(d, target.id, picked))
+  }
+
   async function discard() {
     const editing = draft?.mode === 'edit'
     const ok = await confirm({
@@ -147,26 +197,66 @@ export function ActiveWorkoutPage() {
 
   return (
     <main className="page workout">
-      <header className="workout-header">
-        <input
-          className="title-input"
-          aria-label="Workout name"
-          value={draft.name}
-          onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-        />
-        <div className="workout-stats">
-          <div>
-            <span className="stat-label">Duration</span>
-            <span className="stat-value">
-              {isNew ? formatDuration((now - Date.parse(draft.startedAt)) / 1000) : 'Editing'}
-            </span>
-          </div>
-          <div>
-            <span className="stat-label">Sets done</span>
-            <span className="stat-value">{completed}</span>
-          </div>
+      {/* Sticky: the clock, the totals and Finish stay in reach while scrolling. */}
+      <header className="workout-bar">
+        <div className="workout-bar-top">
+          <input
+            className="title-input"
+            aria-label="Workout name"
+            value={draft.name}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+          />
+          {isNew && (
+            <button
+              type="button"
+              className={stopwatchRunning ? 'timer-btn running' : 'timer-btn'}
+              aria-label={stopwatchRunning ? `Timer (stopwatch at ${stopwatchText})` : 'Timer'}
+              aria-haspopup="dialog"
+              onClick={() => setTimerOpen(true)}
+            >
+              <ClockIcon />
+              {stopwatchRunning && <span>{stopwatchText}</span>}
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn primary finish-btn"
+            aria-label={isNew ? 'Finish workout' : 'Save changes'}
+            onClick={finish}
+            disabled={save.isPending}
+          >
+            {save.isPending ? 'Saving…' : isNew ? 'Finish' : 'Save'}
+          </button>
         </div>
+        <dl className="workout-stats">
+          <div>
+            <dt className="stat-label">Duration</dt>
+            <dd className="stat-value">
+              {isNew ? formatDuration((now - Date.parse(draft.startedAt)) / 1000) : 'Editing'}
+            </dd>
+          </div>
+          <div>
+            <dt className="stat-label">Volume</dt>
+            <dd className="stat-value">{formatKg(completedVolume(draft))}</dd>
+          </div>
+          <div>
+            <dt className="stat-label">Sets</dt>
+            <dd className="stat-value">{completed}</dd>
+          </div>
+        </dl>
       </header>
+
+      {/* Next to Finish's new place, at the top. */}
+      {save.error && (
+        <p role="alert" className="error">
+          Saving failed: {save.error.message}. Your workout is still on this phone. Try again.
+        </p>
+      )}
+      {finishHint && completed === 0 && (
+        <p role="alert" className="error">
+          Tick at least one set before finishing, or discard the workout.
+        </p>
+      )}
 
       {previous.error && (
         <p className="muted">Could not load previous sets. Logging still works.</p>
@@ -204,6 +294,12 @@ export function ActiveWorkoutPage() {
               onToggleDone={toggleDone}
               missingSetId={missing}
               onEdited={(setId) => setMissing((m) => (m === setId ? null : m))}
+              actions={{
+                onHowTo: () => setHowTo(ex),
+                onReplace: () => setReplacing(ex),
+                onReorder: () => setReordering(true),
+                onRemove: () => removeWithConfirm(ex),
+              }}
               open={!collapsed.has(ex.id)}
               onOpenChange={(open) =>
                 setCollapsed((prev) => {
@@ -218,46 +314,46 @@ export function ActiveWorkoutPage() {
         />
       </div>
 
-      <button className="btn block" onClick={() => setPicking(true)}>
+      <button className="btn primary block" onClick={() => setPicking(true)}>
         + Add exercises
       </button>
 
-      <label className="field">
-        <span>Workout notes</span>
-        <textarea
-          rows={2}
-          value={draft.notes}
-          onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
-        />
-      </label>
+      {/* Workout notes are no longer edited here; existing ones are kept on save. */}
+      <button className="btn danger block" onClick={discard} disabled={save.isPending}>
+        {isNew ? 'Discard workout' : 'Discard changes'}
+      </button>
 
-      {save.error && (
-        <p role="alert" className="error">
-          Saving failed: {save.error.message}. Your workout is still on this phone. Try again.
-        </p>
+      {isNew && draft.restEndsAt && (
+        <RestTimer endsAt={draft.restEndsAt} totalMs={draft.restTotalMs} />
       )}
-
-      {finishHint && completed === 0 && (
-        <p role="alert" className="error">
-          Tick at least one set before finishing, or discard the workout.
-        </p>
-      )}
-      <div className="row">
-        <button className="btn danger" onClick={discard} disabled={save.isPending}>
-          Discard
-        </button>
-        <button className="btn primary grow" onClick={finish} disabled={save.isPending}>
-          {save.isPending ? 'Saving…' : isNew ? 'Finish workout' : 'Save changes'}
-        </button>
-      </div>
-
-      {isNew && draft.restEndsAt && <RestTimer endsAt={draft.restEndsAt} />}
+      <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} />
       <PrBanner celebration={celebration} onDone={clearCelebration} />
 
       <ExercisePicker
         open={picking}
         onClose={() => setPicking(false)}
         onPick={(ex) => setDraft((d) => addExercises(d, ex))}
+      />
+      <ExercisePicker
+        open={replacing != null}
+        single
+        title={replacing ? `Replace ${replacing.name}` : undefined}
+        onClose={() => setReplacing(null)}
+        onPick={([picked]) => {
+          const target = replacing
+          if (target && picked) replaceWith(target, picked)
+        }}
+      />
+      <ReorderSheet
+        open={reordering}
+        exercises={draft.exercises}
+        onReorder={(from, to) => setDraft((d) => reorderExercises(d, from, to))}
+        onRemove={removeFromList}
+        onClose={() => setReordering(false)}
+      />
+      <HowToSheet
+        exercise={howTo && { id: howTo.exerciseId, name: howTo.name, imagePath: howTo.imagePath }}
+        onClose={() => setHowTo(null)}
       />
     </main>
   )
@@ -274,10 +370,12 @@ const SET_TYPES: { value: SetType; label: string }[] = [
   { value: 'failure', label: 'Failure' },
 ]
 
-// A routine can use any 15 s step, so make sure its value is always selectable.
-const REST_PRESETS = [0, 30, 60, 90, 120, 150, 180, 240, 300]
-const restOptions = (current: number) =>
-  [...new Set([...REST_PRESETS, current])].sort((a, b) => a - b)
+export interface CardActions {
+  onHowTo: () => void
+  onReplace: () => void
+  onReorder: () => void
+  onRemove: () => void
+}
 
 function ExerciseCard({
   ex,
@@ -289,6 +387,7 @@ function ExerciseCard({
   onOpenChange,
   missingSetId,
   onEdited,
+  actions,
 }: {
   missingSetId: string | null
   onEdited: (setId: string) => void
@@ -305,13 +404,25 @@ function ExerciseCard({
     prev: PreviousSet | undefined,
     origin: { x: number; y: number },
   ) => void
+  actions: CardActions
 }) {
-  const confirm = useConfirm()
+  const [menuOpen, setMenuOpen] = useState(false)
+  // Notes stay out of the way until asked for (or already written).
+  const [notesOpen, setNotesOpen] = useState(() => ex.notes !== '')
+  const [restOpen, setRestOpen] = useState(false)
   let normalCount = 0
   const timed = ex.kind === 'duration'
   const required = requiredField(ex.kind)
   const missingIndex = ex.sets.findIndex((s) => s.id === missingSetId)
+  const tooLargeIndex = ex.sets.findIndex((s) => tooLargeField(s))
   const errorId = `missing-${ex.id}`
+  const notesId = `notes-${ex.id}`
+
+  // Menu items close the menu first: one sheet at a time.
+  const run = (action: () => void) => () => {
+    setMenuOpen(false)
+    action()
+  }
 
   return (
     // The whole card is the drag activator (press and hold on touch);
@@ -334,40 +445,54 @@ function ExerciseCard({
           </span>
         }
         actions={
-          <>
-            {/* Mid-set "how was this done again?": the most useful place for it. */}
-            {!ex.custom && (
-              <HowToButton
-                exercise={{ id: ex.exerciseId, name: ex.name, imagePath: ex.imagePath }}
-              />
-            )}
-            <button
-              className="icon-btn danger"
-              aria-label={`Remove ${ex.name}`}
-              onClick={async () => {
-                const ok = await confirm({
-                  title: `Remove ${ex.name}?`,
-                  message: 'Its sets in this workout are removed too.',
-                  confirmLabel: 'Remove',
-                  danger: true,
-                })
-                if (ok) setDraft((d) => removeExercise(d, ex.id))
-              }}
-            >
-              ✕
-            </button>
-          </>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={`More actions for ${ex.name}`}
+            aria-haspopup="dialog"
+            onClick={() => setMenuOpen(true)}
+          >
+            <MoreIcon />
+          </button>
         }
       >
         <div className="exercise-body">
           {suggest && <SuggestionLine ex={ex} previous={previous} />}
-          <input
-            className="note-input"
-            placeholder="Notes"
-            aria-label={`Notes for ${ex.name}`}
-            value={ex.notes}
-            onChange={(e) => setDraft((d) => updateExercise(d, ex.id, { notes: e.target.value }))}
-          />
+
+          <div className="exercise-tools">
+            <button
+              type="button"
+              className="tool-chip"
+              aria-label={`Rest time for ${ex.name}: ${spokenSeconds(ex.restSeconds)}`}
+              aria-haspopup="dialog"
+              onClick={() => setRestOpen(true)}
+            >
+              <span aria-hidden="true">⏱</span>
+              {ex.restSeconds === 0 ? 'Rest off' : `Rest ${formatDuration(ex.restSeconds)}`}
+            </button>
+            <button
+              type="button"
+              className={notesOpen ? 'tool-chip on' : 'tool-chip'}
+              aria-expanded={notesOpen}
+              aria-controls={notesId}
+              onClick={() => setNotesOpen((o) => !o)}
+            >
+              <span aria-hidden="true">✎</span> Notes
+              {ex.notes && !notesOpen && <span className="tool-dot" aria-label="(has notes)" />}
+            </button>
+          </div>
+          {notesOpen && (
+            <input
+              id={notesId}
+              className="note-input"
+              placeholder="Notes for this exercise"
+              aria-label={`Notes for ${ex.name}`}
+              // Opened on purpose: ready to type. Not when it opens itself for existing notes.
+              autoFocus={ex.notes === ''}
+              value={ex.notes}
+              onChange={(e) => setDraft((d) => updateExercise(d, ex.id, { notes: e.target.value }))}
+            />
+          )}
 
           <table className="sets">
             <thead>
@@ -389,12 +514,14 @@ function ExerciseCard({
                 if (s.setType === 'normal') normalCount++
                 const label = SET_LABEL[s.setType] || String(normalCount)
                 const prev = previous[i]
+                const tooLarge = tooLargeField(s)
                 const field = (
                   key: 'weight' | 'reps' | 'duration',
                   placeholder: string,
                   decimal: boolean,
                 ) => {
-                  const invalid = s.id === missingSetId && key === required
+                  const invalid =
+                    tooLarge === key || (!tooLarge && s.id === missingSetId && key === required)
                   return (
                     <td>
                       <input
@@ -483,37 +610,82 @@ function ExerciseCard({
             </tbody>
           </table>
 
-          {missingIndex >= 0 && (
+          {tooLargeIndex >= 0 ? (
             <p id={errorId} role="alert" className="error small-text">
-              Enter {required === 'duration' ? 'the time' : 'reps'} for set {missingIndex + 1}, then
-              tick it.
+              Set {tooLargeIndex + 1}: kg and reps can be at most {MAX_VALUE}.
             </p>
+          ) : (
+            missingIndex >= 0 && (
+              <p id={errorId} role="alert" className="error small-text">
+                Enter {required === 'duration' ? 'the time' : 'reps'} for set {missingIndex + 1},
+                then tick it.
+              </p>
+            )
           )}
 
-          <div className="row between">
-            <button className="btn small" onClick={() => setDraft((d) => addSet(d, ex.id))}>
-              + Add set
-            </button>
-            <label className="row muted small-text">
-              Rest
-              <select
-                aria-label={`Rest time for ${ex.name}`}
-                value={ex.restSeconds}
-                onChange={(e) =>
-                  setDraft((d) => updateExercise(d, ex.id, { restSeconds: Number(e.target.value) }))
-                }
-              >
-                {restOptions(ex.restSeconds).map((sec) => (
-                  <option key={sec} value={sec}>
-                    {sec === 0 ? 'Off' : formatDuration(sec)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
+          <button className="btn block" onClick={() => setDraft((d) => addSet(d, ex.id))}>
+            + Add set
+          </button>
         </div>
       </Disclosure>
+
+      <RestPickerSheet
+        open={restOpen}
+        exerciseName={ex.name}
+        value={ex.restSeconds}
+        onClose={() => setRestOpen(false)}
+        onDone={(sec) => {
+          setDraft((d) => updateExercise(d, ex.id, { restSeconds: sec }))
+          setRestOpen(false)
+        }}
+      />
+      <Dialog open={menuOpen} onClose={() => setMenuOpen(false)} title={ex.name}>
+        <div className="stack action-sheet">
+          {!ex.custom && (
+            <button type="button" className="btn block" onClick={run(actions.onHowTo)}>
+              How to do it
+            </button>
+          )}
+          <button type="button" className="btn block" onClick={run(actions.onReplace)}>
+            Replace exercise
+          </button>
+          <button type="button" className="btn block" onClick={run(actions.onReorder)}>
+            Reorder exercises
+          </button>
+          <button type="button" className="btn block danger" onClick={run(actions.onRemove)}>
+            Remove exercise
+          </button>
+        </div>
+      </Dialog>
     </section>
+  )
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2M10 2h4" />
+    </svg>
+  )
+}
+
+function MoreIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <circle cx="5" cy="12" r="2" fill="currentColor" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" />
+      <circle cx="19" cy="12" r="2" fill="currentColor" />
+    </svg>
   )
 }
 
