@@ -4,6 +4,10 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  define: {
+    // Changes on every build; the saved query cache is dropped when it does.
+    __BUILD_ID__: JSON.stringify(Date.now().toString(36)),
+  },
   plugins: [
     react(),
     VitePWA({
@@ -23,27 +27,13 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Precache only the app shell. Workout data always comes from Supabase.
-        // Exercise photos (.webp) are left out of the precache on purpose:
-        // installing the app should not download ~1 MB of images up front.
-        globPatterns: ['**/*.{js,css,html,svg,png}'],
+        // Precache only the app shell (fonts included, ~110 kB). Workout data
+        // always comes from Supabase. Exercise photos (.webp) are left out of
+        // the precache on purpose: installing the app should not download
+        // ~8 MB of images up front.
+        globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         navigateFallback: '/index.html',
         runtimeCaching: [
-          {
-            // Google Fonts: the CSS can change, the font files never do.
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\//,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-css' },
-          },
-          {
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\//,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'google-fonts-files',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
           {
             // Cached the first time each photo is shown, then served offline.
             // The files never change in place, so cache-first is safe.

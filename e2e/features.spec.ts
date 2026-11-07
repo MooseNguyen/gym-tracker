@@ -746,6 +746,27 @@ test.describe('log out', () => {
     await dialog.getByRole('button', { name: 'Log out' }).click()
     await expect(page).toHaveURL(/\/login$/)
   })
+
+  test('the data saved on the phone goes with the session', async ({ page }) => {
+    const savedCache = () => page.evaluate(() => localStorage.getItem('gym-tracker-query-cache'))
+    await mockSupabase(page, { routines, folders })
+    await page.goto('/')
+    await expect(page.getByRole('button', { name: 'Start Push' })).toBeVisible()
+    // Saved for a fast start next time (written shortly after the data arrives).
+    await expect.poll(savedCache).toContain('Push Pull Legs')
+
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('button', { name: 'Log out' })
+      .click()
+    await page
+      .getByRole('dialog', { name: 'Log out?' })
+      .getByRole('button', { name: 'Log out' })
+      .click()
+    await expect(page).toHaveURL(/\/login$/)
+    // The next person on this phone must not see it.
+    await expect.poll(savedCache).toBeNull()
+  })
 })
 
 async function emptyWorkoutWithBench(page: Page) {
