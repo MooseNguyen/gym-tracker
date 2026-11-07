@@ -189,3 +189,52 @@ export function offByDefault(e) {
   if (name.includes('hold') && !keepHolds.includes(id)) return 'hold variant'
   return null
 }
+
+/**
+ * RepDB muscle -> the app's muscle value, without the exercise name to go by
+ * (unlike muscleFor for the primary muscle). null = no app muscle for it.
+ */
+export const SECONDARY_MUSCLE = {
+  pectoralis_major: 'mid-chest',
+  latissimus_dorsi: 'lats',
+  rhomboids: 'upper-back',
+  trapezius: 'traps',
+  erector_spinae: 'lower-back',
+  quadratus_lumborum: 'lower-back',
+  anterior_deltoid: 'front-delts',
+  lateral_deltoid: 'side-delts',
+  supraspinatus: 'side-delts',
+  posterior_deltoid: 'rear-delts',
+  biceps_brachii: 'biceps',
+  brachialis: 'biceps',
+  triceps_brachii: 'triceps',
+  brachioradialis: 'forearms',
+  forearm_flexors: 'forearms',
+  forearm_extensors: 'forearms',
+  forearms: 'forearms',
+  quadriceps: 'quads',
+  hamstrings: 'hamstrings',
+  gluteus_maximus: 'glutes',
+  gluteus_medius: 'glutes',
+  adductors: 'glutes',
+  abductors: 'glutes',
+  gastrocnemius: 'calves',
+  soleus: 'calves',
+  rectus_abdominis: 'core',
+  obliques: 'core',
+  transverse_abdominis: 'core',
+  hip_flexors: 'core',
+  // A shoulder-blade muscle the app has no group for.
+  serratus_anterior: null,
+}
+
+/** The app's secondary muscles for one RepDB exercise: mapped, unique, in RepDB's order. */
+export function secondaryFor(e) {
+  const out = []
+  for (const m of e.secondary_muscles ?? []) {
+    if (!(m in SECONDARY_MUSCLE)) throw new Error(`No app muscle for RepDB "${m}" (${e.id})`)
+    const app = SECONDARY_MUSCLE[m]
+    if (app && !out.includes(app)) out.push(app)
+  }
+  return out
+}

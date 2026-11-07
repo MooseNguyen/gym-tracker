@@ -31,12 +31,13 @@ export interface GroupVolume {
 /**
  * Working sets per group over the given workouts, in the app's group order.
  * Every set-based group is listed, untrained ones with 0, so gaps show.
- * One exercise counts fully for its one primary muscle.
+ * Primary and secondary muscles both count (see setsPerMuscle).
  */
 export function groupVolumes(workouts: Workout[]): GroupVolume[] {
   const byMuscle = new Map<string, number>()
   for (const w of workouts) {
-    for (const m of setsPerMuscle(w)) byMuscle.set(m.muscle, (byMuscle.get(m.muscle) ?? 0) + m.sets)
+    for (const m of setsPerMuscle(w, { secondary: true }))
+      byMuscle.set(m.muscle, (byMuscle.get(m.muscle) ?? 0) + m.sets)
   }
   return SET_GROUPS.map((group) => {
     const subs = MUSCLE_SUBGROUPS[group] ?? []

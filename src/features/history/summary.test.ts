@@ -119,4 +119,32 @@ describe('setsPerMuscle / groupsTrained', () => {
   it('rolls muscles up into their groups', () => {
     expect(groupsTrained(w)).toEqual(['back', 'chest'])
   })
+
+  it('adds secondary muscles only when asked, a full set each, never twice for one group', () => {
+    const w2 = workout(
+      // Upper chest is in the primary's group: not counted again.
+      [
+        { ...bench, secondary_muscles: ['triceps', 'front-delts', 'upper-chest'] },
+        [set(80, 8), set(80, 8)],
+      ],
+      [{ ...row, secondary_muscles: ['biceps', 'rear-delts'] }, [set(60, 10)]],
+    )
+    expect(setsPerMuscle(w2, { secondary: true })).toEqual([
+      { muscle: 'mid-chest', group: 'chest', sets: 2 },
+      { muscle: 'triceps', group: 'triceps', sets: 2 },
+      { muscle: 'front-delts', group: 'shoulders', sets: 2 },
+      { muscle: 'upper-back', group: 'back', sets: 1 },
+      { muscle: 'biceps', group: 'biceps', sets: 1 },
+      { muscle: 'rear-delts', group: 'shoulders', sets: 1 },
+    ])
+    // History chips stay on what was trained on purpose.
+    expect(groupsTrained(w2)).toEqual(['chest', 'back'])
+  })
+
+  it('gives no secondary credit for cardio, whose sets are time', () => {
+    const run = { ...exercise('Treadmill', 'cardio', 'duration'), secondary_muscles: ['quads'] }
+    expect(
+      setsPerMuscle(workout([run, [set(null, null, 'normal', 600)]]), { secondary: true }),
+    ).toEqual([{ muscle: 'cardio', group: 'cardio', sets: 1 }])
+  })
 })

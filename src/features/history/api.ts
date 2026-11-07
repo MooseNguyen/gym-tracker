@@ -6,7 +6,7 @@ const WORKOUT_SELECT = `
   id, routine_id, name, started_at, ended_at, notes,
   workout_exercises (
     id, exercise_id, position, notes,
-    exercise:exercises (id, user_id, name, muscle_group, equipment, kind, image_path, image_path_end),
+    exercise:exercises (id, user_id, name, muscle_group, secondary_muscles, equipment, kind, image_path, image_path_end),
     sets (id, position, set_type, weight_kg, reps, duration_s, rpe)
   )`
 

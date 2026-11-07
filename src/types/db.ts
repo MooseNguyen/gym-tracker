@@ -10,6 +10,8 @@ export interface Exercise {
   user_id: string | null
   name: string
   muscle_group: string
+  /** Other muscles it works (app muscle values); weekly stats count them too. Missing in old cached data. */
+  secondary_muscles?: string[]
   equipment: string
   kind: ExerciseKind
   /** Built-ins only: a file under /exercises/, or own/<uuid>.jpg in Storage (exerciseImageUrl). */

@@ -71,17 +71,31 @@ export interface MuscleSets {
 }
 
 /**
- * Working sets per primary muscle, most first (ties keep workout order).
- * One exercise counts fully for its one primary target; secondary muscles are
- * not tracked yet.
+ * How much a set counts for each secondary muscle. A full set (the owner's
+ * choice) overstates volume next to the 10-20 direct sets guideline: 0.5 is
+ * the other common convention.
  */
-export function setsPerMuscle(w: Workout): MuscleSets[] {
+export const SECONDARY_WEIGHT = 1
+
+/**
+ * Working sets per muscle, most first (ties keep workout order). Each set
+ * counts fully for the exercise's primary muscle; with `secondary`, also
+ * SECONDARY_WEIGHT for each secondary muscle in another group (bench press:
+ * mid chest, plus triceps and front delts, but not upper chest again).
+ * Cardio's sets are time, not sets of a muscle: no secondary credit.
+ */
+export function setsPerMuscle(w: Workout, { secondary = false } = {}): MuscleSets[] {
   const byMuscle = new Map<string, number>()
+  const add = (m: string, n: number) => byMuscle.set(m, (byMuscle.get(m) ?? 0) + n)
   for (const we of w.workout_exercises) {
     const n = we.sets.filter(isWorking).length
     if (n === 0) continue
-    const m = we.exercise.muscle_group
-    byMuscle.set(m, (byMuscle.get(m) ?? 0) + n)
+    const primary = we.exercise.muscle_group
+    add(primary, n)
+    if (!secondary || primary === 'cardio') continue
+    for (const m of we.exercise.secondary_muscles ?? []) {
+      if (muscleParent(m) !== muscleParent(primary)) add(m, n * SECONDARY_WEIGHT)
+    }
   }
   return [...byMuscle]
     .map(([muscle, sets]) => ({ muscle, group: muscleParent(muscle), sets }))

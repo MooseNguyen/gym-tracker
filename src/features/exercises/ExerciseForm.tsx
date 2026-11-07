@@ -5,12 +5,18 @@ import {
   MUSCLE_GROUPS,
   MUSCLE_SUBGROUPS,
   muscleLabel,
+  muscleParent,
   type Exercise,
   type ExerciseKind,
 } from '../../types/db'
 import { useIsAdmin } from '../auth/AuthProvider'
 import { useCreateExercise, useSaveBuiltInExercise, type PhotoChanges } from './api'
 import { toSquareJpeg } from './resizeImage'
+
+/** Muscles that can be a secondary target: the specific ones, no plain group, no cardio. */
+const SECONDARY_CHOICES = MUSCLE_GROUPS.flatMap((g) =>
+  g === 'cardio' ? [] : (MUSCLE_SUBGROUPS[g] ?? [g]),
+)
 
 interface Props {
   /** A built-in to edit (admins). Missing = a new exercise. */
@@ -38,6 +44,7 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
   const [kind, setKind] = useState<ExerciseKind>(exercise?.kind ?? 'weight_reps')
   const [builtIn, setBuiltIn] = useState(editing)
   const [steps, setSteps] = useState(initialSteps.join('\n'))
+  const [secondary, setSecondary] = useState<string[]>(exercise?.secondary_muscles ?? [])
   const [hidden, setHidden] = useState(false)
   const [photos, setPhotos] = useState<PhotoChanges>({})
   const [formError, setFormError] = useState<string | null>(null)
@@ -71,7 +78,13 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
     saveBuiltIn.mutate(
       {
         id: exercise?.id,
-        fields: { ...fields, instructions: stepList, hidden },
+        fields: {
+          ...fields,
+          instructions: stepList,
+          hidden,
+          // A muscle in the primary's group would be counted twice: drop it.
+          secondary_muscles: secondary.filter((m) => muscleParent(m) !== muscleParent(muscle)),
+        },
         photos,
         current: exercise && {
           image_path: exercise.image_path,
@@ -150,6 +163,29 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
               removable
             />
           </div>
+          <fieldset className="field secondary-muscles">
+            <legend>Also works (counted in weekly stats)</legend>
+            <div className="chip-wrap">
+              {SECONDARY_CHOICES.filter((m) => muscleParent(m) !== muscleParent(muscle)).map(
+                (m) => {
+                  const on = secondary.includes(m)
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      className={on ? 'chip small on' : 'chip small'}
+                      aria-pressed={on}
+                      onClick={() =>
+                        setSecondary((list) => (on ? list.filter((x) => x !== m) : [...list, m]))
+                      }
+                    >
+                      {muscleLabel(m)}
+                    </button>
+                  )
+                },
+              )}
+            </div>
+          </fieldset>
           <label className="field">
             <span>Steps (one per line)</span>
             <textarea rows={6} value={steps} onChange={(e) => setSteps(e.target.value)} />

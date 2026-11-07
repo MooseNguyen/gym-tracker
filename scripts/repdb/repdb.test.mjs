@@ -1,6 +1,15 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { equipmentFor, excluded, kindFor, muscleFor, offByDefault } from './repdb.mjs'
+import { MUSCLE_GROUPS, MUSCLE_SUBGROUPS } from '../../src/types/db'
+import {
+  equipmentFor,
+  excluded,
+  kindFor,
+  muscleFor,
+  offByDefault,
+  SECONDARY_MUSCLE,
+  secondaryFor,
+} from './repdb.mjs'
 
 const ex = (over) => ({
   id: 'x',
@@ -105,5 +114,35 @@ describe('scripts/repdb/old-to-repdb.json', () => {
   it('never sends two old exercises to the same RepDB id', () => {
     const ids = Object.values(map).filter(Boolean)
     expect(new Set(ids).size).toBe(ids.length)
+  })
+})
+
+describe('secondaryFor', () => {
+  it('maps RepDB muscles to app muscles, once each, in order', () => {
+    const e = {
+      id: 'x',
+      secondary_muscles: [
+        'anterior_deltoid',
+        'triceps_brachii',
+        'lateral_deltoid',
+        'supraspinatus',
+      ],
+    }
+    expect(secondaryFor(e)).toEqual(['front-delts', 'triceps', 'side-delts'])
+  })
+
+  it('drops muscles the app has no group for', () => {
+    expect(secondaryFor({ id: 'x', secondary_muscles: ['serratus_anterior', 'obliques'] })).toEqual(
+      ['core'],
+    )
+  })
+
+  it('fails loudly on a muscle it does not know', () => {
+    expect(() => secondaryFor({ id: 'x', secondary_muscles: ['spleen'] })).toThrow(/spleen/)
+  })
+
+  it('only produces values the app knows', () => {
+    const known = new Set([...MUSCLE_GROUPS, ...Object.values(MUSCLE_SUBGROUPS).flat()])
+    for (const m of Object.values(SECONDARY_MUSCLE)) if (m) expect(known.has(m), m).toBe(true)
   })
 })
