@@ -344,12 +344,18 @@ test.describe('compact card', () => {
     await startPush(page)
     const titles = page.locator('.exercise-title')
 
-    const dragTo = async (from: Locator, toY: number) => {
+    /**
+     * Presses, moves in small steps (so the 6 px activation distance and the
+     * collision checks run), and releases only once `landed` shows the app
+     * has caught up. Playwright moves far faster than a finger: released
+     * right away, the drop used the target from before the last moves.
+     */
+    const dragTo = async (from: Locator, toY: number, landed?: () => Promise<void>) => {
       const box = (await from.boundingBox())!
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
       await page.mouse.down()
-      // Small steps, so the 6 px activation distance and collision checks run.
       await page.mouse.move(box.x + box.width / 2, toY, { steps: 15 })
+      await landed?.()
       await page.mouse.up()
     }
     const bottomOf = async (name: string) => {
@@ -364,8 +370,18 @@ test.describe('compact card', () => {
 
     // Grabbing the name (inside the accordion toggle) drags, and does not toggle it.
     await page.getByRole('button', { name: 'Collapse all' }).click()
+    // Cards fold over 0.3 s; measuring mid-animation aimed the drop below the
+    // screen. The panels turn visibility:hidden only once folded (see
+    // .disclosure-panel), so a hidden input means the layout has settled.
+    await expect(
+      page.getByRole('region', { name: 'Overhead Press' }).getByLabel('Set 1 weight'),
+    ).toBeHidden()
+    await expect(benchCard.getByLabel('Set 1 weight')).toBeHidden()
     const benchToggle = page.getByRole('button', { name: 'Bench Press', exact: true })
-    await dragTo(benchToggle, (await bottomOf('Overhead Press')) - 4)
+    await dragTo(benchToggle, (await bottomOf('Overhead Press')) - 4, () =>
+      // dnd-kit's screen reader announcement of where the card would drop.
+      expect(page.getByText('Bench Press moved to position 2 of 2.')).toBeAttached(),
+    )
     await expect(titles).toHaveText(['Overhead Press', 'Bench Press'])
     await expect(benchToggle).toHaveAttribute('aria-expanded', 'false')
   })
