@@ -1,7 +1,8 @@
-import { useLayoutEffect, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { supabase } from '../../lib/supabase'
 import { useDraft } from '../../features/workout/draftStore'
+import { LiveWorkoutBar } from '../../features/workout/LiveWorkoutBar'
 import { Dialog } from './Dialog'
 
 // Inline 24px stroke icons: five small paths don't justify an icon library.
@@ -51,10 +52,36 @@ const icons = {
   ),
 }
 
+/** Tab order, for the sliding highlight and the slide direction of page changes. */
+const TABS = ['/', '/workout', '/history', '/exercises']
+
+/** Index of the tab a path belongs to; -1 for pages outside the tabs (routine editor, stats). */
+function tabIndex(pathname: string) {
+  if (pathname === '/') return 0
+  return TABS.findIndex((t, i) => i > 0 && (pathname === t || pathname.startsWith(`${t}/`)))
+}
+
+/**
+ * Tells the page transition which way to slide: towards a tab on the right
+ * the new page comes in from the right. Read by the ::view-transition CSS.
+ */
+function setNavDirection(from: number, to: number) {
+  document.documentElement.dataset.navDir = to < from ? 'back' : 'forward'
+}
+
 export function Layout() {
   const draft = useDraft()
   const { pathname } = useLocation()
   const [confirmingLogout, setConfirmingLogout] = useState(false)
+  const current = tabIndex(pathname)
+  const showLiveBar = !!draft && pathname !== '/workout'
+
+  // NavLink props shared by the four tabs.
+  const tab = (to: string) => ({
+    to,
+    viewTransition: true,
+    onClick: () => setNavDirection(current, TABS.indexOf(to)),
+  })
 
   // BrowserRouter keeps the window scroll position across navigations, so
   // "Start" near the bottom of Home used to open the workout half-way down.
@@ -64,28 +91,35 @@ export function Layout() {
   }, [pathname])
 
   return (
-    <div className="app">
+    <div className={showLiveBar ? 'app has-livebar' : 'app'}>
       <div className="content">
         <Outlet />
       </div>
+      {showLiveBar && <LiveWorkoutBar draft={draft} />}
       <nav className="tabbar" aria-label="Main">
-        <NavLink to="/" end>
+        {/* One highlight that slides to the active tab (tabs are equal width). */}
+        <span
+          className="tab-pill"
+          aria-hidden="true"
+          style={{ '--i': current, opacity: current < 0 ? 0 : 1 } as CSSProperties}
+        />
+        <NavLink {...tab('/')} end>
           {icons.workout}
           Workout
         </NavLink>
         {/* Always present, so the bar never shifts; the dot shows a workout in progress. */}
         <NavLink
-          to="/workout"
+          {...tab('/workout')}
           aria-label={draft ? 'Active workout (in progress)' : 'Active workout'}
         >
           <span className={draft ? 'tab-icon tab-live' : 'tab-icon'}>{icons.active}</span>
           Active
         </NavLink>
-        <NavLink to="/history">
+        <NavLink {...tab('/history')}>
           {icons.history}
           History
         </NavLink>
-        <NavLink to="/exercises">
+        <NavLink {...tab('/exercises')}>
           {icons.exercises}
           Exercises
         </NavLink>

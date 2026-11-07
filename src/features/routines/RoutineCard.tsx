@@ -89,7 +89,7 @@ export function RoutineCard({ routine, routineNames, onStart }: Props) {
 
       <button
         type="button"
-        className="btn primary block"
+        className="btn tonal block"
         // Visible text is the same on every card; the name tells them apart.
         aria-label={`Start ${routine.name}`}
         disabled={exercises.length === 0}

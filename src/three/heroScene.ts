@@ -27,7 +27,7 @@ export function createHeroScene(container: HTMLElement): () => void {
   camera.lookAt(0, 0, 0)
 
   // Rim light in the brand lime, on top of the neutral environment.
-  const rim = new THREE.DirectionalLight(0xb5d93a, 3)
+  const rim = new THREE.DirectionalLight(0xa9cc45, 3)
   rim.position.set(-3, 2, -2)
   scene.add(rim)
 
@@ -39,7 +39,7 @@ export function createHeroScene(container: HTMLElement): () => void {
     roughness: 0.45,
   })
   const accentMat = new THREE.MeshStandardMaterial({
-    color: 0xb5d93a,
+    color: 0xa9cc45,
     metalness: 0.3,
     roughness: 0.35,
     emissive: 0x3f5208,

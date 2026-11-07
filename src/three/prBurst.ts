@@ -7,7 +7,7 @@ import * as THREE from 'three'
 const COUNT = 260
 const DURATION = 1.4 // seconds
 const GRAVITY = 900 // px / s²
-const COLORS = [0xb5d93a, 0xd6eb9a, 0x2dd4bf, 0xffffff]
+const COLORS = [0xa9cc45, 0xd0e49c, 0x2dd4bf, 0xffffff]
 
 export interface Origin {
   x: number

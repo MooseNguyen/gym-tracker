@@ -1113,3 +1113,39 @@ test.describe('workout header and timers', () => {
     await expect(page.getByRole('button', { name: /stopwatch at 0:0\d\)$/ })).toBeVisible()
   })
 })
+
+test.describe('live workout bar', () => {
+  test('follows the user across tabs and leads back to the workout', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const bar = page.getByRole('link', { name: /^Resume workout: Push, \d+:\d\d$/ })
+    // Not on the workout itself: it is already on screen there.
+    await expect(bar).toHaveCount(0)
+
+    await page.getByRole('link', { name: 'History' }).click()
+    await expect(page).toHaveURL(/\/history$/)
+    await expect(bar).toBeVisible()
+    await page.getByRole('link', { name: 'Exercises' }).click()
+    await expect(bar).toBeVisible()
+    await page.getByRole('link', { name: 'Workout', exact: true }).click()
+    await expect(bar).toBeVisible()
+
+    await bar.click()
+    await expect(page).toHaveURL(/\/workout$/)
+    await expect(bar).toHaveCount(0)
+  })
+
+  test('shows the rest countdown while resting', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: 'Bench Press' })
+    await card.getByLabel('Set 1 weight').fill('60')
+    await card.getByLabel('Set 1 reps').fill('8')
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+    await page.getByRole('link', { name: 'History' }).click()
+    await expect(
+      page.getByRole('link', { name: /^Resume workout: Push, Rest \d+:\d\d$/ }),
+    ).toBeVisible()
+  })
+})

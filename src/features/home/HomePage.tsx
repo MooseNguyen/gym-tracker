@@ -70,16 +70,6 @@ export function HomePage() {
       <WeekStrip />
       <MuscleWeekCard />
 
-      {draft && (
-        <Link to="/workout" className="card resume">
-          <span className="resume-dot" aria-hidden="true" />
-          <div>
-            <strong>{draft.mode === 'edit' ? 'Continue editing' : 'Resume workout'}</strong>
-            <div className="muted">{draft.name}</div>
-          </div>
-        </Link>
-      )}
-
       <div className="row between">
         <h2>Routines</h2>
         <div className="row">
