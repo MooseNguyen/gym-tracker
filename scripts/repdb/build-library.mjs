@@ -72,6 +72,13 @@ const renameValues = renamed.map(({ oldName, id, e }) =>
   ].join(', '),
 )
 
+// Rows already on RepDB data are done and must not be touched again. This
+// matters when the steps run a second time (seed.sql on a fresh database): an
+// old name can by then belong to an already renamed row (Barbell Preacher Curl
+// became "Preacher Curl", the old "Preacher Curl" becomes Machine Preacher
+// Curl), and a hidden old name can be a new RepDB name ("Cable Fly").
+const NOT_REPDB = `(e.image_path is null or e.image_path not like 'repdb-%')`
+
 // One UPDATE … FROM VALUES: every row is matched against the names as they
 // were before the statement, so renames can never chain (A → B while B → C).
 const renameSql = `update exercises e
@@ -83,10 +90,11 @@ set name = v.new_name,
 from (values
 ${renameValues.map((v) => `  (${v})`).join(',\n')}
 ) as v (old_name, new_name, equipment, image_path, image_path_end, instructions)
-where e.user_id is null and e.name = v.old_name;`
+where e.user_id is null and e.name = v.old_name and ${NOT_REPDB};`
 
-const hideSql = `update exercises set hidden = true
-where user_id is null and name in (${hidden.map(sqlString).join(', ')});`
+const hideSql = `update exercises e set hidden = true
+where e.user_id is null and ${NOT_REPDB}
+  and e.name in (${hidden.map(sqlString).join(', ')});`
 
 const insertValues = added.map((a) => {
   const e = byId.get(a.id)
