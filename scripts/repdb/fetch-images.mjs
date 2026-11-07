@@ -7,8 +7,7 @@
 import { readFile, stat } from 'node:fs/promises'
 import path from 'node:path'
 import sharp from 'sharp'
-import { root } from '../library.mjs'
-import { loadRepdb, REPDB_RAW } from './repdb.mjs'
+import { loadRepdb, REPDB_RAW, root } from './repdb.mjs'
 
 const outDir = path.join(root, 'public', 'exercises')
 const force = process.argv.includes('--force')

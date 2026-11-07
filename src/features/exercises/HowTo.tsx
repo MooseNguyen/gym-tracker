@@ -11,12 +11,12 @@ interface Target {
   imagePathEnd?: string | null
 }
 
-/** Built-ins from RepDB carry its file names; older ones came from free-exercise-db. */
+/** RepDB photos carry its prefix; only those need its credit. */
 const fromRepdb = (imagePath: string | null | undefined) => !!imagePath?.startsWith('repdb-')
 
 /**
  * The numbered steps. Fetches on mount, so render it only when it is shown.
- * `imagePath` picks the credit line (RepDB requires a visible one).
+ * `imagePath` decides the RepDB credit line (its free tier requires one).
  */
 export function HowToSteps({
   exerciseId,
@@ -47,19 +47,11 @@ export function HowToSteps({
           <li key={i}>{step}</li>
         ))}
       </ol>
-      {fromRepdb(imagePath) ? (
+      {fromRepdb(imagePath) && (
         <p className="muted small-text">
           Exercise data by{' '}
           <a href="https://repdb.co" target="_blank" rel="noreferrer">
             RepDB (repdb.co)
-          </a>
-          .
-        </p>
-      ) : (
-        <p className="muted small-text">
-          Instructions from{' '}
-          <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noreferrer">
-            free-exercise-db
           </a>
           .
         </p>
