@@ -1170,3 +1170,37 @@ test.describe('live workout bar', () => {
     ).toBeVisible()
   })
 })
+
+test.describe('plate calculator', () => {
+  test('opens on the next set and shows the plates per side', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByLabel('Set 1 weight').fill('82,5')
+
+    await exerciseAction(page, bench.name, 'Plate calculator')
+    const sheet = page.getByRole('dialog', { name: 'Plate calculator' })
+    await expect(sheet.getByLabel('Total weight (kg)')).toHaveValue('82.5')
+    await expect(sheet.getByText('Each side:')).toContainText('25 + 5 + 1.25')
+
+    // Another bar, and a weight the plates can't make exactly.
+    await sheet.getByRole('button', { name: '15 kg' }).click()
+    await expect(sheet.getByRole('button', { name: '15 kg' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await sheet.getByLabel('Total weight (kg)').fill('64')
+    await expect(sheet.getByText('Each side:')).toContainText('20 + 2.5 + 1.25')
+    await expect(sheet).toContainText("1.5 kg can't be made with these plates: this loads 62.5 kg.")
+  })
+
+  test('is only offered for barbell lifts with weight', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await page.goto('/')
+    await page.getByRole('button', { name: 'Start Pull' }).click()
+    await page.getByRole('button', { name: `More actions for ${pullUp.name}` }).click()
+    const menu = page.getByRole('dialog', { name: pullUp.name })
+    await expect(menu.getByRole('button', { name: 'Replace exercise' })).toBeVisible()
+    await expect(menu.getByRole('button', { name: 'Plate calculator' })).toHaveCount(0)
+  })
+})

@@ -1811,6 +1811,51 @@ button.link {
 }
 
 /* ==========================================================================
+   Plate calculator
+   ========================================================================== */
+.plate-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plate-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+/* One side of a loaded bar: collar, plates (heaviest inside), sleeve end. */
+.plate-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 120px;
+  padding: 0 4px;
+  border-radius: var(--r-control);
+  background:
+    linear-gradient(var(--line), var(--line)) center / 100% 10px no-repeat,
+    var(--glass-fill);
+}
+.plate {
+  width: 16px;
+  flex: none;
+  border-radius: 3px;
+  box-shadow: inset -3px 0 0 rgb(0 0 0 / 0.18);
+}
+.plate-collar {
+  width: 10px;
+  height: 34%;
+  flex: none;
+  border-radius: 2px;
+  background: var(--muted);
+}
+.plate-sleeve {
+  flex: 1;
+}
+.plate-summary {
+  font-size: 1.05rem;
+}
+
+/* ==========================================================================
    Exercise filters (muscles / equipment)
    ========================================================================== */
 .chip {

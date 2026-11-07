@@ -18,6 +18,7 @@ import {
   describeImprovement,
   improvementOver,
   MAX_VALUE,
+  parseNumber,
   removeExercise,
   removeSet,
   reorderExercises,
@@ -37,6 +38,7 @@ import { usePreviousSets, useSaveWorkout } from './api'
 import { PrBanner, type Celebration } from './PrBanner'
 import { describeReason, headlineSuggestion, suggestSets } from './progression'
 import { playCelebration } from './celebrate'
+import { PlateSheet } from './PlateSheet'
 import { ReorderSheet } from './ReorderSheet'
 import { RestTimer } from './RestTimer'
 import { RestPickerSheet, TimerSheet } from './TimerSheets'
@@ -414,6 +416,8 @@ function ExerciseCard({
   actions: CardActions
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [platesOpen, setPlatesOpen] = useState(false)
+  const barbell = ex.equipment === 'barbell' && ex.kind === 'weight_reps'
   // Notes stay out of the way until asked for (or already written).
   const [notesOpen, setNotesOpen] = useState(() => ex.notes !== '')
   const [restOpen, setRestOpen] = useState(false)
@@ -653,6 +657,11 @@ function ExerciseCard({
               How to do it
             </button>
           )}
+          {barbell && (
+            <button type="button" className="btn block" onClick={run(() => setPlatesOpen(true))}>
+              Plate calculator
+            </button>
+          )}
           <button type="button" className="btn block" onClick={run(actions.onReplace)}>
             Replace exercise
           </button>
@@ -664,8 +673,23 @@ function ExerciseCard({
           </button>
         </div>
       </Dialog>
+      {barbell && (
+        <PlateSheet
+          open={platesOpen}
+          initialWeight={nextSetWeight(ex)}
+          onClose={() => setPlatesOpen(false)}
+        />
+      )}
     </section>
   )
+}
+
+/** The weight to load next: the first set not done yet, else the last one entered. */
+function nextSetWeight(ex: DraftExercise): number | null {
+  const pending = ex.sets.find((s) => !s.completed && parseNumber(s.weight) != null)
+  if (pending) return parseNumber(pending.weight)
+  const entered = ex.sets.filter((s) => parseNumber(s.weight) != null)
+  return entered.length ? parseNumber(entered[entered.length - 1].weight) : null
 }
 
 function ClockIcon() {
