@@ -1,4 +1,5 @@
 import type { SetType } from '../../types/db'
+import { fromKgOrNull, type Unit } from '../units'
 
 export interface CalcSet {
   set_type: SetType
@@ -22,10 +23,16 @@ export function estimate1RM(weightKg: number | null, reps: number | null): numbe
   return round1(weightKg * (1 + reps / 30))
 }
 
-/** Total weight moved (weight x reps) across working sets. */
-export function totalVolume(sets: CalcSet[]): number {
+/**
+ * Total weight moved (weight x reps) across working sets, in `unit`.
+ * Each set is converted before multiplying, so an lb lifter's 140 lb x 8
+ * reads 1,120 lb, not 63.5 kg x 8 converted back (1,119.9 lb).
+ */
+export function totalVolume(sets: CalcSet[], unit: Unit = 'kg'): number {
   return round1(
-    sets.filter(isWorkingSet).reduce((sum, s) => sum + (s.weight_kg ?? 0) * (s.reps ?? 0), 0),
+    sets
+      .filter(isWorkingSet)
+      .reduce((sum, s) => sum + (fromKgOrNull(s.weight_kg, unit) ?? 0) * (s.reps ?? 0), 0),
   )
 }
 
@@ -37,15 +44,16 @@ export interface SessionSummary {
   volume: number
 }
 
-/** Collapses one session's sets for one exercise into chart-friendly numbers. */
-export function summarizeSession(date: string, sets: CalcSet[]): SessionSummary {
+/** Collapses one session's sets for one exercise into chart-friendly numbers, in `unit`. */
+export function summarizeSession(date: string, sets: CalcSet[], unit: Unit = 'kg'): SessionSummary {
   const working = sets.filter(isWorkingSet)
+  const weight = (s: CalcSet) => fromKgOrNull(s.weight_kg, unit)
   return {
     date,
-    bestE1RM: maxOrNull(working.map((s) => estimate1RM(s.weight_kg, s.reps))),
-    heaviestKg: maxOrNull(working.map((s) => (s.reps ? s.weight_kg : null))),
+    bestE1RM: maxOrNull(working.map((s) => estimate1RM(weight(s), s.reps))),
+    heaviestKg: maxOrNull(working.map((s) => (s.reps ? weight(s) : null))),
     bestReps: maxOrNull(working.map((s) => s.reps)),
-    volume: totalVolume(working),
+    volume: totalVolume(working, unit),
   }
 }
 

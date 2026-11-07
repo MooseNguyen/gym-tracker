@@ -1,5 +1,6 @@
 import { estimate1RM, totalVolume } from '../../shared/calc'
 import { muscleParent, type ExerciseKind, type SetRow, type Workout } from '../../types/db'
+import { fromKgOrNull, type Unit } from '../../shared/units'
 import { durationMinutes } from './format'
 
 const isWorking = (s: SetRow) => s.set_type !== 'warmup'
@@ -11,11 +12,12 @@ export interface WorkoutStats {
   workingSets: number
   warmupSets: number
   reps: number
+  /** In the unit asked for. */
   volume: number
 }
 
 /** Headline numbers of one workout. Warm-ups are counted apart and add no volume. */
-export function workoutStats(w: Workout): WorkoutStats {
+export function workoutStats(w: Workout, unit: Unit = 'kg'): WorkoutStats {
   const sets = w.workout_exercises.flatMap((we) => we.sets)
   const working = sets.filter(isWorking)
   return {
@@ -24,7 +26,7 @@ export function workoutStats(w: Workout): WorkoutStats {
     workingSets: working.length,
     warmupSets: sets.length - working.length,
     reps: working.reduce((n, s) => n + (s.reps ?? 0), 0),
-    volume: totalVolume(sets),
+    volume: totalVolume(sets, unit),
   }
 }
 
@@ -36,7 +38,12 @@ export interface ExerciseSummary {
   bestE1RM: number | null
 }
 
-export function exerciseSummary(kind: ExerciseKind, sets: SetRow[]): ExerciseSummary {
+/** Volume and bestE1RM are in `unit`; `best` is the stored set (kg). */
+export function exerciseSummary(
+  kind: ExerciseKind,
+  sets: SetRow[],
+  unit: Unit = 'kg',
+): ExerciseSummary {
   const working = sets.filter(isWorking)
   const score = (s: SetRow): number | null => {
     if (kind === 'duration') return s.duration_s || null
@@ -57,9 +64,12 @@ export function exerciseSummary(kind: ExerciseKind, sets: SetRow[]): ExerciseSum
   }
   return {
     workingSets: working.length,
-    volume: totalVolume(working),
+    volume: totalVolume(working, unit),
     best,
-    bestE1RM: kind === 'weight_reps' && best ? estimate1RM(best.weight_kg, best.reps) : null,
+    bestE1RM:
+      kind === 'weight_reps' && best
+        ? estimate1RM(fromKgOrNull(best.weight_kg, unit), best.reps)
+        : null,
   }
 }
 

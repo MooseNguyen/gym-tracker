@@ -2,6 +2,7 @@
 // Everything here is pure so it can be unit tested; the store is in draftStore.ts.
 import type { Exercise, ExerciseKind, PreviousSet, SetType, Workout } from '../../types/db'
 import { reorder } from '../../shared/reorder'
+import { fromKgOrNull, MAX_WEIGHT, toKg, type Unit } from '../../shared/units'
 import type { Stopwatch } from './timers'
 
 /** What a draft needs to know about an exercise. Tests can omit the image. */
@@ -58,7 +59,15 @@ export interface WorkoutDraft {
   restTotalMs?: number
   /** Free stopwatch from the ⏱ sheet. Missing in old drafts = stopped at 0. */
   stopwatch?: Stopwatch
+  /**
+   * Unit the weights in this draft are typed in, fixed when it starts: switching
+   * the setting mid-workout must not reinterpret what was already typed.
+   * Converted to kg on save. Missing in old drafts = kg.
+   */
+  unit?: Unit
 }
+
+export const draftUnit = (d: Pick<WorkoutDraft, 'unit'>): Unit => d.unit ?? 'kg'
 
 const DEFAULT_REST = 90
 const uid = () => crypto.randomUUID()
@@ -98,6 +107,7 @@ export function draftExercise(
 export function newDraft(
   input: {
     name: string
+    unit?: Unit
     routineId?: string | null
     exercises?: {
       exercise: ExerciseRef
@@ -117,11 +127,12 @@ export function newDraft(
     endedAt: null,
     exercises: (input.exercises ?? []).map((e) => draftExercise(e.exercise, e.sets, e.restSeconds)),
     restEndsAt: null,
+    unit: input.unit ?? 'kg',
   }
 }
 
 /** Loads a saved workout back into the editor. All its sets were completed when saved. */
-export function draftFromWorkout(w: Workout): WorkoutDraft {
+export function draftFromWorkout(w: Workout, unit: Unit = 'kg'): WorkoutDraft {
   const str = (n: number | null) => (n == null ? '' : String(n))
   return {
     id: w.id,
@@ -132,6 +143,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
     startedAt: w.started_at,
     endedAt: w.ended_at,
     restEndsAt: null,
+    unit,
     exercises: w.workout_exercises.map((we) => ({
       id: uid(),
       exerciseId: we.exercise_id,
@@ -146,7 +158,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
       sets: we.sets.map((s) => ({
         id: uid(),
         setType: s.set_type,
-        weight: str(s.weight_kg),
+        weight: str(fromKgOrNull(s.weight_kg, unit)),
         reps: str(s.reps),
         duration: str(s.duration_s),
         rpe: str(s.rpe),
@@ -260,22 +272,25 @@ export function requiredField(kind: ExerciseKind): 'reps' | 'duration' {
   return kind === 'duration' ? 'duration' : 'reps'
 }
 
-/** Upper bound for kg and reps: anything above is a typo (an extra 0), not a lift. */
-export const MAX_VALUE = 1000
+/** Upper bound for reps: anything above is a typo (an extra 0). Weights: MAX_WEIGHT per unit. */
+export const MAX_REPS = 1000
 
-/** The first of kg / reps above MAX_VALUE, or null when both are fine. */
-export function tooLargeField(set: Pick<DraftSet, 'weight' | 'reps'>): 'weight' | 'reps' | null {
-  for (const key of ['weight', 'reps'] as const) {
-    const n = parseNumber(set[key])
-    if (n != null && n > MAX_VALUE) return key
-  }
+/** The first of weight / reps above its bound, or null when both are fine. */
+export function tooLargeField(
+  set: Pick<DraftSet, 'weight' | 'reps'>,
+  unit: Unit,
+): 'weight' | 'reps' | null {
+  const weight = parseNumber(set.weight)
+  if (weight != null && weight > MAX_WEIGHT[unit]) return 'weight'
+  const reps = parseNumber(set.reps)
+  if (reps != null && reps > MAX_REPS) return 'reps'
   return null
 }
 
 /** Completed sets that would be saved with an impossible number. */
 export function tooLargeCompletedSets(d: WorkoutDraft): number {
   return d.exercises.reduce(
-    (n, e) => n + e.sets.filter((s) => s.completed && tooLargeField(s)).length,
+    (n, e) => n + e.sets.filter((s) => s.completed && tooLargeField(s, draftUnit(d))).length,
     0,
   )
 }
@@ -291,7 +306,7 @@ export function hasRequiredValue(kind: ExerciseKind, set: DraftSet): boolean {
  * (tap ✓ to "repeat what I did last week") and starts the rest timer.
  *
  * Refuses to complete a set that still has no reps (or duration) after that
- * fill, or has a number above MAX_VALUE, and returns the draft unchanged: an empty ticked set used to be saved
+ * fill, or has a number above its bound, and returns the draft unchanged: an empty ticked set used to be saved
  * and then shown as "BW × 0" in Previous. The caller detects the refusal
  * (the set is still not completed) and points the user at the empty field.
  */
@@ -308,15 +323,16 @@ export function toggleSetComplete(
 
   if (set.completed) return updateSet(d, exId, setId, { completed: false })
 
+  const unit = draftUnit(d)
   const str = (n: number | null | undefined) => (n == null ? '' : String(n))
   const filled: DraftSet = {
     ...set,
     completed: true,
-    weight: set.weight || str(previous?.weight_kg),
+    weight: set.weight || str(fromKgOrNull(previous?.weight_kg ?? null, unit)),
     reps: set.reps || str(previous?.reps),
     duration: set.duration || str(previous?.duration_s),
   }
-  if (!hasRequiredValue(ex.kind, filled) || tooLargeField(filled)) return d
+  if (!hasRequiredValue(ex.kind, filled) || tooLargeField(filled, unit)) return d
 
   const next = updateSet(d, exId, setId, filled)
   return startCountdown(next, ex.restSeconds, now)
@@ -339,20 +355,21 @@ export function adjustCountdown(d: WorkoutDraft, deltaSeconds: number): WorkoutD
   }
 }
 
-/** kg × reps over ticked working sets (warm-ups excluded), as typed so far. */
+/** Weight × reps over ticked working sets (warm-ups excluded), as typed so far, in the draft's unit. */
 export function completedVolume(d: WorkoutDraft): number {
-  let kg = 0
+  let volume = 0
   for (const e of d.exercises) {
     for (const s of e.sets) {
       if (!s.completed || s.setType === 'warmup') continue
-      kg += (parseNumber(s.weight) ?? 0) * (parseNumber(s.reps) ?? 0)
+      volume += (parseNumber(s.weight) ?? 0) * (parseNumber(s.reps) ?? 0)
     }
   }
-  return Math.round(kg * 10) / 10
+  return Math.round(volume * 10) / 10
 }
 
 export interface Improvement {
-  kg: number
+  /** In the draft's unit. */
+  weight: number
   reps: number
   seconds: number
 }
@@ -365,21 +382,25 @@ const round2 = (n: number) => Math.round(n * 100) / 100
  * as asked: fewer reps at a heavier weight still counts as progress.
  * Warm-ups never count, and without a previous set there is nothing to beat.
  */
-export function improvementOver(set: DraftSet, prev: PreviousSet | undefined): Improvement | null {
+export function improvementOver(
+  set: DraftSet,
+  prev: PreviousSet | undefined,
+  unit: Unit,
+): Improvement | null {
   if (!prev || set.setType === 'warmup' || prev.set_type === 'warmup') return null
   const gain = (now: number | null, before: number | null) =>
     now != null && before != null ? Math.max(0, round2(now - before)) : 0
 
   // Missing weight means bodyweight only, i.e. 0 kg added: going from BW to +5 kg is progress.
-  const kg = gain(parseNumber(set.weight) ?? 0, prev.weight_kg ?? 0)
+  const weight = gain(parseNumber(set.weight) ?? 0, fromKgOrNull(prev.weight_kg, unit) ?? 0)
   const reps = gain(parseNumber(set.reps), prev.reps)
   const seconds = gain(parseNumber(set.duration), prev.duration_s)
-  return kg > 0 || reps > 0 || seconds > 0 ? { kg, reps, seconds } : null
+  return weight > 0 || reps > 0 || seconds > 0 ? { weight, reps, seconds } : null
 }
 
-export function describeImprovement(i: Improvement): string {
+export function describeImprovement(i: Improvement, unit: Unit): string {
   const parts = [
-    i.kg > 0 && `+${i.kg} kg`,
+    i.weight > 0 && `+${i.weight} ${unit}`,
     i.reps > 0 && `+${i.reps} rep${i.reps === 1 ? '' : 's'}`,
     i.seconds > 0 && `+${i.seconds}s`,
   ].filter(Boolean)
@@ -424,6 +445,11 @@ export function completedSetCount(d: WorkoutDraft): number {
 
 /** Only completed sets are saved; exercises left with no completed sets are dropped. */
 export function toSavePayload(d: WorkoutDraft, now = new Date()): SaveWorkoutPayload {
+  const unit = draftUnit(d)
+  const kg = (v: string) => {
+    const n = parseNumber(v)
+    return n == null ? null : toKg(n, unit)
+  }
   const rpe = (v: string) => {
     const n = parseNumber(v)
     return n != null && n >= 1 && n <= 10 ? n : null
@@ -451,7 +477,7 @@ export function toSavePayload(d: WorkoutDraft, now = new Date()): SaveWorkoutPay
             set_type: s.setType,
             // Every kind can carry weight: a weighted pull-up, a plate on a plank.
             // For bodyweight exercises it is the added weight; empty = bodyweight only.
-            weight_kg: parseNumber(s.weight),
+            weight_kg: kg(s.weight),
             reps: e.kind === 'duration' ? null : int(s.reps),
             duration_s: e.kind === 'duration' ? int(s.duration) : null,
             rpe: rpe(s.rpe),

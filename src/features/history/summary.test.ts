@@ -148,3 +148,10 @@ describe('setsPerMuscle / groupsTrained', () => {
     ).toEqual([{ muscle: 'cardio', group: 'cardio', sets: 1 }])
   })
 })
+
+describe('volume in lb', () => {
+  it('converts each set before multiplying, so it matches what the lifter typed', () => {
+    // 140 lb was stored as 63.5 kg: 63.5 × 8 = 508 kg = 1,119.9 lb, but the sets read 140 lb × 8.
+    expect(exerciseSummary('weight_reps', [set(63.5, 8)], 'lb').volume).toBe(1120)
+  })
+})

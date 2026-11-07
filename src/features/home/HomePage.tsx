@@ -16,9 +16,11 @@ import {
 } from '../routines/api'
 import { useDraft } from '../workout/draftStore'
 import { startEmptyWorkout, startRoutine } from '../workout/startWorkout'
+import { useUnit } from '../settings/api'
 
 export function HomePage() {
   const draft = useDraft()
+  const unit = useUnit()
   const navigate = useNavigate()
   const routines = useRoutines()
   const folders = useFolders()
@@ -55,7 +57,7 @@ export function HomePage() {
     if (ok) deleteFolder.mutate(f.id)
   }
 
-  const start = (r: Routine) => startRoutine(draft, r) && navigate('/workout')
+  const start = (r: Routine) => startRoutine(draft, r, unit) && navigate('/workout')
 
   return (
     <main className="page home">
@@ -171,7 +173,7 @@ export function HomePage() {
 
       <button
         className="btn primary block start-empty"
-        onClick={() => startEmptyWorkout(draft) && navigate('/workout')}
+        onClick={() => startEmptyWorkout(draft, unit) && navigate('/workout')}
       >
         Start empty workout
       </button>

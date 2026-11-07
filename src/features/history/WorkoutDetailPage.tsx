@@ -8,7 +8,9 @@ import { useDraft } from '../workout/draftStore'
 import { editWorkout } from '../workout/startWorkout'
 import { useDeleteWorkout, useWorkout, useWorkoutPrs, type WorkoutPr } from './api'
 import { PrBadge } from './PrBadge'
-import { formatDate, formatKg, formatSetValues, formatTime } from './format'
+import { formatDate, formatSetValues, formatTime } from './format'
+import { formatAmount, fromKgOrNull } from '../../shared/units'
+import { useUnit } from '../settings/api'
 import { exerciseSummary, setsPerMuscle, workoutStats } from './summary'
 
 export function WorkoutDetailPage() {
@@ -31,7 +33,8 @@ function WorkoutDetail({ w }: { w: Workout }) {
   const draft = useDraft()
   const navigate = useNavigate()
   const confirm = useConfirm()
-  const stats = workoutStats(w)
+  const unit = useUnit()
+  const stats = workoutStats(w, unit)
   const muscles = setsPerMuscle(w)
   const maxSets = Math.max(1, ...muscles.map((m) => m.sets))
 
@@ -51,7 +54,7 @@ function WorkoutDetail({ w }: { w: Workout }) {
         </div>
         <div>
           <dt className="stat-label">Volume</dt>
-          <dd className="stat-value">{formatKg(stats.volume)}</dd>
+          <dd className="stat-value">{formatAmount(stats.volume, unit)}</dd>
         </div>
         <div>
           <dt className="stat-label">Sets</dt>
@@ -112,7 +115,7 @@ function WorkoutDetail({ w }: { w: Workout }) {
         </button>
         <button
           className="btn primary grow"
-          onClick={() => editWorkout(draft, w) && navigate('/workout')}
+          onClick={() => editWorkout(draft, w, unit) && navigate('/workout')}
         >
           Edit
         </button>
@@ -141,7 +144,8 @@ function ExerciseBlock({
   prBySet: Map<string, WorkoutPr>
 }) {
   const { exercise } = we
-  const summary = exerciseSummary(exercise.kind, we.sets)
+  const unit = useUnit()
+  const summary = exerciseSummary(exercise.kind, we.sets, unit)
   const labels = setLabels(we.sets)
   const showE1RM = exercise.kind === 'weight_reps'
 
@@ -171,12 +175,12 @@ function ExerciseBlock({
         </thead>
         <tbody>
           {we.sets.map((s, i) => {
-            const e1rm = estimate1RM(s.weight_kg, s.reps)
+            const e1rm = estimate1RM(fromKgOrNull(s.weight_kg, unit), s.reps)
             return (
               <tr key={s.id} className={s.set_type === 'warmup' ? 'muted' : undefined}>
                 <td>{labels[i]}</td>
                 <td>
-                  {formatSetValues(exercise.kind, s)}
+                  {formatSetValues(exercise.kind, s, unit)}
                   {prBySet.has(s.id) && <PrMark pr={prBySet.get(s.id)!} />}
                 </td>
                 <td>{s.rpe ?? '–'}</td>
@@ -190,10 +194,10 @@ function ExerciseBlock({
       {summary.best && (
         <p className="exercise-footer muted">
           {exercise.kind !== 'duration' && summary.volume > 0 && (
-            <>Volume {formatKg(summary.volume)} · </>
+            <>Volume {formatAmount(summary.volume, unit)} · </>
           )}
-          Best {formatSetValues(exercise.kind, summary.best)}
-          {summary.bestE1RM != null && <> (e1RM {formatKg(summary.bestE1RM)})</>}
+          Best {formatSetValues(exercise.kind, summary.best, unit)}
+          {summary.bestE1RM != null && <> (e1RM {formatAmount(summary.bestE1RM, unit)})</>}
         </p>
       )}
     </section>

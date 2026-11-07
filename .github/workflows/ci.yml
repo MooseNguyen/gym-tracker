@@ -91,3 +91,7 @@ jobs:
         run: >
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           -v ON_ERROR_STOP=1 -f supabase/tests/workout_prs.sql
+      - name: Check who may read and change settings (profiles RLS)
+        run: >
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          -v ON_ERROR_STOP=1 -f supabase/tests/profiles_rls.sql

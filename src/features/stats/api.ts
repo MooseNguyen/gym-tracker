@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase, unwrap } from '../../lib/supabase'
 import { summarizeSession, type SessionSummary } from '../../shared/calc'
 import type { Exercise, SetRow } from '../../types/db'
+import type { Unit } from '../../shared/units'
 
 interface Row {
   workout: { id: string; started_at: string }
@@ -13,12 +14,21 @@ export interface ExerciseHistory {
   sessions: (SessionSummary & { workoutId: string })[]
 }
 
-/** Every session that contains this exercise, oldest first, summarised for charts. */
-export function useExerciseHistory(exerciseId: string | undefined) {
+interface RawHistory {
+  exercise: Exercise
+  rows: Row[]
+}
+
+/**
+ * Every session that contains this exercise, oldest first, summarised for
+ * charts in `unit`. The cache keeps the raw sets and the summary is built on
+ * read, so switching kg/lb needs no refetch.
+ */
+export function useExerciseHistory(exerciseId: string | undefined, unit: Unit) {
   return useQuery({
     queryKey: ['exercise-history', exerciseId],
     enabled: !!exerciseId,
-    queryFn: async (): Promise<ExerciseHistory> => {
+    queryFn: async (): Promise<RawHistory> => {
       const [exercise, rows] = await Promise.all([
         supabase
           .from('exercises')
@@ -35,16 +45,19 @@ export function useExerciseHistory(exerciseId: string | undefined) {
           )
           .eq('exercise_id', exerciseId!),
       ])
-      const data = unwrap(rows) as unknown as Row[]
       return {
         exercise: unwrap(exercise) as Exercise,
-        sessions: data
-          .map((r) => ({
-            workoutId: r.workout.id,
-            ...summarizeSession(r.workout.started_at, r.sets),
-          }))
-          .sort((a, b) => a.date.localeCompare(b.date)),
+        rows: unwrap(rows) as unknown as Row[],
       }
     },
+    select: ({ exercise, rows }): ExerciseHistory => ({
+      exercise,
+      sessions: rows
+        .map((r) => ({
+          workoutId: r.workout.id,
+          ...summarizeSession(r.workout.started_at, r.sets, unit),
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    }),
   })
 }
