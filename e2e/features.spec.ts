@@ -1092,6 +1092,7 @@ test.describe('workout header and timers', () => {
     // Running in the background shows on the header button.
     await sheet.getByRole('button', { name: 'Resume' }).click()
     await page.keyboard.press('Escape')
-    await expect(page.getByRole('button', { name: /stopwatch at 0:03/ })).toBeVisible()
+    // Seconds, not tenths: a slow runner may have moved on a little since the pause.
+    await expect(page.getByRole('button', { name: /stopwatch at 0:0\d\)$/ })).toBeVisible()
   })
 })

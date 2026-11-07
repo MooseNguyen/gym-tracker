@@ -68,7 +68,8 @@ export function ActiveWorkoutPage() {
   const now = useNow(1000, isNew)
   const stopwatch = draft?.stopwatch ?? STOPPED
   const stopwatchRunning = stopwatch.startedAt != null
-  const stopwatchText = formatDuration(stopwatchElapsed(stopwatch, now) / 1000)
+  // Floor, like any stopwatch: 3.6 s is still "0:03" (formatDuration rounds).
+  const stopwatchText = formatDuration(Math.floor(stopwatchElapsed(stopwatch, now) / 1000))
   useWakeLock(isNew)
 
   const previous = usePreviousSets(
