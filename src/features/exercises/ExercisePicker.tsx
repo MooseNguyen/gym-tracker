@@ -48,21 +48,23 @@ function PickerBody({ onClose, onPick }: Omit<Props, 'open'>) {
               </button>
             )
           }}
+          resultsFooter={
+            <div className="sticky-actions">
+              <button
+                type="button"
+                className="btn primary block"
+                disabled={selected.length === 0}
+                onClick={() => {
+                  onPick(selected)
+                  onClose()
+                }}
+              >
+                Add {selected.length || ''} exercise{selected.length === 1 ? '' : 's'}
+              </button>
+            </div>
+          }
         />
       </QueryState>
-      <div className="sticky-actions">
-        <button
-          type="button"
-          className="btn primary block"
-          disabled={selected.length === 0}
-          onClick={() => {
-            onPick(selected)
-            onClose()
-          }}
-        >
-          Add {selected.length || ''} exercise{selected.length === 1 ? '' : 's'}
-        </button>
-      </div>
     </div>
   )
 }

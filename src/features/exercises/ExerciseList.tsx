@@ -7,6 +7,11 @@ import { filterExercises, NO_FILTERS, toggle, type ExerciseFilters as Filters } 
 interface Props {
   exercises: Exercise[]
   renderAction: (exercise: Exercise) => ReactNode
+  /**
+   * Shown under the results only (the picker's "Add" bar). On the filter step
+   * the Show button owns the bottom of the screen, so the two never stack.
+   */
+  resultsFooter?: ReactNode
 }
 
 /**
@@ -15,7 +20,7 @@ interface Props {
  * 2. browse the matching list.
  * Typing a name skips straight to step 2: searching by name should not cost a tap.
  */
-export function ExerciseList({ exercises, renderAction }: Props) {
+export function ExerciseList({ exercises, renderAction, resultsFooter }: Props) {
   const [filters, setFilters] = useState<Filters>(NO_FILTERS)
   const [step, setStep] = useState<'filter' | 'results'>('filter')
 
@@ -108,6 +113,7 @@ export function ExerciseList({ exercises, renderAction }: Props) {
               ))}
             </ul>
           )}
+          {resultsFooter}
         </>
       )}
     </div>

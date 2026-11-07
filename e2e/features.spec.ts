@@ -24,8 +24,7 @@ async function finishDroppingUnticked(page: Page) {
 
 async function startPush(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: 'Push 2 exercises', exact: true }).click()
-  await page.getByRole('button', { name: 'Start Push' }).click()
+  await page.getByRole('button', { name: 'Start Push' }).click() // no need to open the card
   await expect(page).toHaveURL(/\/workout$/)
 }
 
@@ -41,10 +40,11 @@ test.describe('home', () => {
     await expect(page.getByRole('button', { name: 'Unfiled 1', exact: true })).toBeVisible()
     await expect(page.getByText('Empty folder.')).toBeVisible()
 
-    // Collapsed routine: its exercises and Start button are not reachable.
+    // Collapsed routine: the exercises are hidden, but Start is always there.
     const push = page.getByRole('button', { name: 'Push 2 exercises', exact: true })
     await expect(push).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.getByRole('button', { name: 'Start Push' })).toBeHidden()
+    await expect(page.getByText('Overhead Press')).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Start Push' })).toHaveText('Start Routine')
 
     await push.click()
     await expect(push).toHaveAttribute('aria-expanded', 'true')
@@ -805,4 +805,110 @@ test.describe('in-app dialogs', () => {
     await expect(prompt).toBeHidden()
     await expect.poll(() => saved).toEqual([expect.objectContaining({ name: 'Arms' })])
   })
+})
+
+test.describe('routine actions', () => {
+  const sheet = (page: Page) => page.getByRole('dialog', { name: 'Push' })
+  const openMenu = (page: Page) =>
+    page.getByRole('button', { name: 'More actions for Push' }).click()
+
+  test('Edit opens the editor; Duplicate saves a copy in the same folder', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    const saved: { p: { name: string; folder_id: string; exercises: unknown[] } }[] = []
+    await page.route(/\/rest\/v1\/rpc\/save_routine/, (r) => {
+      saved.push(r.request().postDataJSON())
+      return r.fulfill({ status: 200, contentType: 'application/json', body: '"r-copy"' })
+    })
+    await page.goto('/')
+
+    await openMenu(page)
+    await sheet(page).getByRole('button', { name: 'Duplicate routine' }).click()
+    await expect(sheet(page)).toBeHidden()
+    expect(saved).toHaveLength(1)
+    expect(saved[0].p).toMatchObject({ name: 'Push (copy)', folder_id: 'f-ppl' })
+    expect(saved[0].p.exercises).toHaveLength(2)
+
+    await openMenu(page)
+    await sheet(page).getByRole('button', { name: 'Edit routine' }).click()
+    await expect(page).toHaveURL(/\/routines\/r-push$/)
+  })
+
+  test('Share uses the share sheet when there is one', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', {
+        configurable: true,
+        value: async (data: ShareData) => {
+          ;(window as unknown as { shared: ShareData }).shared = data
+        },
+      })
+    })
+    await mockSupabase(page, { routines, folders })
+    await page.goto('/')
+
+    await openMenu(page)
+    await sheet(page).getByRole('button', { name: 'Share routine' }).click()
+    await expect(sheet(page)).toBeHidden()
+    const shared = await page.evaluate(() => (window as unknown as { shared: ShareData }).shared)
+    expect(shared.title).toBe('Push')
+    expect(shared.text).toContain('1. Bench Press — 3 sets')
+  })
+
+  test('Share falls back to the clipboard', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'share', { configurable: true, value: undefined })
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async (text: string) => {
+            ;(window as unknown as { copied: string }).copied = text
+          },
+        },
+      })
+    })
+    await mockSupabase(page, { routines, folders })
+    await page.goto('/')
+
+    await openMenu(page)
+    await sheet(page).getByRole('button', { name: 'Share routine' }).click()
+    await expect(sheet(page).getByRole('status')).toHaveText('Copied to the clipboard.')
+    expect(await page.evaluate(() => (window as unknown as { copied: string }).copied)).toContain(
+      'Overhead Press',
+    )
+  })
+
+  test('Delete asks first, then deletes', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    const deleted: string[] = []
+    await page.route(/\/rest\/v1\/routines\?id=eq\./, (r) => {
+      if (r.request().method() === 'DELETE') deleted.push(r.request().url())
+      return r.fulfill({ status: 204 })
+    })
+    await page.goto('/')
+
+    await openMenu(page)
+    await sheet(page).getByRole('button', { name: 'Delete routine' }).click()
+    const confirm = page.getByRole('dialog', { name: 'Delete routine "Push"?' })
+    await confirm.getByRole('button', { name: 'Cancel' }).click()
+    expect(deleted).toHaveLength(0)
+
+    await openMenu(page)
+    await sheet(page).getByRole('button', { name: 'Delete routine' }).click()
+    await confirm.getByRole('button', { name: 'Delete' }).click()
+    await expect.poll(() => deleted.length).toBe(1)
+    expect(deleted[0]).toContain('id=eq.r-push')
+  })
+})
+
+test('the picker keeps "Show" on screen after picking a muscle group', async ({ page }) => {
+  await mockSupabase(page, { routines, folders })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Start empty workout' }).click()
+  await page.getByRole('button', { name: '+ Add exercises' }).click()
+
+  const picker = page.getByRole('dialog', { name: 'Add exercises' })
+  await picker.getByRole('button', { name: 'Back', exact: true }).first().click() // opens 4 sub-chips
+  // The main filter button ("Show N" or "No exercises match") stays on screen.
+  await expect(picker.locator('.filter-actions .btn.primary')).toBeInViewport()
+  // The Add bar belongs to the results step only.
+  await expect(picker.getByRole('button', { name: /^Add .*exercise/ })).toHaveCount(0)
 })
