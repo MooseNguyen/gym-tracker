@@ -16,6 +16,7 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 7   | Two-frame animation in How-to                                         | #14 |
 | 8   | Secondary muscles count in the weekly stats                           | #20 |
 | 9   | kg / lb per account, CSV export (Me tab)                              | #22 |
+| 11  | Flaky "drags a card from anywhere" e2e test fixed                     | #24 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),
@@ -26,7 +27,6 @@ faster start with a saved query cache and splash (#18).
 | #   | Status | Item                                                                            | Effort | Why                                                                                                     |
 | --- | ------ | ------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
 | 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                           |
-| 11  | To do  | Fix the flaky "drags a card from anywhere" e2e test                             | S      | Fails about half the time on `main` too; a flaky test teaches everyone to ignore red CI                 |
 | 12  | To do  | UI to unhide built-in exercises                                                 | S      | Hidden built-ins can only be restored in SQL today                                                      |
 | 13  | To do  | Edit custom exercises, with a photo                                             | M      | The admin form already resizes and uploads photos; custom exercises can't be edited after creating them |
 | 14  | To do  | Backup / export of the exercises table                                          | S      | Admin-added built-ins live only in the production database                                              |
@@ -44,7 +44,7 @@ faster start with a saved query cache and splash (#18).
 - [x] 8. Secondary muscles — #20
 - [x] 9. kg / lb, CSV export — #22
 - [ ] 10. iPhone check
-- [ ] 11. Flaky drag test
+- [x] 11. Flaky drag test — #24
 - [ ] 12. Unhide built-ins
 - [ ] 13. Edit custom exercises
 - [ ] 14. Exercises backup
