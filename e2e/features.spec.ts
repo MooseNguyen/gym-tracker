@@ -572,6 +572,41 @@ test.describe('history', () => {
     await expect(benchTable.getByRole('cell', { name: '2 F' })).toBeVisible()
     await expect(page.getByText('Best 80 kg × 8 (e1RM 101.3 kg)')).toBeVisible()
   })
+
+  test('marks the personal records the database found', async ({ page }) => {
+    await mockSupabase(page, {
+      workouts: [workout],
+      prs: [
+        { workout_id: workout.id, set_id: 'b', weight_pr: true, e1rm_pr: true },
+        { workout_id: workout.id, set_id: 'c', weight_pr: false, e1rm_pr: true },
+      ],
+    })
+    await page.goto('/history')
+    const card = page.getByRole('link', { name: /Push day/ })
+    await expect(card.locator('.pr-badge')).toHaveText('🏆 2 PRs')
+
+    await card.click()
+    await expect(page.locator('.pr-badge')).toHaveText('🏆 2 PRs')
+    const benchTable = page.getByRole('table').first()
+    await expect(benchTable.getByRole('row', { name: /^1 / })).toContainText(
+      'personal record: heaviest weight and best estimated 1RM',
+    )
+    await expect(benchTable.getByRole('row', { name: /^2 F/ })).toContainText(
+      'personal record: best estimated 1RM',
+    )
+    await expect(benchTable.getByRole('row', { name: /^W / })).not.toContainText('personal record')
+  })
+
+  test('no badge without records, and History still works if the PR lookup fails', async ({
+    page,
+  }) => {
+    await mockSupabase(page, { workouts: [workout] })
+    await page.route('**/rest/v1/rpc/workout_prs', (r) => r.fulfill({ status: 500, json: {} }))
+    await page.goto('/history')
+    const card = page.getByRole('link', { name: /Push day/ })
+    await expect(card).toContainText('2 × Bench Press')
+    await expect(card.locator('.pr-badge')).toHaveCount(0)
+  })
 })
 
 test.describe('body map hover regression', () => {

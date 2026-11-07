@@ -103,6 +103,8 @@ export interface MockOptions {
   folders?: unknown[]
   /** Finished workouts already on the server, shaped like the PostgREST embed. */
   workouts?: { id: string }[]
+  /** Rows the workout_prs RPC returns (the database decides what is a PR). */
+  prs?: { workout_id: string; set_id: string; weight_pr: boolean; e1rm_pr: boolean }[]
 }
 
 export async function mockSupabase(page: Page, opts: MockOptions = {}) {
@@ -158,6 +160,13 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
               },
             ]
           : [],
+      )
+    }
+    if (path === '/rest/v1/rpc/workout_prs') {
+      const { p_workout_ids } = req.postDataJSON() as { p_workout_ids: string[] }
+      return json(
+        route,
+        (opts.prs ?? []).filter((p) => p_workout_ids.includes(p.workout_id)),
       )
     }
     if (path === '/rest/v1/rpc/save_workout') {
