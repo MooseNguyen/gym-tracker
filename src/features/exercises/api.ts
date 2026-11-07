@@ -2,13 +2,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, unwrap } from '../../lib/supabase'
 import type { Exercise, ExerciseKind } from '../../types/db'
 
-const EXERCISE_COLUMNS = 'id, user_id, name, muscle_group, equipment, kind, image_path'
+const EXERCISE_COLUMNS =
+  'id, user_id, name, muscle_group, equipment, kind, image_path, image_path_end'
 
 export function useExercises() {
   return useQuery({
     queryKey: ['exercises'],
     queryFn: async () =>
-      unwrap(await supabase.from('exercises').select(EXERCISE_COLUMNS).order('name')) as Exercise[],
+      unwrap(
+        await supabase
+          .from('exercises')
+          .select(EXERCISE_COLUMNS)
+          // Retired built-ins stay in the table for history and routines,
+          // but are no longer offered.
+          .eq('hidden', false)
+          .order('name'),
+      ) as Exercise[],
     // The library barely changes; avoid refetching it on every picker open.
     staleTime: 10 * 60_000,
   })

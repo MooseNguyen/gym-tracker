@@ -1536,6 +1536,45 @@ button.link {
   align-self: center;
   border-radius: var(--r-card);
 }
+/* Two photos stacked; the end one fades in and out over the start one. */
+.how-to-frames {
+  position: relative;
+  align-self: center;
+  width: 200px;
+  height: 200px;
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--raised);
+}
+.how-to-frames img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.how-to-frame-end {
+  animation: how-to-swap 1.8s ease-in-out infinite;
+}
+@keyframes how-to-swap {
+  0%,
+  35% {
+    opacity: 0;
+  }
+  50%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .how-to-frame-end {
+    animation: none;
+    opacity: 0;
+  }
+}
 .how-to-steps {
   margin: 0;
   padding-left: 1.4em;
