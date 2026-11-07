@@ -102,3 +102,35 @@ export function useWorkoutDays(from: Date) {
       ) as { id: string; started_at: string }[],
   })
 }
+
+/** A set that was a personal record when it was lifted (see the workout_prs RPC). */
+export interface WorkoutPr {
+  workout_id: string
+  set_id: string
+  /** Heaviest weight so far for that exercise. */
+  weight_pr: boolean
+  /** Best estimated 1RM so far for that exercise. */
+  e1rm_pr: boolean
+}
+
+/**
+ * PR sets in the given workouts, computed by the database against all
+ * earlier workouts. The key starts with 'workouts', so saving, editing or
+ * deleting any workout (which invalidates ['workouts']) recomputes them.
+ */
+export function useWorkoutPrs(workoutIds: string[]) {
+  const ids = [...workoutIds].sort()
+  return useQuery({
+    queryKey: ['workouts', 'prs', ids],
+    enabled: ids.length > 0,
+    queryFn: async () =>
+      unwrap(await supabase.rpc('workout_prs', { p_workout_ids: ids })) as WorkoutPr[],
+  })
+}
+
+/** PR sets per workout id, for the History cards. */
+export function prCounts(prs: WorkoutPr[] | undefined): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const p of prs ?? []) counts.set(p.workout_id, (counts.get(p.workout_id) ?? 0) + 1)
+  return counts
+}

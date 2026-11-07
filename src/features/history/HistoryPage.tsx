@@ -2,7 +2,8 @@ import { Link } from 'react-router'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { QueryState } from '../../shared/ui/QueryState'
 import type { Workout } from '../../types/db'
-import { useWorkouts } from './api'
+import { prCounts, useWorkoutPrs, useWorkouts } from './api'
+import { PrBadge } from './PrBadge'
 import { formatDate, formatKg, formatSetValues, formatTime } from './format'
 import { exerciseSummary, groupsTrained, workoutStats } from './summary'
 
@@ -12,6 +13,8 @@ const SHOWN_EXERCISES = 3
 export function HistoryPage() {
   const q = useWorkouts()
   const workouts = q.data?.pages.flat() ?? []
+  // A badge, not essential: the cards show without it while it loads or if it fails.
+  const prs = prCounts(useWorkoutPrs(workouts.map((w) => w.id)).data)
 
   return (
     <main className="page">
@@ -26,7 +29,7 @@ export function HistoryPage() {
         <ul className="list card-list">
           {workouts.map((w) => (
             <li key={w.id}>
-              <WorkoutCard workout={w} />
+              <WorkoutCard workout={w} prs={prs.get(w.id) ?? 0} />
             </li>
           ))}
         </ul>
@@ -44,7 +47,7 @@ export function HistoryPage() {
   )
 }
 
-function WorkoutCard({ workout: w }: { workout: Workout }) {
+function WorkoutCard({ workout: w, prs }: { workout: Workout; prs: number }) {
   const stats = workoutStats(w)
   const groups = groupsTrained(w)
   const hidden = w.workout_exercises.length - SHOWN_EXERCISES
@@ -57,6 +60,7 @@ function WorkoutCard({ workout: w }: { workout: Workout }) {
           {formatDate(w.started_at)} · {formatTime(w.started_at)}
         </small>
       </div>
+      {prs > 0 && <PrBadge count={prs} />}
 
       <dl className="history-stats">
         <div>

@@ -6,7 +6,8 @@ import { QueryState } from '../../shared/ui/QueryState'
 import { muscleLabel, type SetRow, type Workout, type WorkoutExerciseRow } from '../../types/db'
 import { useDraft } from '../workout/draftStore'
 import { editWorkout } from '../workout/startWorkout'
-import { useDeleteWorkout, useWorkout } from './api'
+import { useDeleteWorkout, useWorkout, useWorkoutPrs, type WorkoutPr } from './api'
+import { PrBadge } from './PrBadge'
 import { formatDate, formatKg, formatSetValues, formatTime } from './format'
 import { exerciseSummary, setsPerMuscle, workoutStats } from './summary'
 
@@ -24,6 +25,8 @@ export function WorkoutDetailPage() {
 }
 
 function WorkoutDetail({ w }: { w: Workout }) {
+  const prs = useWorkoutPrs([w.id]).data ?? []
+  const prBySet = new Map(prs.map((p) => [p.set_id, p]))
   const del = useDeleteWorkout()
   const draft = useDraft()
   const navigate = useNavigate()
@@ -38,6 +41,7 @@ function WorkoutDetail({ w }: { w: Workout }) {
       <p className="muted">
         {formatDate(w.started_at)} · {formatTime(w.started_at)}–{formatTime(w.ended_at)}
       </p>
+      {prs.length > 0 && <PrBadge count={prs.length} />}
       {w.notes && <p>{w.notes}</p>}
 
       <dl className="detail-stats card">
@@ -82,7 +86,7 @@ function WorkoutDetail({ w }: { w: Workout }) {
       )}
 
       {w.workout_exercises.map((we) => (
-        <ExerciseBlock key={we.id} we={we} />
+        <ExerciseBlock key={we.id} we={we} prBySet={prBySet} />
       ))}
 
       {del.error && (
@@ -129,7 +133,13 @@ function setLabels(sets: SetRow[]): string[] {
   })
 }
 
-function ExerciseBlock({ we }: { we: WorkoutExerciseRow }) {
+function ExerciseBlock({
+  we,
+  prBySet,
+}: {
+  we: WorkoutExerciseRow
+  prBySet: Map<string, WorkoutPr>
+}) {
   const { exercise } = we
   const summary = exerciseSummary(exercise.kind, we.sets)
   const labels = setLabels(we.sets)
@@ -165,7 +175,10 @@ function ExerciseBlock({ we }: { we: WorkoutExerciseRow }) {
             return (
               <tr key={s.id} className={s.set_type === 'warmup' ? 'muted' : undefined}>
                 <td>{labels[i]}</td>
-                <td>{formatSetValues(exercise.kind, s)}</td>
+                <td>
+                  {formatSetValues(exercise.kind, s)}
+                  {prBySet.has(s.id) && <PrMark pr={prBySet.get(s.id)!} />}
+                </td>
                 <td>{s.rpe ?? '–'}</td>
                 {showE1RM && <td>{e1rm != null && s.set_type !== 'warmup' ? e1rm : '–'}</td>}
               </tr>
@@ -184,5 +197,18 @@ function ExerciseBlock({ we }: { we: WorkoutExerciseRow }) {
         </p>
       )}
     </section>
+  )
+}
+
+/** Trophy next to a PR set; says which record for screen readers and on long-press. */
+function PrMark({ pr }: { pr: WorkoutPr }) {
+  const what = [pr.weight_pr && 'heaviest weight', pr.e1rm_pr && 'best estimated 1RM']
+    .filter(Boolean)
+    .join(' and ')
+  return (
+    <span className="pr-mark" title={`PR: ${what}`}>
+      <span aria-hidden="true"> 🏆</span>
+      <span className="sr-only"> (personal record: {what})</span>
+    </span>
   )
 }

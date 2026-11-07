@@ -2202,3 +2202,23 @@ button.link {
 .stopwatch-time.running {
   color: var(--accent);
 }
+
+/* ==========================================================================
+   Personal records (History)
+   ========================================================================== */
+.pr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 1px 9px;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, #f5c542 16%, transparent);
+  color: #f5d77a;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pr-mark {
+  cursor: help;
+}
