@@ -4,7 +4,7 @@ import { EXERCISE_IMAGE_BUCKET, UPLOADED_PREFIX } from '../../shared/ui/exercise
 import type { Exercise, ExerciseKind } from '../../types/db'
 
 const EXERCISE_COLUMNS =
-  'id, user_id, name, muscle_group, equipment, kind, image_path, image_path_end'
+  'id, user_id, name, muscle_group, secondary_muscles, equipment, kind, image_path, image_path_end'
 
 export function useExercises() {
   return useQuery({
@@ -66,6 +66,7 @@ export function useCreateExercise() {
 export interface BuiltInFields extends NewExercise {
   instructions: string[]
   hidden: boolean
+  secondary_muscles: string[]
 }
 
 /**

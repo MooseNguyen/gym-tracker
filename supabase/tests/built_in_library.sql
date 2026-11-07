@@ -10,6 +10,8 @@ declare
   plain_groups int;
   bad_muscles int;
   old_data int;
+  bad_secondary int;
+  with_secondary int;
 begin
   -- 264 before RepDB + 310 added; 48 old ones RepDB doesn't cover are hidden.
   select count(*) into built_ins from exercises where user_id is null;
@@ -64,6 +66,26 @@ begin
     );
   if bad_muscles <> 0 then
     raise exception '% built-in exercises have an unknown muscle_group', bad_muscles;
+  end if;
+
+  -- Secondary muscles: specific app values only (no plain group, no cardio),
+  -- and the RepDB fill reached the seed's rows too.
+  select count(*) into bad_secondary
+  from exercises, unnest(secondary_muscles) as m
+  where user_id is null
+    and m not in (
+      'upper-chest', 'mid-chest', 'lower-chest',
+      'lats', 'upper-back', 'traps', 'lower-back',
+      'front-delts', 'side-delts', 'rear-delts',
+      'biceps', 'triceps', 'forearms', 'quads', 'hamstrings', 'glutes', 'calves', 'core'
+    );
+  if bad_secondary <> 0 then
+    raise exception '% secondary muscles of built-ins are not app muscle values', bad_secondary;
+  end if;
+  select count(*) into with_secondary
+  from exercises where user_id is null and not hidden and cardinality(secondary_muscles) > 0;
+  if with_secondary <> 493 then
+    raise exception 'expected 493 visible built-ins with secondary muscles, found %', with_secondary;
   end if;
 
   raise notice 'ok: % built-in exercises', built_ins;

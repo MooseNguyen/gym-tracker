@@ -6,7 +6,7 @@ const ROUTINE_SELECT = `
   id, name, notes, folder_id, created_at,
   routine_exercises (
     id, exercise_id, position, target_sets, rest_seconds,
-    exercise:exercises (id, user_id, name, muscle_group, equipment, kind, image_path, image_path_end)
+    exercise:exercises (id, user_id, name, muscle_group, secondary_muscles, equipment, kind, image_path, image_path_end)
   )`
 
 export function useRoutines() {

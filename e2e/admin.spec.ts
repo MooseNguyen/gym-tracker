@@ -103,6 +103,15 @@ test('an admin adds a built-in with a photo and steps', async ({ page }) => {
   await expect(form.getByRole('alert')).toHaveText('Add at least one step.')
   expect(calls.uploads).toHaveLength(0)
 
+  // Secondary muscles: none from the primary's own group (back) are offered.
+  const alsoWorks = form.getByRole('group', { name: 'Also works (counted in weekly stats)' })
+  await expect(alsoWorks.getByRole('button', { name: 'upper back' })).toHaveCount(0)
+  await alsoWorks.getByRole('button', { name: 'biceps' }).click()
+  await expect(alsoWorks.getByRole('button', { name: 'biceps' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+
   await form
     .getByLabel('Steps (one per line)')
     .fill('Sit with your chest on the pad.\n\nPull one handle down to your chest.')
@@ -123,6 +132,7 @@ test('an admin adds a built-in with a photo and steps', async ({ page }) => {
         kind: 'weight_reps',
         instructions: ['Sit with your chest on the pad.', 'Pull one handle down to your chest.'],
         hidden: false,
+        secondary_muscles: ['biceps'],
         image_path: calls.uploads[0].path,
         user_id: null, // built-in, not the admin's own custom exercise
       },

@@ -104,3 +104,12 @@ describe('weekRange', () => {
     expect(to.getHours()).toBe(0)
   })
 })
+
+describe('groupVolumes with secondary muscles', () => {
+  it('counts a set for the primary group and for each secondary group', () => {
+    const w = workout(['mid-chest', sets(4)])
+    w.workout_exercises[0].exercise.secondary_muscles = ['triceps', 'front-delts']
+    const byGroup = Object.fromEntries(groupVolumes([w]).map((g) => [g.group, g.sets]))
+    expect(byGroup).toMatchObject({ chest: 4, triceps: 4, shoulders: 4, back: 0 })
+  })
+})
