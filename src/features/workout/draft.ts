@@ -7,6 +7,7 @@ import type { Stopwatch } from './timers'
 /** What a draft needs to know about an exercise. Tests can omit the image. */
 export type ExerciseRef = Pick<Exercise, 'id' | 'name' | 'kind'> & {
   image_path?: string | null
+  image_path_end?: string | null
   user_id?: string | null
   equipment?: string
 }
@@ -30,6 +31,8 @@ export interface DraftExercise {
   kind: ExerciseKind
   /** Optional: drafts saved before images existed do not have it. */
   imagePath?: string | null
+  /** End-of-movement photo for the How-to animation; missing in old drafts. */
+  imagePathEnd?: string | null
   /** User-created exercise: has no built-in instructions. Missing in old drafts = built-in. */
   custom?: boolean
   /** For load suggestions (plate steps). Missing in old drafts: a 2.5 kg step is assumed. */
@@ -83,6 +86,7 @@ export function draftExercise(
     name: exercise.name,
     kind: exercise.kind,
     imagePath: exercise.image_path ?? null,
+    imagePathEnd: exercise.image_path_end ?? null,
     custom: !!exercise.user_id,
     equipment: exercise.equipment,
     restSeconds,
@@ -134,6 +138,7 @@ export function draftFromWorkout(w: Workout): WorkoutDraft {
       name: we.exercise.name,
       kind: we.exercise.kind,
       imagePath: we.exercise.image_path,
+      imagePathEnd: we.exercise.image_path_end ?? null,
       custom: !!we.exercise.user_id,
       equipment: we.exercise.equipment,
       restSeconds: DEFAULT_REST,

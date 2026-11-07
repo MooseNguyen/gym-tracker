@@ -14,7 +14,8 @@ export const bench = {
   muscle_group: 'chest',
   equipment: 'barbell',
   kind: 'weight_reps',
-  image_path: 'bench-press.webp',
+  image_path: 'repdb-bench-press.webp',
+  image_path_end: 'repdb-bench-press-end.webp',
 }
 
 const user = {

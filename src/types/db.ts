@@ -14,6 +14,8 @@ export interface Exercise {
   kind: ExerciseKind
   /** File name under /exercises/ (built-in exercises only). */
   image_path: string | null
+  /** Second photo, the end of the movement (RepDB built-ins); null = one photo. */
+  image_path_end?: string | null
 }
 
 export interface RoutineFolder {

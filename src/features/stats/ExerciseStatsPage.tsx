@@ -54,7 +54,7 @@ export default function ExerciseStatsPage() {
       {/* Above the history, so it is there even before the first session. */}
       {exercise && !exercise.user_id && (
         <Disclosure className="card how-to-card" summary={<strong>How to do it</strong>}>
-          <HowToSteps exerciseId={exercise.id} />
+          <HowToSteps exerciseId={exercise.id} imagePath={exercise.image_path} />
         </Disclosure>
       )}
       <QueryState

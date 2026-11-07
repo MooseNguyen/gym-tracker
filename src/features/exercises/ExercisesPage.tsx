@@ -39,7 +39,14 @@ export function ExercisesPage() {
           renderAction={(e) => (
             <div className="row">
               {!e.user_id && (
-                <HowToButton exercise={{ id: e.id, name: e.name, imagePath: e.image_path }} />
+                <HowToButton
+                  exercise={{
+                    id: e.id,
+                    name: e.name,
+                    imagePath: e.image_path,
+                    imagePathEnd: e.image_path_end,
+                  }}
+                />
               )}
               <Link className="btn small" to={`/exercises/${e.id}`}>
                 Stats
@@ -66,6 +73,14 @@ export function ExercisesPage() {
           )}
         />
       </QueryState>
+      {/* RepDB's free tier requires a visible credit where its data is shown. */}
+      <p className="muted small-text">
+        Exercise data by{' '}
+        <a href="https://repdb.co" target="_blank" rel="noreferrer">
+          RepDB (repdb.co)
+        </a>
+        .
+      </p>
       <Dialog open={adding} onClose={() => setAdding(false)} title="New exercise">
         <NewExerciseForm onDone={() => setAdding(false)} />
       </Dialog>

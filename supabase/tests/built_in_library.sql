@@ -3,12 +3,34 @@
 do $$
 declare
   built_ins int;
+  visible int;
+  without_photo int;
+  without_steps int;
+  duplicate_names int;
   plain_groups int;
   bad_muscles int;
 begin
+  -- 264 before RepDB + 310 added; 48 old ones RepDB doesn't cover are hidden.
   select count(*) into built_ins from exercises where user_id is null;
-  if built_ins <> 264 then
-    raise exception 'expected 264 built-in exercises, found %', built_ins;
+  select count(*) into visible from exercises where user_id is null and not hidden;
+  if built_ins <> 574 or visible <> 526 then
+    raise exception 'expected 574 built-ins (526 visible), found % (% visible)', built_ins, visible;
+  end if;
+
+  -- Every exercise a user can pick has a photo and how-to steps (this also
+  -- covers the seed rows, which run after the migrations on a fresh database).
+  select count(*) into without_photo
+  from exercises where user_id is null and not hidden and image_path is null;
+  select count(*) into without_steps
+  from exercises where user_id is null and not hidden and coalesce(cardinality(instructions), 0) = 0;
+  if without_photo <> 0 or without_steps <> 0 then
+    raise exception '% visible built-ins without a photo, % without steps', without_photo, without_steps;
+  end if;
+
+  select count(*) into duplicate_names
+  from (select name from exercises where user_id is null and not hidden group by name having count(*) > 1) d;
+  if duplicate_names <> 0 then
+    raise exception '% names are used by more than one visible built-in', duplicate_names;
   end if;
 
   -- Chest, back and shoulders built-ins must use a sub-muscle, not the plain group.

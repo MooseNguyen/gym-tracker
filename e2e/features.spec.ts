@@ -267,7 +267,14 @@ test.describe('how to', () => {
       "Lower it to your mid chest; don't bounce.",
       'Press back up and lock your arms.',
     ])
-    await expect(sheet.getByRole('link', { name: 'free-exercise-db' })).toBeVisible()
+    // Start and end photos of the movement, with RepDB's required credit.
+    const frames = sheet.getByRole('img', { name: 'Bench Press, start and end' })
+    await expect(frames.locator('img')).toHaveCount(2)
+    await expect(frames.locator('img').last()).toHaveAttribute(
+      'src',
+      '/exercises/repdb-bench-press-end.webp',
+    )
+    await expect(sheet.getByRole('link', { name: 'RepDB (repdb.co)' })).toBeVisible()
 
     await page.keyboard.press('Escape')
     await expect(sheet).toBeHidden()
@@ -481,6 +488,16 @@ test.describe('exercise filters', () => {
     await page.getByLabel('Search exercises').fill('press')
     await expect(page.locator('.list-item')).toHaveCount(2)
     await expect(page.getByRole('button', { name: '← Filters' })).toBeVisible()
+  })
+
+  test('asks only for exercises that are not retired', async ({ page }) => {
+    await mockSupabase(page, { exercises: library })
+    const list = page.waitForRequest(
+      (r) => r.url().includes('/rest/v1/exercises') && r.method() === 'GET',
+    )
+    await page.goto('/exercises')
+    expect(new URL((await list).url()).searchParams.get('hidden')).toBe('eq.false')
+    await expect(page.getByRole('link', { name: 'RepDB (repdb.co)' })).toBeVisible()
   })
 
   test('no match disables the show button', async ({ page }) => {

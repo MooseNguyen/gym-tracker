@@ -7,10 +7,24 @@ interface Target {
   id: string
   name: string
   imagePath: string | null | undefined
+  /** End-of-movement photo: with it, the sheet alternates the two. */
+  imagePathEnd?: string | null
 }
 
-/** The numbered steps. Fetches on mount, so render it only when it is shown. */
-export function HowToSteps({ exerciseId }: { exerciseId: string }) {
+/** Built-ins from RepDB carry its file names; older ones came from free-exercise-db. */
+const fromRepdb = (imagePath: string | null | undefined) => !!imagePath?.startsWith('repdb-')
+
+/**
+ * The numbered steps. Fetches on mount, so render it only when it is shown.
+ * `imagePath` picks the credit line (RepDB requires a visible one).
+ */
+export function HowToSteps({
+  exerciseId,
+  imagePath,
+}: {
+  exerciseId: string
+  imagePath?: string | null
+}) {
   const q = useExerciseInstructions(exerciseId, true)
 
   if (q.isPending) return <p className="muted">Loading instructions…</p>
@@ -33,14 +47,40 @@ export function HowToSteps({ exerciseId }: { exerciseId: string }) {
           <li key={i}>{step}</li>
         ))}
       </ol>
-      <p className="muted small-text">
-        Instructions from{' '}
-        <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noreferrer">
-          free-exercise-db
-        </a>
-        .
-      </p>
+      {fromRepdb(imagePath) ? (
+        <p className="muted small-text">
+          Exercise data by{' '}
+          <a href="https://repdb.co" target="_blank" rel="noreferrer">
+            RepDB (repdb.co)
+          </a>
+          .
+        </p>
+      ) : (
+        <p className="muted small-text">
+          Instructions from{' '}
+          <a href="https://github.com/yuhonas/free-exercise-db" target="_blank" rel="noreferrer">
+            free-exercise-db
+          </a>
+          .
+        </p>
+      )}
     </>
+  )
+}
+
+/**
+ * Start and end of the movement, cross-fading in a loop: enough to see the
+ * direction of the lift. One photo when there is no second one; reduced
+ * motion shows the start only (the animation is switched off in CSS).
+ */
+function HowToImage({ exercise }: { exercise: Target }) {
+  if (!exercise.imagePathEnd)
+    return <ExerciseThumb imagePath={exercise.imagePath} name={exercise.name} size={200} />
+  return (
+    <div className="how-to-frames" role="img" aria-label={`${exercise.name}, start and end`}>
+      <img src={`/exercises/${exercise.imagePath}`} alt="" />
+      <img src={`/exercises/${exercise.imagePathEnd}`} alt="" className="how-to-frame-end" />
+    </div>
   )
 }
 
@@ -56,8 +96,8 @@ export function HowToSheet({
     <Dialog open={!!exercise} onClose={onClose} title={exercise ? `How to: ${exercise.name}` : ''}>
       {exercise && (
         <div className="stack how-to">
-          <ExerciseThumb imagePath={exercise.imagePath} name={exercise.name} size={200} />
-          <HowToSteps exerciseId={exercise.id} />
+          <HowToImage exercise={exercise} />
+          <HowToSteps exerciseId={exercise.id} imagePath={exercise.imagePath} />
         </div>
       )}
     </Dialog>
