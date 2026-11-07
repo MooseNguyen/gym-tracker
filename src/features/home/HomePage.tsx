@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router'
-import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { HeroCanvas } from '../../shared/ui/HeroCanvas'
 import { MuscleWeekCard } from '../stats/MuscleWeekCard'
+import { RoutineCard } from '../routines/RoutineCard'
 import { WeekStrip } from './WeekStrip'
 import { useConfirm, usePrompt } from '../../shared/ui/confirmContext'
 import { Disclosure } from '../../shared/ui/Disclosure'
@@ -28,6 +28,7 @@ export function HomePage() {
   const prompt = usePrompt()
 
   const groups = groupByFolder(folders.data ?? [], routines.data ?? [])
+  const routineNames = (routines.data ?? []).map((r) => r.name)
   const mutationError = saveFolder.error ?? deleteFolder.error
 
   async function newFolder() {
@@ -164,7 +165,12 @@ export function HomePage() {
               ) : (
                 <div className="stack">
                   {routines.map((r) => (
-                    <RoutineItem key={r.id} routine={r} onStart={() => start(r)} />
+                    <RoutineCard
+                      key={r.id}
+                      routine={r}
+                      routineNames={routineNames}
+                      onStart={() => start(r)}
+                    />
                   ))}
                 </div>
               )}
@@ -180,47 +186,6 @@ export function HomePage() {
         Start empty workout
       </button>
     </main>
-  )
-}
-
-function RoutineItem({ routine, onStart }: { routine: Routine; onStart: () => void }) {
-  const exercises = routine.routine_exercises
-  return (
-    <Disclosure
-      className="routine card"
-      summary={
-        <span className="routine-summary">
-          <strong>{routine.name}</strong>
-          <small className="muted">
-            {exercises.length} exercise{exercises.length === 1 ? '' : 's'}
-          </small>
-        </span>
-      }
-    >
-      {exercises.length === 0 ? (
-        <p className="muted small-text">No exercises in this routine yet.</p>
-      ) : (
-        <ol className="routine-exercises">
-          {exercises.map((re) => (
-            <li key={re.id}>
-              <ExerciseThumb imagePath={re.exercise.image_path} name={re.exercise.name} size={40} />
-              <span className="grow">{re.exercise.name}</span>
-              <small className="muted">
-                {re.target_sets} set{re.target_sets === 1 ? '' : 's'}
-              </small>
-            </li>
-          ))}
-        </ol>
-      )}
-      <div className="row">
-        <Link className="btn" to={`/routines/${routine.id}`}>
-          Edit
-        </Link>
-        <button className="btn primary grow" disabled={exercises.length === 0} onClick={onStart}>
-          Start {routine.name}
-        </button>
-      </div>
-    </Disclosure>
   )
 }
 

@@ -758,12 +758,20 @@ button.link {
   padding: 4px 0 8px 26px;
 }
 
-.routine.card {
-  padding: 4px 14px;
-  gap: 0;
+/* Card = accordion (name → exercise list) + an always-visible Start. */
+.routine-card {
+  padding: 4px 14px 14px;
+  gap: 4px;
 }
-.routine.open {
+.routine-card:has(.routine.open) {
   border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+/* Routine actions sheet: big, thumb-reachable rows. */
+.action-sheet .btn {
+  min-height: 48px;
+}
+.action-sheet [role='status']:empty {
+  display: none;
 }
 .routine.open > .disclosure-panel > .disclosure-inner {
   padding-bottom: 12px;
@@ -1439,9 +1447,8 @@ button.link {
   flex-direction: column;
   gap: 6px;
 }
-/* "Show N exercises" stays reachable without scrolling past 12 chips:
-   on a page it sits just above the floating tab bar; inside the picker
-   sheet (which has its own sticky "Add" button) it stays in the flow. */
+/* "Show N exercises" stays reachable without scrolling past the chips:
+   on a page it sits just above the floating tab bar. */
 .filter-actions {
   position: sticky;
   bottom: calc(var(--tabbar-space) + 4px);
@@ -1449,9 +1456,13 @@ button.link {
   padding: 8px 0;
   background: linear-gradient(to top, var(--bg) 70%, transparent);
 }
+/* In a sheet, stick to the sheet's own bottom (no tab bar there). The
+   picker's "Add" bar only exists on the results step, so they never stack. */
 .sheet .filter-actions {
-  position: static;
-  background: none;
+  bottom: 0;
+  background: color-mix(in srgb, var(--raised) 70%, transparent);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
 }
 .muscle-chips .chip {
   width: 100%;
