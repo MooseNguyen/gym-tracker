@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { ExerciseKind, PreviousSet } from '../../types/db'
+import type { ExerciseKind, PreviousSet, Workout } from '../../types/db'
 import {
   addSet,
   adjustCountdown,
   completedVolume,
+  draftFromWorkout,
   startCountdown,
   applySuggestions,
   replaceExercise,
@@ -234,58 +235,62 @@ describe('improvementOver', () => {
   })
 
   it('reports more kg, more reps, or both', () => {
-    expect(improvementOver(set('82,5', '8'), prev({ weight_kg: 80, reps: 8 }))).toEqual({
-      kg: 2.5,
+    expect(improvementOver(set('82,5', '8'), prev({ weight_kg: 80, reps: 8 }), 'kg')).toEqual({
+      weight: 2.5,
       reps: 0,
       seconds: 0,
     })
-    expect(improvementOver(set('80', '10'), prev({ weight_kg: 80, reps: 8 }))).toEqual({
-      kg: 0,
+    expect(improvementOver(set('80', '10'), prev({ weight_kg: 80, reps: 8 }), 'kg')).toEqual({
+      weight: 0,
       reps: 2,
       seconds: 0,
     })
-    expect(improvementOver(set('85', '9'), prev({ weight_kg: 80, reps: 8 }))).toEqual({
-      kg: 5,
+    expect(improvementOver(set('85', '9'), prev({ weight_kg: 80, reps: 8 }), 'kg')).toEqual({
+      weight: 5,
       reps: 1,
       seconds: 0,
     })
   })
 
   it('counts heavier with fewer reps as progress, as specified', () => {
-    expect(improvementOver(set('90', '5'), prev({ weight_kg: 80, reps: 8 }))?.kg).toBe(10)
+    expect(improvementOver(set('90', '5'), prev({ weight_kg: 80, reps: 8 }), 'kg')?.weight).toBe(10)
   })
 
   it('returns null when equal or worse', () => {
-    expect(improvementOver(set('80', '8'), prev({ weight_kg: 80, reps: 8 }))).toBeNull()
-    expect(improvementOver(set('75', '6'), prev({ weight_kg: 80, reps: 8 }))).toBeNull()
+    expect(improvementOver(set('80', '8'), prev({ weight_kg: 80, reps: 8 }), 'kg')).toBeNull()
+    expect(improvementOver(set('75', '6'), prev({ weight_kg: 80, reps: 8 }), 'kg')).toBeNull()
   })
 
   it('treats empty weight as bodyweight (0 kg added)', () => {
-    expect(improvementOver(set('', '10'), prev({ reps: 8 }))).toEqual({
-      kg: 0,
+    expect(improvementOver(set('', '10'), prev({ reps: 8 }), 'kg')).toEqual({
+      weight: 0,
       reps: 2,
       seconds: 0,
     })
-    expect(improvementOver(set('5', '8'), prev({ reps: 8 }))?.kg).toBe(5)
+    expect(improvementOver(set('5', '8'), prev({ reps: 8 }), 'kg')?.weight).toBe(5)
   })
 
   it('ignores warm-ups and sets with no previous', () => {
-    expect(improvementOver(set('100', '10', 'warmup'), prev({ weight_kg: 60, reps: 5 }))).toBeNull()
     expect(
-      improvementOver(set('100', '10'), prev({ weight_kg: 60, reps: 5, set_type: 'warmup' })),
+      improvementOver(set('100', '10', 'warmup'), prev({ weight_kg: 60, reps: 5 }), 'kg'),
     ).toBeNull()
-    expect(improvementOver(set('100', '10'), undefined)).toBeNull()
+    expect(
+      improvementOver(set('100', '10'), prev({ weight_kg: 60, reps: 5, set_type: 'warmup' }), 'kg'),
+    ).toBeNull()
+    expect(improvementOver(set('100', '10'), undefined, 'kg')).toBeNull()
   })
 
   it('avoids floating point noise in the kg difference', () => {
-    expect(improvementOver(set('80,3', '8'), prev({ weight_kg: 80.1, reps: 8 }))?.kg).toBe(0.2)
+    expect(
+      improvementOver(set('80,3', '8'), prev({ weight_kg: 80.1, reps: 8 }), 'kg')?.weight,
+    ).toBe(0.2)
   })
 })
 
 describe('describeImprovement', () => {
   it('lists only what improved', () => {
-    expect(describeImprovement({ kg: 2.5, reps: 1, seconds: 0 })).toBe('+2.5 kg · +1 rep')
-    expect(describeImprovement({ kg: 0, reps: 3, seconds: 0 })).toBe('+3 reps')
+    expect(describeImprovement({ weight: 2.5, reps: 1, seconds: 0 }, 'kg')).toBe('+2.5 kg · +1 rep')
+    expect(describeImprovement({ weight: 0, reps: 3, seconds: 0 }, 'kg')).toBe('+3 reps')
   })
 })
 
@@ -353,12 +358,12 @@ describe('replaceExercise', () => {
   })
 })
 
-describe('MAX_VALUE validation', () => {
+describe('too large values', () => {
   it('flags kg or reps above 1000, accepting 1000 and comma decimals', () => {
-    expect(tooLargeField({ weight: '1000', reps: '8' })).toBeNull()
-    expect(tooLargeField({ weight: '1000,5', reps: '8' })).toBe('weight')
-    expect(tooLargeField({ weight: '80', reps: '1200' })).toBe('reps')
-    expect(tooLargeField({ weight: '', reps: '' })).toBeNull()
+    expect(tooLargeField({ weight: '1000', reps: '8' }, 'kg')).toBeNull()
+    expect(tooLargeField({ weight: '1000,5', reps: '8' }, 'kg')).toBe('weight')
+    expect(tooLargeField({ weight: '80', reps: '1200' }, 'kg')).toBe('reps')
+    expect(tooLargeField({ weight: '', reps: '' }, 'kg')).toBeNull()
   })
 
   it('refuses to tick a set with an impossible number', () => {
@@ -406,5 +411,97 @@ describe('countdown and volume', () => {
     d = updateSet(d, ex.id, b.id, { weight: '40', reps: '10', completed: true, setType: 'warmup' })
     d = addSet(d, ex.id) // copies 40 × 10 but is not ticked
     expect(completedVolume(d)).toBe(640)
+  })
+})
+
+describe('a draft typed in lb', () => {
+  const lbDraft = (): WorkoutDraft => ({ ...draftWith(bench), unit: 'lb' })
+  const prevKg = (weight_kg: number, reps: number): PreviousSet => ({
+    exercise_id: bench.id,
+    position: 0,
+    set_type: 'normal',
+    weight_kg,
+    reps,
+    duration_s: null,
+    rpe: null,
+  })
+
+  it('saves kg, the only unit the database knows', () => {
+    let d = lbDraft()
+    const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { weight: '135', reps: '5', completed: true })
+    expect(toSavePayload(d).exercises[0].sets[0].weight_kg).toBe(61.25)
+  })
+
+  it('a ✓ on an empty set fills last time in lb, and beating it is measured in lb', () => {
+    let d = lbDraft()
+    const ex = d.exercises[0]
+    d = toggleSetComplete(d, ex.id, ex.sets[0].id, prevKg(61.25, 5))
+    expect(d.exercises[0].sets[0]).toMatchObject({ weight: '135', reps: '5', completed: true })
+
+    const heavier = { ...d.exercises[0].sets[0], weight: '140' }
+    expect(improvementOver(heavier, prevKg(61.25, 5), 'lb')).toEqual({
+      weight: 5,
+      reps: 0,
+      seconds: 0,
+    })
+    expect(describeImprovement({ weight: 5, reps: 0, seconds: 0 }, 'lb')).toBe('+5 lb')
+  })
+
+  it('volume is in lb as typed, not rounded through kg', () => {
+    let d = lbDraft()
+    const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { weight: '140', reps: '8', completed: true })
+    expect(completedVolume(d)).toBe(1120) // via kg it would read 1,119.9
+  })
+
+  it('allows heavier numbers in lb before calling them a typo', () => {
+    expect(tooLargeField({ weight: '1500', reps: '3' }, 'lb')).toBeNull()
+    expect(tooLargeField({ weight: '1500', reps: '3' }, 'kg')).toBe('weight')
+  })
+
+  it('reopens a saved workout in the unit it is edited in', () => {
+    const w = {
+      id: 'w1',
+      routine_id: null,
+      name: 'Push',
+      started_at: '2026-01-01T10:00:00Z',
+      ended_at: '2026-01-01T11:00:00Z',
+      notes: null,
+      workout_exercises: [
+        {
+          id: 'we1',
+          exercise_id: bench.id,
+          position: 0,
+          notes: null,
+          exercise: { ...bench, user_id: null, muscle_group: 'chest', equipment: 'barbell' },
+          sets: [
+            {
+              id: 's1',
+              position: 0,
+              set_type: 'normal',
+              weight_kg: 61.25,
+              reps: 5,
+              duration_s: null,
+              rpe: null,
+            },
+          ],
+        },
+      ],
+    } as unknown as Workout
+    const d = draftFromWorkout(w, 'lb')
+    expect(d.unit).toBe('lb')
+    expect(d.exercises[0].sets[0].weight).toBe('135')
+    expect(toSavePayload(d).exercises[0].sets[0].weight_kg).toBe(61.25) // unchanged on save
+  })
+
+  it('old drafts without a unit are kg', () => {
+    const { unit: _unit, ...old } = draftWith(bench)
+    void _unit
+    expect(toSavePayload(old as WorkoutDraft).exercises).toEqual([])
+    let d = old as WorkoutDraft
+    const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { weight: '100', reps: '5', completed: true })
+    expect(toSavePayload(d).exercises[0].sets[0].weight_kg).toBe(100)
   })
 })

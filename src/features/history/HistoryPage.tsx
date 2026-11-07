@@ -4,7 +4,9 @@ import { QueryState } from '../../shared/ui/QueryState'
 import type { Workout } from '../../types/db'
 import { prCounts, useWorkoutPrs, useWorkouts } from './api'
 import { PrBadge } from './PrBadge'
-import { formatDate, formatKg, formatSetValues, formatTime } from './format'
+import { formatDate, formatSetValues, formatTime } from './format'
+import { formatAmount } from '../../shared/units'
+import { useUnit } from '../settings/api'
 import { exerciseSummary, groupsTrained, workoutStats } from './summary'
 
 /** Exercises listed on a card; the rest collapse into "+N more". */
@@ -48,7 +50,8 @@ export function HistoryPage() {
 }
 
 function WorkoutCard({ workout: w, prs }: { workout: Workout; prs: number }) {
-  const stats = workoutStats(w)
+  const unit = useUnit()
+  const stats = workoutStats(w, unit)
   const groups = groupsTrained(w)
   const hidden = w.workout_exercises.length - SHOWN_EXERCISES
 
@@ -73,7 +76,7 @@ function WorkoutCard({ workout: w, prs }: { workout: Workout; prs: number }) {
         </div>
         <div>
           <dt>Volume</dt>
-          <dd>{formatKg(stats.volume)}</dd>
+          <dd>{formatAmount(stats.volume, unit)}</dd>
         </div>
       </dl>
 
@@ -92,7 +95,9 @@ function WorkoutCard({ workout: w, prs }: { workout: Workout; prs: number }) {
                 {s.workingSets} × {we.exercise.name}
               </span>
               {s.best && (
-                <small className="muted">best {formatSetValues(we.exercise.kind, s.best)}</small>
+                <small className="muted">
+                  best {formatSetValues(we.exercise.kind, s.best, unit)}
+                </small>
               )}
             </li>
           )

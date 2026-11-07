@@ -762,22 +762,25 @@ test.describe('muscle stats', () => {
   })
 })
 
+/** Me tab → Log out: opens the confirmation. */
+async function openLogOut(page: Page) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Me' }).click()
+  await page.getByRole('dialog', { name: 'Me' }).getByRole('button', { name: 'Log out' }).click()
+}
+
 test.describe('log out', () => {
   test('asks first; Cancel keeps the session, Log out goes to the login page', async ({ page }) => {
     await mockSupabase(page, { routines, folders })
     await page.goto('/')
-    const tab = page.getByRole('navigation', { name: 'Main' }).getByRole('button', {
-      name: 'Log out',
-    })
 
-    await tab.click()
+    await openLogOut(page)
     const dialog = page.getByRole('dialog', { name: 'Log out?' })
     await expect(dialog).toBeVisible()
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toBeHidden()
     await expect(page).toHaveURL(/\/$/)
 
-    await tab.click()
+    await openLogOut(page)
     await dialog.getByRole('button', { name: 'Log out' }).click()
     await expect(page).toHaveURL(/\/login$/)
   })
@@ -790,10 +793,7 @@ test.describe('log out', () => {
     // Saved for a fast start next time (written shortly after the data arrives).
     await expect.poll(savedCache).toContain('Push Pull Legs')
 
-    await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('button', { name: 'Log out' })
-      .click()
+    await openLogOut(page)
     await page
       .getByRole('dialog', { name: 'Log out?' })
       .getByRole('button', { name: 'Log out' })

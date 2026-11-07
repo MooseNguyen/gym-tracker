@@ -1,7 +1,18 @@
+import type { Unit } from '../../shared/units'
+
 /** Plates usually found in a gym, heaviest first (kg). */
 export const KG_PLATES = [25, 20, 15, 10, 5, 2.5, 1.25] as const
 /** Bars to pick from: Olympic men's, women's / technique, and a short or EZ bar. */
 export const KG_BARS = [20, 15, 10] as const
+
+/** The same in a lb gym: 45 lb plates and bar, down to 2.5 lb change plates. */
+export const LB_PLATES = [45, 35, 25, 10, 5, 2.5] as const
+export const LB_BARS = [45, 35, 25] as const
+
+export const GYM: Record<Unit, { plates: readonly number[]; bars: readonly number[] }> = {
+  kg: { plates: KG_PLATES, bars: KG_BARS },
+  lb: { plates: LB_PLATES, bars: LB_BARS },
+}
 
 export interface PlateLoad {
   /** Plates for ONE side of the bar, heaviest first (the order they go on). */

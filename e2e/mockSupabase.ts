@@ -105,10 +105,15 @@ export interface MockOptions {
   workouts?: { id: string }[]
   /** Rows the workout_prs RPC returns (the database decides what is a PR). */
   prs?: { workout_id: string; set_id: string; weight_pr: boolean; e1rm_pr: boolean }[]
+  /** The account's saved weight unit; no profile row (kg) when left out. */
+  unit?: 'kg' | 'lb'
 }
 
 export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   const saved: SavedWorkout[] = []
+  /** Bodies of the settings upserts the app sent. */
+  const profileWrites: { unit: string }[] = []
+  let unit = opts.unit
 
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -142,6 +147,16 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     }
     // Sign-out: the server only revokes the refresh token, nothing to return.
     if (path === '/auth/v1/logout') return route.fulfill({ status: 204 })
+    if (path === '/rest/v1/profiles') {
+      if (req.method() === 'POST') {
+        const body = req.postDataJSON() as { unit: 'kg' | 'lb' }
+        profileWrites.push({ unit: body.unit })
+        unit = body.unit
+        return route.fulfill({ status: 201 })
+      }
+      const rows = unit ? [{ unit }] : []
+      return json(route, single ? (rows[0] ?? null) : rows)
+    }
     if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
     if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
@@ -188,7 +203,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     return json(route, { message: `Unmocked ${req.method()} ${path}` }, 501)
   })
 
-  return { saved }
+  return { saved, profileWrites }
 }
 
 // ---------------------------------------------------------------------------

@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { HowToSheet } from '../exercises/HowTo'
-import { formatKg, formatSetValues } from '../history/format'
+import { formatSetIn, formatSetValues } from '../history/format'
+import { formatAmount, fromKg, MAX_WEIGHT, type Unit } from '../../shared/units'
 import { useConfirm } from '../../shared/ui/confirmContext'
 import { Dialog } from '../../shared/ui/Dialog'
 import { Disclosure } from '../../shared/ui/Disclosure'
@@ -17,7 +18,8 @@ import {
   completedVolume,
   describeImprovement,
   improvementOver,
-  MAX_VALUE,
+  draftUnit,
+  MAX_REPS,
   parseNumber,
   removeExercise,
   removeSet,
@@ -93,6 +95,7 @@ export function ActiveWorkoutPage() {
     )
 
   const completed = completedSetCount(draft)
+  const unit = draftUnit(draft)
   const allCollapsed =
     draft.exercises.length > 0 && draft.exercises.every((e) => collapsed.has(e.id))
 
@@ -111,16 +114,16 @@ export function ActiveWorkoutPage() {
     if (!set.completed && !completedSet?.completed) {
       // Refused: point at the field to fill instead of silently doing nothing.
       setMissing(set.id)
-      const field = tooLargeField(set) ?? requiredField(ex.kind)
+      const field = tooLargeField(set, unit) ?? requiredField(ex.kind)
       document.getElementById(fieldId(set.id, field))?.focus()
       return
     }
     setMissing(null)
     // Only when ticking on (not off), and not while editing an old workout.
     if (!isNew || set.completed || !completedSet?.completed) return
-    const gain = improvementOver(completedSet, prev)
+    const gain = improvementOver(completedSet, prev, unit)
     if (!gain) return
-    setCelebration({ id: Date.now(), exercise: ex.name, text: describeImprovement(gain) })
+    setCelebration({ id: Date.now(), exercise: ex.name, text: describeImprovement(gain, unit) })
     playCelebration(origin)
   }
 
@@ -239,7 +242,7 @@ export function ActiveWorkoutPage() {
           </div>
           <div>
             <dt className="stat-label">Volume</dt>
-            <dd className="stat-value">{formatKg(completedVolume(draft))}</dd>
+            <dd className="stat-value">{formatAmount(completedVolume(draft), unit)}</dd>
           </div>
           <div>
             <dt className="stat-label">Sets</dt>
@@ -292,6 +295,7 @@ export function ActiveWorkoutPage() {
               ex={ex}
               controls={controls}
               previous={previous.data?.get(ex.exerciseId) ?? []}
+              unit={unit}
               suggest={isNew}
               onToggleDone={toggleDone}
               missingSetId={missing}
@@ -390,6 +394,7 @@ function ExerciseCard({
   ex,
   controls,
   previous,
+  unit,
   suggest,
   onToggleDone,
   open,
@@ -402,7 +407,10 @@ function ExerciseCard({
   onEdited: (setId: string) => void
   ex: DraftExercise
   controls: ItemControls
+  /** Last time's sets, weights in kg as stored. */
   previous: PreviousSet[]
+  /** The draft's unit: what the weight inputs are typed in. */
+  unit: Unit
   /** Show next-target suggestions: new workouts only, not when editing an old one. */
   suggest: boolean
   open: boolean
@@ -425,7 +433,7 @@ function ExerciseCard({
   const timed = ex.kind === 'duration'
   const required = requiredField(ex.kind)
   const missingIndex = ex.sets.findIndex((s) => s.id === missingSetId)
-  const tooLargeIndex = ex.sets.findIndex((s) => tooLargeField(s))
+  const tooLargeIndex = ex.sets.findIndex((s) => tooLargeField(s, unit))
   const errorId = `missing-${ex.id}`
   const notesId = `notes-${ex.id}`
 
@@ -468,7 +476,7 @@ function ExerciseCard({
         }
       >
         <div className="exercise-body">
-          {suggest && <SuggestionLine ex={ex} previous={previous} />}
+          {suggest && <SuggestionLine ex={ex} previous={previous} unit={unit} />}
 
           <div className="exercise-tools">
             <button
@@ -510,7 +518,7 @@ function ExerciseCard({
               <tr>
                 <th scope="col">Set</th>
                 <th scope="col">Previous</th>
-                <th scope="col">{ex.kind === 'bodyweight_reps' ? '+kg' : 'kg'}</th>
+                <th scope="col">{ex.kind === 'bodyweight_reps' ? `+${unit}` : unit}</th>
                 <th scope="col">{timed ? 'sec' : 'Reps'}</th>
                 <th scope="col">
                   <span className="sr-only">Done</span>
@@ -525,7 +533,7 @@ function ExerciseCard({
                 if (s.setType === 'normal') normalCount++
                 const label = SET_LABEL[s.setType] || String(normalCount)
                 const prev = previous[i]
-                const tooLarge = tooLargeField(s)
+                const tooLarge = tooLargeField(s, unit)
                 const field = (
                   key: 'weight' | 'reps' | 'duration',
                   placeholder: string,
@@ -576,11 +584,11 @@ function ExerciseCard({
                         </select>
                       </span>
                     </td>
-                    <td className="prev">{prev ? formatSetValues(ex.kind, prev) : '—'}</td>
+                    <td className="prev">{prev ? formatSetValues(ex.kind, prev, unit) : '—'}</td>
                     {field(
                       'weight',
                       prev?.weight_kg
-                        ? String(prev.weight_kg)
+                        ? String(fromKg(prev.weight_kg, unit))
                         : ex.kind === 'weight_reps'
                           ? ''
                           : 'BW',
@@ -623,7 +631,8 @@ function ExerciseCard({
 
           {tooLargeIndex >= 0 ? (
             <p id={errorId} role="alert" className="error small-text">
-              Set {tooLargeIndex + 1}: kg and reps can be at most {MAX_VALUE}.
+              Set {tooLargeIndex + 1}: weight can be at most {MAX_WEIGHT[unit]} {unit}, reps{' '}
+              {MAX_REPS}.
             </p>
           ) : (
             missingIndex >= 0 && (
@@ -677,6 +686,7 @@ function ExerciseCard({
         <PlateSheet
           open={platesOpen}
           initialWeight={nextSetWeight(ex)}
+          unit={unit}
           onClose={() => setPlatesOpen(false)}
         />
       )}
@@ -725,18 +735,26 @@ function MoreIcon() {
  * Apply fills only empty fields of unticked sets; ticking without applying
  * still logs last time's numbers, as before.
  */
-function SuggestionLine({ ex, previous }: { ex: DraftExercise; previous: PreviousSet[] }) {
-  const suggestions = suggestSets(ex.kind, ex.equipment, previous)
+function SuggestionLine({
+  ex,
+  previous,
+  unit,
+}: {
+  ex: DraftExercise
+  previous: PreviousSet[]
+  unit: Unit
+}) {
+  const suggestions = suggestSets(ex.kind, ex.equipment, previous, unit)
   const head = headlineSuggestion(previous, suggestions)
   if (!head) return null
 
   const field = requiredField(ex.kind)
   const canFill = ex.sets.some((s, i) => suggestions[i] && !s.completed && !s[field])
-  const target = formatSetValues(ex.kind, {
-    weight_kg: head.weight,
-    reps: head.reps,
-    duration_s: head.duration,
-  })
+  const target = formatSetIn(
+    ex.kind,
+    { weight: head.weight, reps: head.reps, duration_s: head.duration },
+    unit,
+  )
 
   return (
     <div className="suggestion">

@@ -1,6 +1,6 @@
 import { useLayoutEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
-import { supabase } from '../../lib/supabase'
+import { LogoutConfirm, MeSheetBody } from '../../features/settings/MeSheet'
 import { useDraft } from '../../features/workout/draftStore'
 import { LiveWorkoutBar } from '../../features/workout/LiveWorkoutBar'
 import { Dialog } from './Dialog'
@@ -45,9 +45,10 @@ const icons = {
       <path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01" />
     </Icon>
   ),
-  logout: (
+  me: (
     <Icon>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
     </Icon>
   ),
 }
@@ -72,7 +73,11 @@ function setNavDirection(from: number, to: number) {
 export function Layout() {
   const draft = useDraft()
   const { pathname } = useLocation()
-  const [confirmingLogout, setConfirmingLogout] = useState(false)
+  // The Me sheet, or the log-out confirmation opened from it.
+  const [sheet, setSheet] = useState<'me' | 'logout' | null>(null)
+  // Only if still open: going from Me to Log out? closes the Me <dialog>, and
+  // its close event must not close the one that just opened.
+  const closeSheet = (which: 'me' | 'logout') => setSheet((s) => (s === which ? null : s))
   const current = tabIndex(pathname)
   const showLiveBar = !!draft && pathname !== '/workout'
 
@@ -123,57 +128,18 @@ export function Layout() {
           {icons.exercises}
           Exercises
         </NavLink>
-        <button type="button" onClick={() => setConfirmingLogout(true)}>
-          {icons.logout}
-          Log out
+        <button type="button" onClick={() => setSheet('me')} aria-haspopup="dialog">
+          {icons.me}
+          Me
         </button>
       </nav>
 
-      <Dialog open={confirmingLogout} onClose={() => setConfirmingLogout(false)} title="Log out?">
-        <LogoutConfirm hasDraft={!!draft} onCancel={() => setConfirmingLogout(false)} />
+      <Dialog open={sheet === 'me'} onClose={() => closeSheet('me')} title="Me">
+        <MeSheetBody onLogOut={() => setSheet('logout')} />
       </Dialog>
-    </div>
-  )
-}
-
-/** Body of the log-out dialog. A failed sign-out keeps the dialog open with the reason. */
-function LogoutConfirm({ hasDraft, onCancel }: { hasDraft: boolean; onCancel: () => void }) {
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function logOut() {
-    setPending(true)
-    setError(null)
-    // On success onAuthStateChange clears the session and RequireAuth sends
-    // the user to /login, which unmounts this dialog.
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      setError(error.message)
-      setPending(false)
-    }
-  }
-
-  return (
-    <div className="stack">
-      <p>You will need your email and password to sign in again.</p>
-      {hasDraft && (
-        <p className="muted">
-          Your unfinished workout stays saved on this phone and will be here when you sign back in.
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="error">
-          {error}
-        </p>
-      )}
-      <div className="row">
-        <button type="button" className="btn" onClick={onCancel} disabled={pending}>
-          Cancel
-        </button>
-        <button type="button" className="btn danger grow" onClick={logOut} disabled={pending}>
-          {pending ? 'Logging out…' : 'Log out'}
-        </button>
-      </div>
+      <Dialog open={sheet === 'logout'} onClose={() => closeSheet('logout')} title="Log out?">
+        <LogoutConfirm onCancel={() => setSheet(null)} />
+      </Dialog>
     </div>
   )
 }

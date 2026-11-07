@@ -31,6 +31,27 @@ export function useWorkouts() {
 }
 
 /**
+ * Every workout with its sets, for the CSV export. Fetched in pages because
+ * PostgREST caps a response (1000 rows by default); a one-off read, not cached.
+ */
+export async function fetchAllWorkouts(): Promise<Workout[]> {
+  const page = 200
+  const all: Workout[] = []
+  for (let from = 0; ; from += page) {
+    const rows = unwrap(
+      await supabase
+        .from('workouts')
+        .select(WORKOUT_SELECT)
+        .order('started_at')
+        .order('id') // a stable order, so pages never skip or repeat a row
+        .range(from, from + page - 1),
+    ) as unknown as Workout[]
+    all.push(...rows)
+    if (rows.length < page) return all
+  }
+}
+
+/**
  * Full workouts that started in [from, to), for weekly muscle stats.
  * A week is a handful of workouts, so the full select stays small.
  */

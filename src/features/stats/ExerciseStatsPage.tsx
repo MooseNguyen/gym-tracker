@@ -14,23 +14,28 @@ import { Disclosure } from '../../shared/ui/Disclosure'
 import { QueryState } from '../../shared/ui/QueryState'
 import { HowToSteps } from '../exercises/HowTo'
 import { formatDate } from '../history/format'
+import type { Unit } from '../../shared/units'
+import { useUnit } from '../settings/api'
 import { useExerciseHistory } from './api'
 
 type Metric = 'bestE1RM' | 'heaviestKg' | 'volume' | 'bestReps'
 
 const METRIC_LABEL: Record<Metric, string> = {
-  bestE1RM: 'Estimated 1RM (kg)',
-  heaviestKg: 'Heaviest weight (kg)',
-  volume: 'Session volume (kg)',
+  bestE1RM: 'Estimated 1RM',
+  heaviestKg: 'Heaviest weight',
+  volume: 'Session volume',
   bestReps: 'Most reps',
 }
+const metricLabel = (m: Metric, unit: Unit) =>
+  m === 'bestReps' ? METRIC_LABEL[m] : `${METRIC_LABEL[m]} (${unit})`
 
 const shortDate = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
 
 // Default export so the route can lazy-load this page and keep Recharts out of the main bundle.
 export default function ExerciseStatsPage() {
   const { id } = useParams()
-  const q = useExerciseHistory(id)
+  const unit = useUnit()
+  const q = useExerciseHistory(id, unit)
   const kind = q.data?.exercise.kind
   const metrics: Metric[] =
     kind === 'weight_reps'
@@ -78,11 +83,11 @@ export default function ExerciseStatsPage() {
                   aria-pressed={m === metric}
                   onClick={() => setPicked(m)}
                 >
-                  {METRIC_LABEL[m].replace(/ \(kg\)/, '')}
+                  {METRIC_LABEL[m]}
                 </button>
               ))}
             </div>
-            <figure className="card chart" aria-label={METRIC_LABEL[metric]}>
+            <figure className="card chart" aria-label={metricLabel(metric, unit)}>
               {points.length < 2 ? (
                 <p className="muted center">Need at least 2 sessions to draw a trend.</p>
               ) : (
@@ -103,7 +108,7 @@ export default function ExerciseStatsPage() {
                     <Line
                       type="monotone"
                       dataKey="value"
-                      name={METRIC_LABEL[metric]}
+                      name={metricLabel(metric, unit)}
                       stroke="var(--accent)"
                       strokeWidth={2}
                       dot={{ r: 3 }}
@@ -119,13 +124,13 @@ export default function ExerciseStatsPage() {
         <dl className="prs">
           {kind === 'weight_reps' && (
             <>
-              <PrCard label="Estimated 1RM" value={prs.bestE1RM} unit="kg" />
-              <PrCard label="Heaviest weight" value={prs.heaviestKg} unit="kg" />
-              <PrCard label="Best session volume" value={prs.bestSessionVolume} unit="kg" />
+              <PrCard label="Estimated 1RM" value={prs.bestE1RM} unit={unit} />
+              <PrCard label="Heaviest weight" value={prs.heaviestKg} unit={unit} />
+              <PrCard label="Best session volume" value={prs.bestSessionVolume} unit={unit} />
             </>
           )}
           {kind === 'bodyweight_reps' && (
-            <PrCard label="Most added weight" value={prs.heaviestKg} unit="kg" />
+            <PrCard label="Most added weight" value={prs.heaviestKg} unit={unit} />
           )}
           {kind !== 'duration' && (
             <PrCard label="Most reps in a set" value={prs.bestReps} unit="" />
@@ -140,7 +145,7 @@ export default function ExerciseStatsPage() {
                 <span>{formatDate(s.date)}</span>
                 <span className="muted">
                   {kind === 'weight_reps'
-                    ? `${s.heaviestKg ?? '—'} kg top · ${s.volume} kg`
+                    ? `${s.heaviestKg ?? '—'} ${unit} top · ${s.volume} ${unit}`
                     : `${s.bestReps ?? '—'} reps`}
                 </span>
               </Link>

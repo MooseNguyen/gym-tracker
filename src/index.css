@@ -2283,3 +2283,25 @@ button.link {
 .pr-mark {
   cursor: help;
 }
+
+/* ==========================================================================
+   Me sheet (settings, export, log out)
+   ========================================================================== */
+.me-section h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.me-section + .me-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.me-section + .btn {
+  margin-top: 14px;
+}
+.me-section p {
+  margin: 0;
+}

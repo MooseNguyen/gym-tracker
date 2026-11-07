@@ -1,4 +1,5 @@
 import type { Routine, Workout } from '../../types/db'
+import type { Unit } from '../../shared/units'
 import { draftFromWorkout, newDraft, type WorkoutDraft } from './draft'
 import { setDraft } from './draftStore'
 
@@ -16,15 +17,18 @@ function replaceDraft(current: WorkoutDraft | null, next: WorkoutDraft): boolean
   return true
 }
 
-export function startEmptyWorkout(current: WorkoutDraft | null) {
-  return replaceDraft(current, newDraft({ name: 'Workout' }))
+// `unit`: the account's weight unit now; the draft keeps it until it is saved.
+
+export function startEmptyWorkout(current: WorkoutDraft | null, unit: Unit) {
+  return replaceDraft(current, newDraft({ name: 'Workout', unit }))
 }
 
-export function startRoutine(current: WorkoutDraft | null, r: Routine) {
+export function startRoutine(current: WorkoutDraft | null, r: Routine, unit: Unit) {
   return replaceDraft(
     current,
     newDraft({
       name: r.name,
+      unit,
       routineId: r.id,
       exercises: r.routine_exercises.map((re) => ({
         exercise: re.exercise,
@@ -35,6 +39,6 @@ export function startRoutine(current: WorkoutDraft | null, r: Routine) {
   )
 }
 
-export function editWorkout(current: WorkoutDraft | null, w: Workout) {
-  return replaceDraft(current, draftFromWorkout(w))
+export function editWorkout(current: WorkoutDraft | null, w: Workout, unit: Unit) {
+  return replaceDraft(current, draftFromWorkout(w, unit))
 }
