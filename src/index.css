@@ -13,9 +13,9 @@
   --text: #eef1e8;
   --muted: #98a18f;
   --placeholder: #6b7363;
-  /* Sage-lime: calmer than a neon lime on a dark screen in a bright gym. */
-  --accent: #93b464;
-  --accent-soft: #c4d9a3;
+  /* Lime, a step calmer than #b5d93a: less glare on a dark screen. */
+  --accent: #a9cc45;
+  --accent-soft: #d0e49c;
   --accent-ink: #151a03;
   /* Teal, not green: green would read as the lime accent. */
   --success: #2dd4bf;
