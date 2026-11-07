@@ -9,6 +9,7 @@ declare
   duplicate_names int;
   plain_groups int;
   bad_muscles int;
+  old_data int;
 begin
   -- 264 before RepDB + 310 added; 48 old ones RepDB doesn't cover are hidden.
   select count(*) into built_ins from exercises where user_id is null;
@@ -25,6 +26,16 @@ begin
   from exercises where user_id is null and not hidden and coalesce(cardinality(instructions), 0) = 0;
   if without_photo <> 0 or without_steps <> 0 then
     raise exception '% visible built-ins without a photo, % without steps', without_photo, without_steps;
+  end if;
+
+  -- free-exercise-db is gone: no built-in keeps its photo or steps.
+  select count(*) into old_data
+  from exercises
+  where user_id is null
+    and (image_path is null or image_path not like 'repdb-%')
+    and (image_path is not null or image_path_end is not null or instructions is not null);
+  if old_data <> 0 then
+    raise exception '% built-ins still carry free-exercise-db photos or steps', old_data;
   end if;
 
   select count(*) into duplicate_names

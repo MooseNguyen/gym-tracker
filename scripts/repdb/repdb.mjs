@@ -1,3 +1,9 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+/** Repository root (scripts/repdb/ is two levels down). */
+export const root = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))))
+
 // RepDB free tier (https://repdb.co, https://github.com/RepDB/exercise-dataset):
 // in-app use with attribution, no redistribution as a dataset. Pinned to one
 // commit so the generated migration is reproducible.

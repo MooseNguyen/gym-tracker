@@ -59,16 +59,15 @@ Then open the app from the home screen and sign in with it.
 
 ## Scripts
 
-| Command                                         | What it does                                                                    |
-| ----------------------------------------------- | ------------------------------------------------------------------------------- |
-| `npm run dev`                                   | Dev server                                                                      |
-| `npm run build`                                 | Type-check + production build                                                   |
-| `npm run lint`                                  | ESLint                                                                          |
-| `npm test`                                      | Unit tests (calc + workout draft logic)                                         |
-| `npm run test:e2e`                              | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                 |
-| `npm run db:types`                              | Generate TS types from the linked Supabase project (replace `src/types/db.ts`)  |
-| `node scripts/fetch-exercise-images.mjs`        | Re-download exercise photos (only when `scripts/exercise-images.json` changes)  |
-| `node scripts/build-instructions-migration.mjs` | Regenerate the instructions migration from free-exercise-db (same mapping file) |
+| Command                               | What it does                                                                   |
+| ------------------------------------- | ------------------------------------------------------------------------------ |
+| `npm run dev`                         | Dev server                                                                     |
+| `npm run build`                       | Type-check + production build                                                  |
+| `npm run lint`                        | ESLint                                                                         |
+| `npm test`                            | Unit tests (calc + workout draft logic)                                        |
+| `npm run test:e2e`                    | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                |
+| `npm run db:types`                    | Generate TS types from the linked Supabase project (replace `src/types/db.ts`) |
+| `node scripts/repdb/fetch-images.mjs` | Re-download the RepDB exercise images listed in `scripts/repdb/library.json`   |
 
 ## Architecture notes
 
@@ -90,10 +89,10 @@ Then open the app from the home screen and sign in with it.
 
 ## Exercise photos and instructions
 
-Both from [free-exercise-db](https://github.com/yuhonas/free-exercise-db), released into the public domain (Unlicense).
+Built-in exercises, photos (start and end of the movement) and steps come from [RepDB](https://repdb.co), free tier, pinned to one dataset commit ([`scripts/repdb`](scripts/repdb)).
+Its license allows in-app use **with a visible credit** (shown on the Exercises page and in the How-to sheet), but not redistributing the data as a dataset or deriving from it with generative AI.
 Instructions are loaded only when the "How to" sheet opens, so lists and history do not carry ~1 kB of text per exercise.
-The original photos look like commercial stock photography whose origin the dataset does not document:
-fine for a personal app, but **check the provenance before using them in a client or commercial product.**
+Retired built-ins RepDB doesn't cover are hidden: they keep their name for history but have no photo or steps.
 
 ## Testing checklist that needs a real Supabase project
 
