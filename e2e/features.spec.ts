@@ -13,6 +13,12 @@ test.beforeEach(async ({ page }) => {
   await fakeLogin(page)
 })
 
+/** Opens an exercise's ⋯ actions sheet and picks one item. */
+async function exerciseAction(page: Page, exercise: string, item: string) {
+  await page.getByRole('button', { name: `More actions for ${exercise}` }).click()
+  await page.getByRole('dialog', { name: exercise }).getByRole('button', { name: item }).click()
+}
+
 /** Finish, and confirm dropping the sets left unticked. */
 async function finishDroppingUnticked(page: Page) {
   await page.getByRole('button', { name: 'Finish workout' }).click()
@@ -253,7 +259,7 @@ test.describe('how to', () => {
     const card = page.getByRole('region', { name: bench.name })
     await card.getByLabel('Set 1 weight').fill('70')
 
-    await card.getByRole('button', { name: 'How to do Bench Press' }).click()
+    await exerciseAction(page, bench.name, 'How to do it')
     const sheet = page.getByRole('dialog', { name: 'How to: Bench Press' })
     await expect(sheet).toBeVisible()
     await expect(sheet.getByRole('listitem')).toHaveText([
@@ -268,7 +274,7 @@ test.describe('how to', () => {
     await expect(card.getByLabel('Set 1 weight')).toHaveValue('70')
   })
 
-  test('custom exercises have no how-to button', async ({ page }) => {
+  test('custom exercises have no how-to item', async ({ page }) => {
     await mockSupabase(page, { routines, folders, exercises: [bench, customCurl] })
     await page.goto('/')
     await page.getByRole('button', { name: 'Start empty workout' }).click()
@@ -279,8 +285,15 @@ test.describe('how to', () => {
     await page.getByRole('button', { name: 'Select My Cable Curl' }).click()
     await page.getByRole('button', { name: 'Add 2 exercises' }).click()
 
-    await expect(page.getByRole('button', { name: 'How to do Bench Press' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'How to do My Cable Curl' })).toHaveCount(0)
+    await page.getByRole('button', { name: 'More actions for Bench Press' }).click()
+    const benchMenu = page.getByRole('dialog', { name: 'Bench Press' })
+    await expect(benchMenu.getByRole('button', { name: 'How to do it' })).toBeVisible()
+    await page.keyboard.press('Escape')
+
+    await page.getByRole('button', { name: 'More actions for My Cable Curl' }).click()
+    const curlMenu = page.getByRole('dialog', { name: 'My Cable Curl' })
+    await expect(curlMenu.getByRole('button', { name: 'Replace exercise' })).toBeVisible()
+    await expect(curlMenu.getByRole('button', { name: 'How to do it' })).toHaveCount(0)
   })
 
   test('the stats page shows the steps even before any history', async ({ page }) => {
@@ -774,7 +787,7 @@ test.describe('in-app dialogs', () => {
     await expect(page.getByRole('alert')).toContainText('Tick at least one set')
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    await card.getByRole('button', { name: `Remove ${bench.name}` }).click()
+    await exerciseAction(page, bench.name, 'Remove exercise')
     const remove = page.getByRole('dialog', { name: `Remove ${bench.name}?` })
     await remove.getByRole('button', { name: 'Cancel' }).click()
     await expect(card).toBeVisible()
@@ -911,4 +924,98 @@ test('the picker keeps "Show" on screen after picking a muscle group', async ({ 
   await expect(picker.locator('.filter-actions .btn.primary')).toBeInViewport()
   // The Add bar belongs to the results step only.
   await expect(picker.getByRole('button', { name: /^Add .*exercise/ })).toHaveCount(0)
+})
+
+test.describe('exercise card actions', () => {
+  test('Replace keeps the set rows, clears the numbers, and asks when sets are logged', async ({
+    page,
+  }) => {
+    await mockSupabase(page, { routines, folders, exercises: [bench, customCurl] })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+    await card.getByRole('button', { name: '+ Add set' }).click()
+    await card.getByLabel('Set 1 weight').fill('60')
+    await card.getByLabel('Set 1 reps').fill('10')
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+
+    await exerciseAction(page, bench.name, 'Replace exercise')
+    const picker = page.getByRole('dialog', { name: `Replace ${bench.name}` })
+    await picker.getByRole('button', { name: /^Show all/ }).click()
+    await picker.getByRole('button', { name: 'Choose My Cable Curl' }).click()
+
+    // One set was ticked: confirm before its numbers go.
+    const ask = page.getByRole('dialog', { name: `Replace ${bench.name}?` })
+    await expect(ask).toContainText('1 logged set is cleared')
+    await ask.getByRole('button', { name: 'Replace' }).click()
+
+    const curl = page.getByRole('region', { name: 'My Cable Curl' })
+    await expect(curl.getByLabel('Set 1 weight')).toHaveValue('')
+    await expect(curl.getByRole('button', { name: 'Set 1 done' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    await expect(curl.getByLabel('Set 2 weight')).toBeVisible() // still 2 rows
+    // Same slot: still first.
+    await expect(page.locator('.exercise-title').first()).toHaveText('My Cable Curl')
+  })
+
+  test('the reorder sheet moves and removes exercises', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    await exerciseAction(page, bench.name, 'Reorder exercises')
+
+    const sheet = page.getByRole('dialog', { name: 'Reorder' })
+    const rows = sheet.locator('.reorder-name')
+    await expect(rows).toHaveText(['Bench Press', 'Overhead Press'])
+    const moveDown = sheet.getByRole('button', { name: 'Move Bench Press down' })
+    await moveDown.focus()
+    await page.keyboard.press('Enter')
+    await expect(rows).toHaveText(['Overhead Press', 'Bench Press'])
+
+    // Nothing logged yet: removed without a question.
+    await sheet.getByRole('button', { name: 'Remove Overhead Press' }).click()
+    await expect(rows).toHaveText(['Bench Press'])
+
+    await sheet.getByRole('button', { name: 'Done' }).click()
+    await expect(sheet).toBeHidden()
+    await expect(page.locator('.exercise-title')).toHaveText(['Bench Press'])
+  })
+
+  test('notes open on demand; rest time sits next to them', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+
+    await expect(card.getByLabel(`Notes for ${bench.name}`)).toHaveCount(0)
+    await expect(card.getByLabel(`Rest time for ${bench.name}`)).toBeVisible()
+    await card.getByRole('button', { name: 'Notes' }).click()
+    const notes = card.getByLabel(`Notes for ${bench.name}`)
+    await expect(notes).toBeFocused()
+    await notes.fill('Elbows in')
+    await card.getByRole('button', { name: 'Notes' }).click()
+    await expect(notes).toHaveCount(0)
+    await card.getByRole('button', { name: /Notes/ }).click()
+    await expect(card.getByLabel(`Notes for ${bench.name}`)).toHaveValue('Elbows in')
+  })
+
+  test('kg and reps above 1000 are flagged and cannot be ticked', async ({ page }) => {
+    await mockSupabase(page, { routines, folders })
+    await startPush(page)
+    const card = page.getByRole('region', { name: bench.name })
+
+    await card.getByLabel('Set 1 weight').fill('8000')
+    await card.getByLabel('Set 1 reps').fill('8')
+    await expect(card.getByRole('alert')).toContainText('at most 1000')
+    await expect(card.getByLabel('Set 1 weight')).toHaveAttribute('aria-invalid', 'true')
+
+    await card.getByRole('button', { name: 'Set 1 done' }).click()
+    await expect(card.getByRole('button', { name: 'Set 1 done' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
+    await expect(card.getByLabel('Set 1 weight')).toBeFocused()
+
+    await card.getByLabel('Set 1 weight').fill('80')
+    await expect(card.getByRole('alert')).toHaveCount(0)
+  })
 })

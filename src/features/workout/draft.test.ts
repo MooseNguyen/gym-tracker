@@ -3,6 +3,9 @@ import type { ExerciseKind, PreviousSet } from '../../types/db'
 import {
   addSet,
   applySuggestions,
+  replaceExercise,
+  tooLargeCompletedSets,
+  tooLargeField,
   describeImprovement,
   emptySet,
   improvementOver,
@@ -310,5 +313,62 @@ describe('applySuggestions', () => {
     expect(sets[0]).toMatchObject({ weight: '80', reps: '8' }) // ticked: untouched
     expect(sets[1]).toMatchObject({ weight: '85', reps: '9' }) // typed weight kept
     expect(sets[2]).toMatchObject({ id: s3.id, weight: '', reps: '' }) // no suggestion for it
+  })
+})
+
+describe('replaceExercise', () => {
+  it('keeps slot, set count, set types and rest; clears numbers, ticks and notes', () => {
+    let d = draftWith(bench, pullUp)
+    const slot = d.exercises[0]
+    const [s1, s2] = slot.sets
+    d = updateSet(d, slot.id, s1.id, {
+      weight: '80',
+      reps: '8',
+      completed: true,
+      setType: 'warmup',
+    })
+    d = updateSet(d, slot.id, s2.id, { weight: '90', rpe: '8' })
+    d = { ...d, exercises: [{ ...d.exercises[0], notes: 'old' }, d.exercises[1]] }
+
+    const next = replaceExercise(d, slot.id, { ...plank, image_path: 'plank.webp' })
+    const ex = next.exercises[0]
+    expect(ex).toMatchObject({
+      id: slot.id,
+      exerciseId: plank.id,
+      name: 'Plank',
+      kind: 'duration',
+      imagePath: 'plank.webp',
+      restSeconds: 120,
+      notes: '',
+    })
+    expect(ex.sets.map((s) => [s.id, s.setType])).toEqual([
+      [s1.id, 'warmup'],
+      [s2.id, 'normal'],
+    ])
+    expect(ex.sets.every((s) => !s.completed && !s.weight && !s.reps && !s.rpe)).toBe(true)
+    expect(next.exercises[1]).toBe(d.exercises[1]) // others untouched
+  })
+})
+
+describe('MAX_VALUE validation', () => {
+  it('flags kg or reps above 1000, accepting 1000 and comma decimals', () => {
+    expect(tooLargeField({ weight: '1000', reps: '8' })).toBeNull()
+    expect(tooLargeField({ weight: '1000,5', reps: '8' })).toBe('weight')
+    expect(tooLargeField({ weight: '80', reps: '1200' })).toBe('reps')
+    expect(tooLargeField({ weight: '', reps: '' })).toBeNull()
+  })
+
+  it('refuses to tick a set with an impossible number', () => {
+    let d = draftWith(bench)
+    const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { weight: '8000', reps: '8' })
+    expect(toggleSetComplete(d, ex.id, ex.sets[0].id, undefined)).toBe(d)
+  })
+
+  it('counts ticked sets that were edited above the limit afterwards', () => {
+    let d = draftWith(bench)
+    const ex = d.exercises[0]
+    d = updateSet(d, ex.id, ex.sets[0].id, { weight: '8000', reps: '8', completed: true })
+    expect(tooLargeCompletedSets(d)).toBe(1)
   })
 })

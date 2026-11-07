@@ -166,6 +166,27 @@ export function removeExercise(d: WorkoutDraft, exId: string): WorkoutDraft {
   return { ...d, exercises: d.exercises.filter((e) => e.id !== exId) }
 }
 
+/**
+ * Swaps the exercise in a slot for another one. Keeps the number of sets,
+ * their types and the rest time; clears numbers, ticks and notes, which
+ * belonged to the old exercise. The slot keeps its id and position.
+ */
+export function replaceExercise(
+  d: WorkoutDraft,
+  exId: string,
+  exercise: ExerciseRef,
+): WorkoutDraft {
+  return mapExercise(d, exId, (e) => {
+    const fresh = draftExercise(exercise)
+    return {
+      ...fresh,
+      id: e.id,
+      restSeconds: e.restSeconds,
+      sets: e.sets.map((s) => ({ ...emptySet(), id: s.id, setType: s.setType })),
+    }
+  })
+}
+
 export function reorderExercises(d: WorkoutDraft, fromId: string, toId: string): WorkoutDraft {
   return { ...d, exercises: reorder(d.exercises, fromId, toId) }
 }
@@ -229,6 +250,26 @@ export function requiredField(kind: ExerciseKind): 'reps' | 'duration' {
   return kind === 'duration' ? 'duration' : 'reps'
 }
 
+/** Upper bound for kg and reps: anything above is a typo (an extra 0), not a lift. */
+export const MAX_VALUE = 1000
+
+/** The first of kg / reps above MAX_VALUE, or null when both are fine. */
+export function tooLargeField(set: Pick<DraftSet, 'weight' | 'reps'>): 'weight' | 'reps' | null {
+  for (const key of ['weight', 'reps'] as const) {
+    const n = parseNumber(set[key])
+    if (n != null && n > MAX_VALUE) return key
+  }
+  return null
+}
+
+/** Completed sets that would be saved with an impossible number. */
+export function tooLargeCompletedSets(d: WorkoutDraft): number {
+  return d.exercises.reduce(
+    (n, e) => n + e.sets.filter((s) => s.completed && tooLargeField(s)).length,
+    0,
+  )
+}
+
 /** A set is loggable only with a positive rep count (or duration). Weight is optional. */
 export function hasRequiredValue(kind: ExerciseKind, set: DraftSet): boolean {
   const n = parseNumber(set[requiredField(kind)])
@@ -240,7 +281,7 @@ export function hasRequiredValue(kind: ExerciseKind, set: DraftSet): boolean {
  * (tap ✓ to "repeat what I did last week") and starts the rest timer.
  *
  * Refuses to complete a set that still has no reps (or duration) after that
- * fill and returns the draft unchanged: an empty ticked set used to be saved
+ * fill, or has a number above MAX_VALUE, and returns the draft unchanged: an empty ticked set used to be saved
  * and then shown as "BW × 0" in Previous. The caller detects the refusal
  * (the set is still not completed) and points the user at the empty field.
  */
@@ -265,7 +306,7 @@ export function toggleSetComplete(
     reps: set.reps || str(previous?.reps),
     duration: set.duration || str(previous?.duration_s),
   }
-  if (!hasRequiredValue(ex.kind, filled)) return d
+  if (!hasRequiredValue(ex.kind, filled) || tooLargeField(filled)) return d
 
   const next = updateSet(d, exId, setId, filled)
   return { ...next, restEndsAt: ex.restSeconds > 0 ? now + ex.restSeconds * 1000 : null }

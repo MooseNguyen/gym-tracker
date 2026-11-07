@@ -9,18 +9,21 @@ interface Props {
   open: boolean
   onClose: () => void
   onPick: (exercises: Exercise[]) => void
+  /** Pick exactly one: tapping an exercise picks it and closes (Replace). */
+  single?: boolean
+  title?: string
 }
 
-export function ExercisePicker({ open, onClose, onPick }: Props) {
+export function ExercisePicker({ open, onClose, onPick, single, title }: Props) {
   return (
-    <Dialog open={open} onClose={onClose} title="Add exercises">
-      <PickerBody onClose={onClose} onPick={onPick} />
+    <Dialog open={open} onClose={onClose} title={title ?? 'Add exercises'}>
+      <PickerBody onClose={onClose} onPick={onPick} single={single} />
     </Dialog>
   )
 }
 
 // Separate component so the selection resets every time the dialog opens.
-function PickerBody({ onClose, onPick }: Omit<Props, 'open'>) {
+function PickerBody({ onClose, onPick, single }: Omit<Props, 'open' | 'title'>) {
   const { data = [], isPending, error, refetch } = useExercises()
   const [selected, setSelected] = useState<Exercise[]>([])
 
@@ -35,6 +38,20 @@ function PickerBody({ onClose, onPick }: Omit<Props, 'open'>) {
         <ExerciseList
           exercises={data}
           renderAction={(e) => {
+            if (single)
+              return (
+                <button
+                  type="button"
+                  className="btn small"
+                  aria-label={`Choose ${e.name}`}
+                  onClick={() => {
+                    onPick([e])
+                    onClose()
+                  }}
+                >
+                  Choose
+                </button>
+              )
             const isOn = selected.some((s) => s.id === e.id)
             return (
               <button
@@ -49,19 +66,21 @@ function PickerBody({ onClose, onPick }: Omit<Props, 'open'>) {
             )
           }}
           resultsFooter={
-            <div className="sticky-actions">
-              <button
-                type="button"
-                className="btn primary block"
-                disabled={selected.length === 0}
-                onClick={() => {
-                  onPick(selected)
-                  onClose()
-                }}
-              >
-                Add {selected.length || ''} exercise{selected.length === 1 ? '' : 's'}
-              </button>
-            </div>
+            single ? undefined : (
+              <div className="sticky-actions">
+                <button
+                  type="button"
+                  className="btn primary block"
+                  disabled={selected.length === 0}
+                  onClick={() => {
+                    onPick(selected)
+                    onClose()
+                  }}
+                >
+                  Add {selected.length || ''} exercise{selected.length === 1 ? '' : 's'}
+                </button>
+              </div>
+            )
           }
         />
       </QueryState>

@@ -597,6 +597,24 @@ button.link {
     opacity: 0;
   }
 }
+.sheet.sheet-full {
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+  padding-top: calc(16px + env(safe-area-inset-top));
+}
+/* Only while open: a closed <dialog> must keep display: none. The body fills
+   the screen so its last row (Done) sits at the bottom. */
+.sheet.sheet-full[open] {
+  display: flex;
+  flex-direction: column;
+}
+.sheet-full > .reorder-sheet {
+  flex: 1;
+}
+.reorder-sheet > .sticky-actions {
+  margin-top: auto;
+}
 .sheet-header {
   display: flex;
   justify-content: space-between;
@@ -881,15 +899,46 @@ button.link {
   width: 32px;
   height: 32px;
 }
-/* Footer row ("+ Add set", rest time) matches the compact set rows. */
-.exercise-body > .row .btn.small {
-  min-height: 34px;
-  font-size: 0.875rem;
+/* Rest time and Notes, above the sets: two small pills. */
+.exercise-tools {
+  display: flex;
+  gap: 8px;
 }
-.exercise-body > .row select {
-  width: auto;
+.tool-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-height: 34px;
-  padding: 2px 8px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tool-chip.on {
+  border-color: var(--accent);
+  color: var(--text);
+}
+/* The rest <select> is the chip's text: no box of its own. */
+.tool-chip select {
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: inherit;
+  font-weight: inherit;
+}
+.tool-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .exercise-summary {
   display: flex;
@@ -948,9 +997,26 @@ button.link {
 
 .sets {
   width: 100%;
+  /* Fixed layout: the inputs fill their columns, so kg and reps sit side by
+     side instead of floating apart in whatever width is left. */
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0 4px;
   text-align: center;
+}
+.sets th:nth-child(1) {
+  width: 42px;
+}
+/* kg and reps: room for "102.5" and no more; Previous takes the rest. */
+.sets th:nth-child(3),
+.sets th:nth-child(4) {
+  width: 64px;
+}
+.sets th:nth-child(5) {
+  width: 44px;
+}
+.sets th:nth-child(6) {
+  width: 34px;
 }
 .sets th {
   font-size: 0.78rem;
@@ -963,10 +1029,10 @@ button.link {
   transition: background 0.25s;
 }
 .sets td:first-child {
-  border-radius: var(--r-control) 0 0 var(--r-control);
+  border-radius: 6px 0 0 6px;
 }
 .sets td:last-child {
-  border-radius: 0 var(--r-control) var(--r-control) 0;
+  border-radius: 0 6px 6px 0;
 }
 .sets tr.done td {
   background: color-mix(in srgb, var(--success) 13%, transparent);
@@ -977,14 +1043,15 @@ button.link {
   white-space: nowrap;
 }
 .num-input {
-  width: 54px;
-  min-height: 36px;
-  height: 36px;
+  width: 100%;
+  border-radius: 6px;
+  min-height: 32px;
+  height: 32px;
   padding: 2px;
   text-align: center;
   font-family: var(--font-display);
   /* 16px minimum: anything smaller makes iOS zoom into the field on focus. */
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -1006,7 +1073,7 @@ button.link {
   width: 34px;
   height: 34px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--raised);
   cursor: pointer;
   font-family: var(--font-display);
@@ -1651,4 +1718,58 @@ button.link {
   .sticky-actions {
     background: var(--raised);
   }
+}
+
+/* ==========================================================================
+   Reorder sheet
+   ========================================================================== */
+.reorder-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reorder-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 4px;
+  border-radius: var(--r-control);
+  -webkit-user-select: none;
+  user-select: none;
+}
+.reorder-row.dragging {
+  background: var(--raised);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+}
+.reorder-remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #2a0808;
+  font-size: 1.3rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+.reorder-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 1.05rem;
+}
+.reorder-handle {
+  flex: none;
+  color: var(--muted);
+  font-size: 1.4rem;
+}
+.reorder-row .thumb {
+  border-radius: 50%;
 }
