@@ -19,6 +19,8 @@ export interface Exercise {
   image_path: string | null
   /** Second photo, the end of the movement (RepDB built-ins); null = one photo. */
   image_path_end?: string | null
+  /** Loaded only by the admin's hidden list (useHiddenExercises); missing = visible. */
+  hidden?: boolean
 }
 
 export interface RoutineFolder {

@@ -81,6 +81,7 @@ test('members see no admin controls', async ({ page }) => {
   await expect(form.getByLabel('Built-in (shown to everyone)')).toHaveCount(0)
   await page.keyboard.press('Escape')
   await expect(page.getByRole('button', { name: `Edit ${bench.name}` })).toHaveCount(0)
+  await expect(page.getByLabel('Show hidden built-ins')).toHaveCount(0)
 })
 
 test('an admin adds a built-in with a photo and steps', async ({ page }) => {
@@ -199,4 +200,84 @@ test('a failed save removes the photo it just uploaded', async ({ page }) => {
   await expect(form.getByRole('alert')).toHaveText('Database is down')
   await expect(form).toBeVisible() // nothing lost: the admin can retry
   expect(calls.removed).toEqual([[calls.uploads[0].path]])
+})
+
+/** A built-in retired by the RepDB switch: hidden, no photo, no steps. */
+const retiredBuiltIn = () => ({
+  id: 'ex-retired',
+  user_id: null,
+  name: 'Cable Fly',
+  muscle_group: 'chest',
+  equipment: 'cable',
+  kind: 'weight_reps',
+  image_path: null,
+  image_path_end: null,
+  hidden: true,
+})
+
+async function openHiddenList(page: Page) {
+  await page.getByLabel('Show hidden built-ins').check()
+  return page.getByRole('region', { name: /Hidden built-ins/ })
+}
+
+test('an admin unhides a built-in and it is offered again', async ({ page }) => {
+  const cableFly = retiredBuiltIn()
+  await fakeLogin(page, { admin: true })
+  await mockSupabase(page, { exercises: [bench, cableFly] })
+  const calls = await mockAdminWrites(page)
+  // The fixture is the mock's data: a successful update changes what the next read returns.
+  await page.route(`${MOCK_SUPABASE_URL}/rest/v1/exercises*`, (route) => {
+    if (route.request().method() === 'PATCH') cableFly.hidden = false
+    return route.fallback()
+  })
+  await page.goto('/exercises')
+
+  await page.getByLabel('Search exercises').fill('cable fly')
+  const noMatch = page.getByText('No exercises match. Change the filters or the search.')
+  await expect(noMatch).toBeVisible()
+
+  const hidden = await openHiddenList(page)
+  await expect(hidden.getByRole('listitem')).toHaveText([/Cable Fly/])
+  await hidden.getByRole('button', { name: 'Unhide Cable Fly' }).click()
+
+  await expect(hidden.getByText('No hidden built-ins.')).toBeVisible()
+  expect(calls.writes).toEqual([{ method: 'PATCH', body: { hidden: false } }])
+  // Refetched: back in the main list, so in every picker too.
+  await expect(noMatch).toBeHidden()
+  await expect(page.getByRole('listitem').filter({ hasText: 'Cable Fly' })).toBeVisible()
+})
+
+test('a failed unhide says why and keeps the built-in hidden', async ({ page }) => {
+  await fakeLogin(page, { admin: true })
+  await mockSupabase(page, { exercises: [bench, retiredBuiltIn()] })
+  await mockAdminWrites(page, { failWrite: true })
+  await page.goto('/exercises')
+
+  const hidden = await openHiddenList(page)
+  await hidden.getByRole('button', { name: 'Unhide Cable Fly' }).click()
+  await expect(hidden.getByRole('alert')).toHaveText('Database is down')
+  await expect(hidden.getByRole('button', { name: 'Unhide Cable Fly' })).toBeEnabled()
+})
+
+test('editing a hidden built-in keeps it hidden', async ({ page }) => {
+  await fakeLogin(page, { admin: true })
+  await mockSupabase(page, { exercises: [bench, retiredBuiltIn()] })
+  const calls = await mockAdminWrites(page)
+  await page.goto('/exercises')
+
+  const hidden = await openHiddenList(page)
+  await hidden.getByRole('button', { name: 'Edit Cable Fly' }).click()
+  const form = page.getByRole('dialog', { name: 'Edit exercise' })
+  await expect(form.getByLabel('Hidden (no longer offered; history keeps it)')).toBeChecked()
+
+  // A retired built-in has neither, and a built-in needs both.
+  await form.getByLabel('Start photo').setInputFiles(photo())
+  await form
+    .getByLabel('Steps (one per line)')
+    .fill('Open the arms wide.\nBring the handles together.')
+  await form.getByRole('button', { name: 'Save' }).click()
+  await expect(form).toBeHidden()
+
+  expect(calls.writes).toHaveLength(1)
+  expect(calls.writes[0].body).toMatchObject({ name: 'Cable Fly', hidden: true })
 })

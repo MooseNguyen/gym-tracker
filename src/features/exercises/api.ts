@@ -3,6 +3,8 @@ import { supabase, unwrap } from '../../lib/supabase'
 import { EXERCISE_IMAGE_BUCKET, UPLOADED_PREFIX } from '../../shared/ui/exerciseImage'
 import type { Exercise, ExerciseKind } from '../../types/db'
 
+const ADMIN_ONLY = 'Only admins can change built-in exercises.'
+
 const EXERCISE_COLUMNS =
   'id, user_id, name, muscle_group, secondary_muscles, equipment, kind, image_path, image_path_end'
 
@@ -21,6 +23,42 @@ export function useExercises() {
       ) as Exercise[],
     // The library barely changes; avoid refetching it on every picker open.
     staleTime: 10 * 60_000,
+  })
+}
+
+/**
+ * Built-ins an admin has hidden (or retired by a migration), for the admin's
+ * "Show hidden" list. A separate query: the main list, which every picker
+ * reads, stays visible-only. Loaded only while that list is open.
+ */
+export function useHiddenExercises(enabled: boolean) {
+  return useQuery({
+    queryKey: ['exercises', 'hidden'],
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await supabase
+          .from('exercises')
+          .select(`${EXERCISE_COLUMNS}, hidden`)
+          .is('user_id', null)
+          .eq('hidden', true)
+          .order('name'),
+      ) as Exercise[],
+  })
+}
+
+/** Hides or unhides a built-in (admins only; RLS rejects anyone else). */
+export function useSetExerciseHidden() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, hidden }: { id: string; hidden: boolean }) => {
+      const res = await supabase.from('exercises').update({ hidden }).eq('id', id).select('id')
+      if (res.error?.code === '42501') throw new Error(ADMIN_ONLY)
+      // RLS hides a refused update instead of failing it: no row back.
+      if ((unwrap(res) ?? []).length !== 1) throw new Error(ADMIN_ONLY)
+    },
+    // Prefix match: refreshes both the main list and the hidden one.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
   })
 }
 
@@ -137,11 +175,10 @@ export function useSaveBuiltInExercise() {
               // Explicit null: the column defaults to the caller's id (a custom exercise).
               .insert({ ...row, user_id: null })
               .select(EXERCISE_COLUMNS)
-        if (res.error?.code === '42501')
-          throw new Error('Only admins can change built-in exercises.')
+        if (res.error?.code === '42501') throw new Error(ADMIN_ONLY)
         const saved = unwrap(res) as Exercise[]
         // RLS hides a refused update instead of failing it: no row back.
-        if (saved.length !== 1) throw new Error('Only admins can change built-in exercises.')
+        if (saved.length !== 1) throw new Error(ADMIN_ONLY)
 
         await removeUploads([
           start !== undefined ? current?.image_path : null,

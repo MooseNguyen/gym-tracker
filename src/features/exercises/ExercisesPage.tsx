@@ -8,6 +8,7 @@ import { useIsAdmin } from '../auth/AuthProvider'
 import { useDeleteExercise, useExerciseInstructions, useExercises } from './api'
 import { ExerciseForm } from './ExerciseForm'
 import { ExerciseList } from './ExerciseList'
+import { HiddenBuiltIns } from './HiddenBuiltIns'
 import { HowToButton } from './HowTo'
 
 export function ExercisesPage() {
@@ -17,6 +18,7 @@ export function ExercisesPage() {
   const [adding, setAdding] = useState(false)
   const isAdmin = useIsAdmin()
   const [editing, setEditing] = useState<Exercise | null>(null)
+  const [showHidden, setShowHidden] = useState(false)
 
   return (
     <main className="page">
@@ -26,6 +28,17 @@ export function ExercisesPage() {
           + New
         </button>
       </div>
+      {isAdmin && (
+        <label className="check-field">
+          <input
+            type="checkbox"
+            checked={showHidden}
+            onChange={(e) => setShowHidden(e.target.checked)}
+          />
+          <span>Show hidden built-ins</span>
+        </label>
+      )}
+      {isAdmin && showHidden && <HiddenBuiltIns onEdit={setEditing} />}
       {del.error && (
         <p role="alert" className="error">
           {del.error.message}
