@@ -35,6 +35,8 @@ Installable on iPhone as a PWA.
 
 > The built-in email sender is rate-limited (a few emails per hour). Only sign-up confirmation and password reset send email, so that's fine for one user.
 
+> **Backups:** the free plan keeps none you can restore. Run `npm run backup` every month: [docs/BACKUP.md](docs/BACKUP.md).
+
 ### 2. Local dev
 
 ```bash
@@ -59,15 +61,17 @@ Then open the app from the home screen and sign in with it.
 
 ## Scripts
 
-| Command                               | What it does                                                                   |
-| ------------------------------------- | ------------------------------------------------------------------------------ |
-| `npm run dev`                         | Dev server                                                                     |
-| `npm run build`                       | Type-check + production build                                                  |
-| `npm run lint`                        | ESLint                                                                         |
-| `npm test`                            | Unit tests (calc + workout draft logic)                                        |
-| `npm run test:e2e`                    | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                |
-| `npm run db:types`                    | Generate TS types from the linked Supabase project (replace `src/types/db.ts`) |
-| `node scripts/repdb/fetch-images.mjs` | Re-download the RepDB exercise images listed in `scripts/repdb/library.json`   |
+| Command                               | What it does                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------- |
+| `npm run dev`                         | Dev server                                                                      |
+| `npm run build`                       | Type-check + production build                                                   |
+| `npm run lint`                        | ESLint                                                                          |
+| `npm test`                            | Unit tests (calc + workout draft logic)                                         |
+| `npm run test:e2e`                    | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                 |
+| `npm run db:types`                    | Generate TS types from the linked Supabase project (replace `src/types/db.ts`)  |
+| `node scripts/repdb/fetch-images.mjs` | Re-download the RepDB exercise images listed in `scripts/repdb/library.json`    |
+| `npm run backup`                      | Monthly backup of production data and photos ([docs/BACKUP.md](docs/BACKUP.md)) |
+| `npm run restore -- <folder>`         | Restore a backup into a fresh project and check the counts                      |
 
 ## Architecture notes
 
@@ -108,7 +112,7 @@ where email = 'you@example.com';
 ```
 
 The role lives in `app_metadata`, which users cannot change themselves; RLS (`is_admin()`, [migration](supabase/migrations/20261113000000_admin_exercises.sql)) enforces it, and CI checks it ([`admin_rls.sql`](supabase/tests/admin_rls.sql)).
-Built-ins added this way exist only in that database (not in `seed.sql`): export the `exercises` table now and then as a backup.
+Built-ins added this way exist only in that database (not in `seed.sql`): the monthly backup ([docs/BACKUP.md](docs/BACKUP.md)) keeps them and their photos.
 
 ## Testing checklist that needs a real Supabase project
 
