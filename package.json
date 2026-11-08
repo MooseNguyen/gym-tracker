@@ -11,7 +11,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "format": "prettier --write .",
-    "db:types": "supabase gen types typescript --local > src/types/supabase.ts"
+    "db:types": "supabase gen types typescript --local > src/types/supabase.ts",
+    "backup": "node --env-file=.env.local --env-file=.env.backup scripts/backup/backup.mjs",
+    "restore": "node --env-file=.env.restore scripts/backup/restore.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
