@@ -1147,6 +1147,58 @@ test.describe('workout header and timers', () => {
     )
   })
 
+  test.describe('on a slow phone, where the wheel lags behind a pick', () => {
+    const ROW = 44 // TimeWheel's ITEM_HEIGHT
+
+    test.beforeEach(async ({ page }) => {
+      // The smooth scroll stalls one row short of where it is going, as when
+      // a busy phone drops frames (on a row, so scroll snap leaves it there).
+      // Only the wheel calls element.scrollTo.
+      await page.addInitScript((row) => {
+        Element.prototype.scrollTo = function (this: Element, options?: ScrollToOptions | number) {
+          const top = typeof options === 'object' ? (options.top ?? 0) : 0
+          this.scrollTop = top - Math.sign(top - this.scrollTop) * row
+        } as Element['scrollTo']
+      }, ROW)
+      await mockSupabase(page, { routines, folders })
+      await startPush(page)
+      await page.getByRole('button', { name: /Rest time for Bench Press/ }).click()
+    })
+
+    test('a key press is not undone while the wheel catches up', async ({ page }) => {
+      const sheet = page.getByRole('dialog', { name: 'Rest timer' })
+      const wheel = sheet.getByRole('spinbutton', { name: 'Rest time for Bench Press' })
+      await wheel.focus()
+      await page.keyboard.press('PageDown') // 1:30 → 2:30; the wheel stops at 2:15
+      await expect(wheel).toHaveAttribute('aria-valuetext', '2 min 30 s')
+      // Longer than the wheel's 120 ms settle delay, the time a position still
+      // on its way would need to overwrite the pick.
+      await page.waitForTimeout(300)
+      await sheet.getByRole('button', { name: 'Done' }).click()
+
+      await expect(
+        page.getByRole('region', { name: bench.name }).getByRole('button', {
+          name: /Rest time for Bench Press/,
+        }),
+      ).toHaveText(/Rest 2:30/)
+    })
+
+    test('scrolling by hand still picks after a key press', async ({ page }) => {
+      const wheel = page
+        .getByRole('dialog', { name: 'Rest timer' })
+        .getByRole('spinbutton', { name: 'Rest time for Bench Press' })
+      await wheel.focus()
+      await page.keyboard.press('PageDown')
+      await expect(wheel).toHaveAttribute('aria-valuetext', '2 min 30 s')
+
+      // A finger takes over and drags the wheel to 3:00 (row 12). Playwright
+      // has no touch scrolling in mobile WebKit, so: pointer down, then move.
+      await wheel.dispatchEvent('pointerdown')
+      await wheel.evaluate((el, top) => (el.scrollTop = top), 12 * ROW)
+      await expect(wheel).toHaveAttribute('aria-valuetext', '3 min')
+    })
+  })
+
   test('the ⏱ sheet starts a countdown and runs a stopwatch', async ({ page }) => {
     await page.clock.install()
     await mockSupabase(page, { routines, folders })
