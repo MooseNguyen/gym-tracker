@@ -28,6 +28,10 @@ export function TimeWheel({ values, value, onChange, format, spoken, label }: Pr
   const [pos, setPos] = useState(() => indexOf(value))
   const settle = useRef<ReturnType<typeof setTimeout>>(undefined)
   const frame = useRef(0)
+  // Row a key press or tap is scrolling to. Until the wheel gets there, its
+  // position is stale (a slow phone can pause mid-scroll for longer than the
+  // settle delay) and must not overwrite the value already picked.
+  const target = useRef<number | null>(null)
 
   // Open on the current value without animating.
   useLayoutEffect(() => {
@@ -53,7 +57,13 @@ export function TimeWheel({ values, value, onChange, format, spoken, label }: Pr
   const scrollToIndex = (i: number) => {
     const el = ref.current
     if (!el) return
+    target.current = i
     el.scrollTo({ top: i * ITEM_HEIGHT, behavior: reducedMotion() ? 'auto' : 'smooth' })
+  }
+
+  // A finger or mouse wheel takes over: from here the position is the value.
+  const handOver = () => {
+    target.current = null
   }
 
   function onScroll() {
@@ -63,7 +73,12 @@ export function TimeWheel({ values, value, onChange, format, spoken, label }: Pr
     frame.current = requestAnimationFrame(() => setPos(el.scrollTop / ITEM_HEIGHT))
     // The value follows once the wheel comes to rest (snap included).
     clearTimeout(settle.current)
-    settle.current = setTimeout(() => pick(Math.round(el.scrollTop / ITEM_HEIGHT)), 120)
+    settle.current = setTimeout(() => {
+      const i = Math.round(el.scrollTop / ITEM_HEIGHT)
+      if (target.current !== null && i !== target.current) return // still on its way
+      target.current = null
+      pick(i)
+    }, 120)
   }
 
   function onKeyDown(e: KeyboardEvent) {
@@ -96,6 +111,8 @@ export function TimeWheel({ values, value, onChange, format, spoken, label }: Pr
         aria-valuetext={spoken(value)}
         onScroll={onScroll}
         onKeyDown={onKeyDown}
+        onPointerDown={handOver}
+        onWheel={handOver}
         style={{ paddingBlock: ITEM_HEIGHT * ((VISIBLE - 1) / 2) }}
       >
         {values.map((v, i) => {
