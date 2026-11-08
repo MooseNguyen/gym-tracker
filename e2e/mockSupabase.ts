@@ -139,7 +139,16 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
 
     if (path === '/rest/v1/exercises') {
       const library = opts.exercises ?? [bench]
-      if (!single) return json(route, library)
+      if (!single) {
+        // hidden=eq.false (every list) or eq.true (the admin's hidden list).
+        const hidden = url.searchParams.get('hidden')
+        if (!hidden) return json(route, library)
+        const wanted = hidden === 'eq.true'
+        return json(
+          route,
+          library.filter((e) => Boolean((e as { hidden?: boolean }).hidden) === wanted),
+        )
+      }
       // .single() by id: the stats page and the instructions sheet.
       const id = url.searchParams.get('id')?.replace('eq.', '')
       const found = [bench, overheadPress, pullUp, ...library].find((e) => e.id === id) ?? bench

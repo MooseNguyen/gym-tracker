@@ -17,6 +17,9 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 8   | Secondary muscles count in the weekly stats                           | #20 |
 | 9   | kg / lb per account, CSV export (Me tab)                              | #22 |
 | 11  | Flaky "drags a card from anywhere" e2e test fixed                     | #24 |
+| 12  | Admins can unhide built-in exercises                                  | #26 |
+| 14  | Monthly backup of the whole database and photos, tested restore       | #25 |
+| 15  | Supabase region checked: Sydney, kept (moving was not worth it)       | #25 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),
@@ -27,10 +30,7 @@ faster start with a saved query cache and splash (#18).
 | #   | Status | Item                                                                            | Effort | Why                                                                                                     |
 | --- | ------ | ------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
 | 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                           |
-| 12  | To do  | UI to unhide built-in exercises                                                 | S      | Hidden built-ins can only be restored in SQL today                                                      |
 | 13  | To do  | Edit custom exercises, with a photo                                             | M      | The admin form already resizes and uploads photos; custom exercises can't be edited after creating them |
-| 14  | To do  | Monthly backup of the whole database and photos, with a tested restore          | S      | The free plan keeps no backups; admin-added built-ins live only in production                           |
-| 15  | Done   | Check the Supabase project region: Sydney. Kept (moving was not worth it)       | S      | Latency from Vietnam; moving later means a migration                                                    |
 
 ## Checklist
 
@@ -45,7 +45,7 @@ faster start with a saved query cache and splash (#18).
 - [x] 9. kg / lb, CSV export — #22
 - [ ] 10. iPhone check
 - [x] 11. Flaky drag test — #24
-- [ ] 12. Unhide built-ins
+- [x] 12. Unhide built-ins — #26
 - [ ] 13. Edit custom exercises
-- [ ] 14. Database backup
-- [x] 15. Supabase region: Sydney, kept
+- [x] 14. Database backup — #25
+- [x] 15. Supabase region: Sydney, kept — #25

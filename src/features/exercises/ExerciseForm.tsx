@@ -45,7 +45,8 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
   const [builtIn, setBuiltIn] = useState(editing)
   const [steps, setSteps] = useState(initialSteps.join('\n'))
   const [secondary, setSecondary] = useState<string[]>(exercise?.secondary_muscles ?? [])
-  const [hidden, setHidden] = useState(false)
+  // From the exercise, not false: saving a hidden built-in must not unhide it.
+  const [hidden, setHidden] = useState(exercise?.hidden ?? false)
   const [photos, setPhotos] = useState<PhotoChanges>({})
   const [formError, setFormError] = useState<string | null>(null)
 
