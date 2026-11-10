@@ -15,6 +15,10 @@ create function pg_temp.act_as(user_id uuid) returns void language sql as $$
 $$;
 
 set local role authenticated;
+-- Storage refuses SQL deletes on storage.objects (trigger protect_delete)
+-- unless this is set, which is what the Storage API does before deleting.
+-- RLS still applies: this tests the same check remove() goes through.
+select set_config('storage.allow_delete_query', 'true', true);
 
 -- Member B has a photo of their own.
 select pg_temp.act_as('00000000-0000-0000-0000-0000000000d2');
