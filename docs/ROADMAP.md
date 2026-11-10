@@ -29,9 +29,9 @@ test fixed by a real wheel bug fix (#27).
 
 ## Next
 
-| #   | Status | Item                                                                            | Effort | Why                                                                                                     |
-| --- | ------ | ------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------- |
-| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                           |
+| #   | Status | Item                                                                            | Effort | Why                                                                           |
+| --- | ------ | ------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------- |
+| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet |
 
 ## Checklist
 
