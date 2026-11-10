@@ -10,7 +10,7 @@ import {
   type ExerciseKind,
 } from '../../types/db'
 import { useIsAdmin } from '../auth/AuthProvider'
-import { useCreateExercise, useSaveBuiltInExercise, type PhotoChanges } from './api'
+import { useSaveBuiltInExercise, useSaveCustomExercise, type PhotoChanges } from './api'
 import { toSquareJpeg } from './resizeImage'
 
 /** Muscles that can be a secondary target: the specific ones, no plain group, no cardio. */
@@ -19,7 +19,7 @@ const SECONDARY_CHOICES = MUSCLE_GROUPS.flatMap((g) =>
 )
 
 interface Props {
-  /** A built-in to edit (admins). Missing = a new exercise. */
+  /** The exercise to edit: the member's own custom one, or a built-in (admins). Missing = new. */
   exercise?: Exercise
   /** Its current steps, when editing. */
   initialSteps?: string[]
@@ -29,12 +29,13 @@ interface Props {
 }
 
 /**
- * New custom exercise for everyone; admins can also make it a built-in (with
- * photos and steps, shown to every user) or edit an existing built-in.
+ * Custom exercise for everyone (new or their own, with one optional photo);
+ * admins can also make it a built-in (with photos and steps, shown to every
+ * user) or edit an existing built-in.
  */
 export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: Props) {
   const isAdmin = useIsAdmin()
-  const create = useCreateExercise()
+  const saveCustom = useSaveCustomExercise()
   const saveBuiltIn = useSaveBuiltInExercise()
   const editing = !!exercise
 
@@ -42,23 +43,30 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
   const [muscle, setMuscle] = useState<string>(exercise?.muscle_group ?? MUSCLE_GROUPS[0])
   const [equipment, setEquipment] = useState<string>(exercise?.equipment ?? EQUIPMENT[0])
   const [kind, setKind] = useState<ExerciseKind>(exercise?.kind ?? 'weight_reps')
-  const [builtIn, setBuiltIn] = useState(editing)
+  const [builtIn, setBuiltIn] = useState(!!exercise && !exercise.user_id)
+  // Past sets of a custom exercise were logged for its kind; changing it would
+  // show them wrong (kg × reps read as a duration). A new exercise instead.
+  const kindLocked = editing && !builtIn
   const [steps, setSteps] = useState(initialSteps.join('\n'))
   const [secondary, setSecondary] = useState<string[]>(exercise?.secondary_muscles ?? [])
   // From the exercise, not false: saving a hidden built-in must not unhide it.
   const [hidden, setHidden] = useState(exercise?.hidden ?? false)
   const [photos, setPhotos] = useState<PhotoChanges>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const kindHintId = useId()
 
-  const pending = create.isPending || saveBuiltIn.isPending
-  const error = formError ?? create.error?.message ?? saveBuiltIn.error?.message
+  const pending = saveCustom.isPending || saveBuiltIn.isPending
+  const error = formError ?? saveCustom.error?.message ?? saveBuiltIn.error?.message
 
   function submit(e: FormEvent) {
     e.preventDefault()
     setFormError(null)
     const fields = { name: name.trim(), muscle_group: muscle, equipment, kind }
     if (!builtIn) {
-      create.mutate(fields, { onSuccess: onDone })
+      saveCustom.mutate(
+        { id: exercise?.id, fields, photo: photos.start, currentPhoto: exercise?.image_path },
+        { onSuccess: onDone },
+      )
       return
     }
 
@@ -131,12 +139,37 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
       </label>
       <label className="field">
         <span>Tracked as</span>
-        <select value={kind} onChange={(e) => setKind(e.target.value as ExerciseKind)}>
+        <select
+          value={kind}
+          disabled={kindLocked}
+          aria-describedby={kindLocked ? kindHintId : undefined}
+          onChange={(e) => setKind(e.target.value as ExerciseKind)}
+        >
           <option value="weight_reps">Weight × reps</option>
           <option value="bodyweight_reps">Reps only</option>
           <option value="duration">Duration</option>
         </select>
+        {kindLocked && (
+          <small id={kindHintId} className="muted">
+            Fixed once created, so past sets still read right. Need another kind? Make a new
+            exercise.
+          </small>
+        )}
       </label>
+
+      {!builtIn && (
+        <div className="photo-fields">
+          <PhotoField
+            label="Photo (optional)"
+            current={photos.start === null ? null : (exercise?.image_path ?? null)}
+            value={photos.start ?? undefined}
+            onChange={(blob) => setPhotos({ start: blob })}
+            onError={setFormError}
+            removable
+          />
+          <p className="muted small-text">Anyone with the link can see this photo.</p>
+        </div>
+      )}
 
       {isAdmin && !editing && (
         <label className="check-field">
@@ -151,7 +184,7 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
             <PhotoField
               label="Start photo"
               current={exercise?.image_path ?? null}
-              value={photos.start}
+              value={photos.start ?? undefined}
               onChange={(blob) => setPhotos((p) => ({ ...p, start: blob ?? undefined }))}
               onError={setFormError}
             />
