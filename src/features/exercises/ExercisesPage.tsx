@@ -59,7 +59,8 @@ export function ExercisesPage() {
                   }}
                 />
               )}
-              {isAdmin && !e.user_id && (
+              {/* RLS returns only built-ins and the member's own custom ones. */}
+              {(isAdmin || e.user_id) && (
                 <button
                   className="icon-btn"
                   aria-label={`Edit ${e.name}`}
@@ -84,7 +85,7 @@ export function ExercisesPage() {
                       confirmLabel: 'Delete',
                       danger: true,
                     })
-                    if (ok) del.mutate(e.id)
+                    if (ok) del.mutate(e)
                   }}
                 >
                   🗑
@@ -106,14 +107,22 @@ export function ExercisesPage() {
         <ExerciseForm library={data} onDone={() => setAdding(false)} />
       </Dialog>
       <Dialog open={!!editing} onClose={() => setEditing(null)} title="Edit exercise">
-        {editing && (
-          <EditBuiltIn
-            key={editing.id}
-            exercise={editing}
-            library={data}
-            onDone={() => setEditing(null)}
-          />
-        )}
+        {editing &&
+          (editing.user_id ? (
+            <ExerciseForm
+              key={editing.id}
+              exercise={editing}
+              library={data}
+              onDone={() => setEditing(null)}
+            />
+          ) : (
+            <EditBuiltIn
+              key={editing.id}
+              exercise={editing}
+              library={data}
+              onDone={() => setEditing(null)}
+            />
+          ))}
       </Dialog>
     </main>
   )

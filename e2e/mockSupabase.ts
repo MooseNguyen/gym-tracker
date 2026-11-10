@@ -284,6 +284,84 @@ export const customCurl = {
   image_path: null,
 }
 
+// ---------------------------------------------------------------------------
+// Exercise writes and photo uploads (the exercise forms).
+// ---------------------------------------------------------------------------
+
+// A real (tiny) PNG, so the browser decodes and resizes it like a phone photo.
+const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP4z8DwHwyBNAMDgwMDAwA+5wP/3XwKqQAAAABJRU5ErkJggg==',
+  'base64',
+)
+export const photo = (name = 'machine.png') => ({ name, mimeType: 'image/png', buffer: PNG })
+
+/** The signed-in e2e account (fakeLogin); custom exercises belong to it. */
+export const E2E_USER_ID = user.id
+
+export interface ExerciseWrites {
+  /** Upload path and whether the file sent is a JPEG. */
+  uploads: { path: string; isJpeg: boolean }[]
+  removed: string[][]
+  /** Inserts (POST) and updates (PATCH) with their bodies. */
+  writes: { method: string; body: Record<string, unknown> }[]
+  /** Ids of deleted exercises. */
+  deletes: string[]
+}
+
+/**
+ * Storage and exercise writes on top of mockSupabase (register after it, so
+ * these routes win). `failWrite` makes the row insert/update fail;
+ * `deleteInUse` makes a delete fail the way the foreign key would.
+ */
+export async function mockExerciseWrites(
+  page: Page,
+  { failWrite = false, deleteInUse = false } = {},
+): Promise<ExerciseWrites> {
+  const calls: ExerciseWrites = { uploads: [], removed: [], writes: [], deletes: [] }
+  const bucket = `${MOCK_SUPABASE_URL}/storage/v1/object/exercise-images`
+  await page.route(`${bucket}/**`, (route) => {
+    const req = route.request()
+    calls.uploads.push({
+      path: new URL(req.url()).pathname.replace('/storage/v1/object/exercise-images/', ''),
+      isJpeg: isJpegUpload(req.headers()['content-type'], req.postDataBuffer()),
+    })
+    return route.fulfill({ status: 200, json: { Key: 'ok', Id: 'ok' } })
+  })
+  await page.route(bucket, (route) => {
+    const { prefixes } = route.request().postDataJSON() as { prefixes: string[] }
+    calls.removed.push(prefixes)
+    return route.fulfill({ status: 200, json: [] })
+  })
+  await page.route(`${MOCK_SUPABASE_URL}/rest/v1/exercises*`, (route) => {
+    const req = route.request()
+    if (req.method() === 'GET') return route.fallback()
+    const id = new URL(req.url()).searchParams.get('id')?.replace('eq.', '') ?? 'ex-new'
+    if (req.method() === 'DELETE') {
+      if (deleteInUse)
+        return route.fulfill({
+          status: 409,
+          json: { code: '23503', message: 'violates foreign key constraint' },
+        })
+      calls.deletes.push(id)
+      return route.fulfill({ status: 200, json: [{ id }] })
+    }
+    const body = req.postDataJSON() as Record<string, unknown>
+    calls.writes.push({ method: req.method(), body })
+    if (failWrite) return route.fulfill({ status: 500, json: { message: 'Database is down' } })
+    return route.fulfill({ status: 201, json: [{ id, ...body }] })
+  })
+  return calls
+}
+
+/** Sent as image/jpeg, and the bytes are a JPEG (they start with FF D8 FF). */
+function isJpegUpload(contentType: string | undefined, body: Buffer | null) {
+  return (
+    contentType === 'image/jpeg' &&
+    !!body &&
+    body.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
+  )
+}
+
 const INSTRUCTIONS: Record<string, string[]> = {
   [bench.id]: [
     'Lie back on a flat bench and unrack the bar.',

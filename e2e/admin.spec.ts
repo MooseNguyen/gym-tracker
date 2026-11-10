@@ -1,13 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { MOCK_SUPABASE_URL } from '../playwright.config'
-import { bench, fakeLogin, mockSupabase } from './mockSupabase'
-
-// A real (tiny) PNG, so the browser decodes and resizes it like a phone photo.
-const PNG = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGP4z8DwHwyBNAMDgwMDAwA+5wP/3XwKqQAAAABJRU5ErkJggg==',
-  'base64',
-)
-const photo = (name = 'machine.png') => ({ name, mimeType: 'image/png', buffer: PNG })
+import { bench, fakeLogin, mockExerciseWrites, mockSupabase, photo } from './mockSupabase'
 
 const ownPhotoExercise = {
   id: 'ex-own',
@@ -18,53 +11,6 @@ const ownPhotoExercise = {
   kind: 'weight_reps',
   image_path: 'own/old-photo.jpg',
   image_path_end: null,
-}
-
-interface Calls {
-  /** Upload path and whether the file sent is a JPEG. */
-  uploads: { path: string; isJpeg: boolean }[]
-  removed: string[][]
-  writes: { method: string; body: Record<string, unknown> }[]
-}
-
-/**
- * Storage and exercise writes on top of mockSupabase (registered after it, so
- * these routes win). `failWrite` makes the row insert/update fail.
- */
-async function mockAdminWrites(page: Page, { failWrite = false } = {}): Promise<Calls> {
-  const calls: Calls = { uploads: [], removed: [], writes: [] }
-  const bucket = `${MOCK_SUPABASE_URL}/storage/v1/object/exercise-images`
-  await page.route(`${bucket}/**`, (route) => {
-    const req = route.request()
-    calls.uploads.push({
-      path: new URL(req.url()).pathname.replace('/storage/v1/object/exercise-images/', ''),
-      isJpeg: isJpegUpload(req.headers()['content-type'], req.postDataBuffer()),
-    })
-    return route.fulfill({ status: 200, json: { Key: 'ok', Id: 'ok' } })
-  })
-  await page.route(bucket, (route) => {
-    const { prefixes } = route.request().postDataJSON() as { prefixes: string[] }
-    calls.removed.push(prefixes)
-    return route.fulfill({ status: 200, json: [] })
-  })
-  await page.route(`${MOCK_SUPABASE_URL}/rest/v1/exercises*`, (route) => {
-    const req = route.request()
-    if (req.method() === 'GET') return route.fallback()
-    const body = req.postDataJSON() as Record<string, unknown>
-    calls.writes.push({ method: req.method(), body })
-    if (failWrite) return route.fulfill({ status: 500, json: { message: 'Database is down' } })
-    return route.fulfill({ status: 201, json: [{ id: 'ex-new', ...body }] })
-  })
-  return calls
-}
-
-/** Sent as image/jpeg, and the bytes are a JPEG (they start with FF D8 FF). */
-function isJpegUpload(contentType: string | undefined, body: Buffer | null) {
-  return (
-    contentType === 'image/jpeg' &&
-    !!body &&
-    body.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]))
-  )
 }
 
 async function openNewForm(page: Page) {
@@ -87,7 +33,7 @@ test('members see no admin controls', async ({ page }) => {
 test('an admin adds a built-in with a photo and steps', async ({ page }) => {
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [bench] })
-  const calls = await mockAdminWrites(page)
+  const calls = await mockExerciseWrites(page)
   const form = await openNewForm(page)
 
   await form.getByLabel('Name').fill('Iso-Lateral Pulldown')
@@ -144,7 +90,7 @@ test('an admin adds a built-in with a photo and steps', async ({ page }) => {
 test('a built-in name that is taken is refused before anything is uploaded', async ({ page }) => {
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [bench] })
-  const calls = await mockAdminWrites(page)
+  const calls = await mockExerciseWrites(page)
   const form = await openNewForm(page)
   await form.getByLabel('Name').fill(bench.name.toUpperCase())
   await form.getByLabel('Built-in (shown to everyone)').check()
@@ -161,7 +107,7 @@ test('a built-in name that is taken is refused before anything is uploaded', asy
 test('editing a built-in replaces its photo and removes the old upload', async ({ page }) => {
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [ownPhotoExercise] })
-  const calls = await mockAdminWrites(page)
+  const calls = await mockExerciseWrites(page)
   await page.goto('/exercises')
   await page.getByLabel('Search exercises').fill('iso')
   await page.getByRole('button', { name: 'Edit Iso-Lateral Row' }).click()
@@ -189,7 +135,7 @@ test('editing a built-in replaces its photo and removes the old upload', async (
 test('a failed save removes the photo it just uploaded', async ({ page }) => {
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [bench] })
-  const calls = await mockAdminWrites(page, { failWrite: true })
+  const calls = await mockExerciseWrites(page, { failWrite: true })
   const form = await openNewForm(page)
   await form.getByLabel('Name').fill('Iso-Lateral Pulldown')
   await form.getByLabel('Built-in (shown to everyone)').check()
@@ -224,7 +170,7 @@ test('an admin unhides a built-in and it is offered again', async ({ page }) => 
   const cableFly = retiredBuiltIn()
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [bench, cableFly] })
-  const calls = await mockAdminWrites(page)
+  const calls = await mockExerciseWrites(page)
   // The fixture is the mock's data: a successful update changes what the next read returns.
   await page.route(`${MOCK_SUPABASE_URL}/rest/v1/exercises*`, (route) => {
     if (route.request().method() === 'PATCH') cableFly.hidden = false
@@ -250,7 +196,7 @@ test('an admin unhides a built-in and it is offered again', async ({ page }) => 
 test('a failed unhide says why and keeps the built-in hidden', async ({ page }) => {
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [bench, retiredBuiltIn()] })
-  await mockAdminWrites(page, { failWrite: true })
+  await mockExerciseWrites(page, { failWrite: true })
   await page.goto('/exercises')
 
   const hidden = await openHiddenList(page)
@@ -262,7 +208,7 @@ test('a failed unhide says why and keeps the built-in hidden', async ({ page }) 
 test('editing a hidden built-in keeps it hidden', async ({ page }) => {
   await fakeLogin(page, { admin: true })
   await mockSupabase(page, { exercises: [bench, retiredBuiltIn()] })
-  const calls = await mockAdminWrites(page)
+  const calls = await mockExerciseWrites(page)
   await page.goto('/exercises')
 
   const hidden = await openHiddenList(page)
