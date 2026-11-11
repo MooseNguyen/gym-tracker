@@ -21,6 +21,7 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 13  | Members edit their custom exercises (no photo)                        | #28 |
 | 14  | Monthly backup of the whole database and photos, tested restore       | #25 |
 | 15  | Supabase region checked: Sydney, kept (moving was not worth it)       | #25 |
+| 17  | Weekly CI run of the e2e suite × 4, no retries (flake hunt)           | #31 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),
@@ -29,12 +30,11 @@ test fixed by a real wheel bug fix (#27).
 
 ## Next
 
-| #   | Status | Item                                                                            | Effort | Why                                                                                                                              |
-| --- | ------ | ------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| 16  | To do  | Restore a backup into an empty Supabase project, end to end                     | S      | The restore script has only run against a local database; a backup never restored is a hope, not a backup                        |
-| 17  | To do  | Scheduled CI run of the whole e2e suite, repeated (`--repeat-each=4`)           | S      | Both flaky tests (#24, #27) showed up only under load, and #27 was a real bug; a weekly run finds them early without slowing PRs |
-| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                                                    |
-| 19  | Later  | Members can delete their account and all its data                               | M      | Not possible today; expected once the app has outside users                                                                      |
+| #   | Status | Item                                                                            | Effort | Why                                                                                                       |
+| --- | ------ | ------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
+| 16  | To do  | Restore a backup into an empty Supabase project, end to end                     | S      | The restore script has only run against a local database; a backup never restored is a hope, not a backup |
+| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                             |
+| 19  | Later  | Members can delete their account and all its data                               | M      | Not possible today; expected once the app has outside users                                               |
 
 ## Checklist
 
@@ -54,6 +54,6 @@ test fixed by a real wheel bug fix (#27).
 - [x] 14. Database backup — #25
 - [x] 15. Supabase region: Sydney, kept — #25
 - [ ] 16. Restore test on a real project
-- [ ] 17. Scheduled repeated e2e run
+- [x] 17. Scheduled repeated e2e run — #31
 - ~~18. Upload cap per account~~ — dropped: custom exercises have no photos
 - [ ] 19. Account deletion
