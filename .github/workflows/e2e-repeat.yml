@@ -1,0 +1,58 @@
+name: E2E repeated (flake hunt)
+
+# The whole e2e suite several times over, with no retries and every CPU busy.
+# The PR runs in ci.yml retry once, so a test that fails then passes stays
+# green there; both flaky tests so far (#24, #27) only showed up under load.
+on:
+  schedule:
+    - cron: '0 20 * * 0' # Sundays 20:00 UTC (Monday 03:00 in Vietnam)
+  workflow_dispatch:
+    inputs:
+      repeat:
+        description: Times to run each test
+        type: number
+        default: 4
+  # Changes to this file test themselves.
+  pull_request:
+    paths: [.github/workflows/e2e-repeat.yml]
+
+concurrency:
+  group: e2e-repeat-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e-repeat:
+    name: E2E (WebKit) × ${{ inputs.repeat || 4 }}, no retries
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Same image as the e2e job in ci.yml: change the tag in both files.
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+      options: --user 1001
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # --retries=0: a flake fails the run instead of passing as "flaky".
+      # --workers=100%: load like the local runs that found the flakes.
+      # --trace=retain-on-failure: the failing step is in the trace (ci.yml
+      # keeps traces only on a retry, and there are none here).
+      - run: >
+          npx playwright test --repeat-each="$REPEAT" --retries=0 --workers=100%
+          --trace=retain-on-failure
+        env:
+          REPEAT: ${{ inputs.repeat || 4 }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-repeat
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14

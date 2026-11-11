@@ -73,6 +73,15 @@ Then open the app from the home screen and sign in with it.
 | `npm run backup`                      | Monthly backup of production data and photos ([docs/BACKUP.md](docs/BACKUP.md)) |
 | `npm run restore -- <folder>`         | Restore a backup into a fresh project and check the counts                      |
 
+### Flake hunt (scheduled CI)
+
+[`e2e-repeat.yml`](.github/workflows/e2e-repeat.yml) runs the whole e2e suite 4 times every Sunday (20:00 UTC), with no retries and every CPU busy.
+The PR checks retry a failed test once, so a flaky test passes there; this run fails on it instead.
+
+- **Run it by hand:** Actions → **E2E repeated (flake hunt)** → **Run workflow** (pick the repeat count), or `gh workflow run e2e-repeat.yml -f repeat=8`.
+- **When it fails** (GitHub emails whoever last changed the workflow file): download the `playwright-report-repeat` artifact and open the failing test's trace with `npx playwright show-trace <trace.zip>`. It shows the exact step and the page at that moment.
+- A failure here is often a real timing bug, not just a bad test (the rest wheel, #27): reproduce it locally with `npx playwright test <file> --repeat-each=40 --workers=8` before changing the test.
+
 ## Architecture notes
 
 - **Workout in progress = local draft** ([`draft.ts`](src/features/workout/draft.ts), [`draftStore.ts`](src/features/workout/draftStore.ts)).
