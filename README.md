@@ -116,13 +116,10 @@ Built-ins added this way exist only in that database (not in `seed.sql`): the mo
 
 ### Custom exercises (every user)
 
-Anyone can add their own exercises (**+ New**) and edit or delete them later (✎, 🗑), with one optional photo.
-The photo goes in the same bucket, under `user/<their id>/<uuid>.jpg`: RLS lets each account write and delete only in its own folder, and a check constraint lets a custom exercise use only a photo from its owner's folder ([migration](supabase/migrations/20261117000000_custom_exercise_photos.sql), checked in CI by [`custom_photos_rls.sql`](supabase/tests/custom_photos_rls.sql)).
+Anyone can add their own exercises (**+ New**) and edit or delete them later (✎, 🗑): name, muscle group, equipment. RLS lets each account change only its own (init migration).
+Custom exercises have **no photo** (the placeholder icon): only admins upload photos, for built-ins.
 
-- **Privacy:** the bucket is public, so anyone who has a photo's link can open it. The name is a random uuid and the link is shown only to its owner, but don't treat it as private (the form says so).
 - **Tracked as** can't be changed once the exercise exists: past sets were logged for that kind. This is a UI rule, not a database one; changing it through the API only mislabels that account's own history.
-- Replaced or removed photos are deleted right away, and so is the photo of a deleted exercise. Clean-up is best effort: a failed delete leaves a file behind (storage only, never shown).
-- Known limit: there is no cap on the number of uploads per account (each is at most 1 MB, a bucket setting). Fine for a few users; add a quota before opening sign-up widely.
 
 ## Testing checklist that needs a real Supabase project
 

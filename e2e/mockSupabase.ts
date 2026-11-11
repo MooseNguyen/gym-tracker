@@ -295,9 +295,6 @@ const PNG = Buffer.from(
 )
 export const photo = (name = 'machine.png') => ({ name, mimeType: 'image/png', buffer: PNG })
 
-/** The signed-in e2e account (fakeLogin); custom exercises belong to it. */
-export const E2E_USER_ID = user.id
-
 export interface ExerciseWrites {
   /** Upload path and whether the file sent is a JPEG. */
   uploads: { path: string; isJpeg: boolean }[]

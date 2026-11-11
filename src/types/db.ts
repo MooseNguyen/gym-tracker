@@ -15,10 +15,7 @@ export interface Exercise {
   secondary_muscles?: string[]
   equipment: string
   kind: ExerciseKind
-  /**
-   * A file under /exercises/ (RepDB), or an upload in Storage (exerciseImageUrl):
-   * own/<uuid>.jpg for built-ins, user/<owner id>/<uuid>.jpg for a custom one.
-   */
+  /** Built-ins only: a file under /exercises/, or own/<uuid>.jpg in Storage (exerciseImageUrl). */
   image_path: string | null
   /** Second photo, the end of the movement (RepDB built-ins); null = one photo. */
   image_path_end?: string | null
