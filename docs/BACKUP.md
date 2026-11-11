@@ -8,7 +8,7 @@ made from this machine, and a tested way back.
 | ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | Every `public` table: workouts, sets, routines, folders, exercises… | Schema, functions, policies: `supabase/migrations` (git)                 |
 | `auth.users` + `auth.identities`: password hashes, the admin role   | Sessions: everyone signs in again after a restore                        |
-| Uploaded photos (`exercise-images` bucket: built-ins and custom)    | RepDB photos: `public/exercises` (git)                                   |
+| Admin-uploaded photos (`exercise-images` bucket)                    | RepDB photos: `public/exercises` (git)                                   |
 | Row counts of that day (`counts.txt`), to check a restore           | Auth settings, Vercel env vars: copied by hand (README, Setup steps 3–5) |
 
 A backup folder holds **password hashes and every workout**: treat it like a

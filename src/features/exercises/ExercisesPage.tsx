@@ -85,7 +85,7 @@ export function ExercisesPage() {
                       confirmLabel: 'Delete',
                       danger: true,
                     })
-                    if (ok) del.mutate(e)
+                    if (ok) del.mutate(e.id)
                   }}
                 >
                   🗑

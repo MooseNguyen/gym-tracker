@@ -29,9 +29,9 @@ interface Props {
 }
 
 /**
- * Custom exercise for everyone (new or their own, with one optional photo);
- * admins can also make it a built-in (with photos and steps, shown to every
- * user) or edit an existing built-in.
+ * Custom exercise for everyone (new, or editing their own; no photo); admins
+ * can also make it a built-in (with photos and steps, shown to every user) or
+ * edit an existing built-in.
  */
 export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: Props) {
   const isAdmin = useIsAdmin()
@@ -63,10 +63,7 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
     setFormError(null)
     const fields = { name: name.trim(), muscle_group: muscle, equipment, kind }
     if (!builtIn) {
-      saveCustom.mutate(
-        { id: exercise?.id, fields, photo: photos.start, currentPhoto: exercise?.image_path },
-        { onSuccess: onDone },
-      )
+      saveCustom.mutate({ id: exercise?.id, fields }, { onSuccess: onDone })
       return
     }
 
@@ -157,20 +154,6 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
         )}
       </label>
 
-      {!builtIn && (
-        <div className="photo-fields">
-          <PhotoField
-            label="Photo (optional)"
-            current={photos.start === null ? null : (exercise?.image_path ?? null)}
-            value={photos.start ?? undefined}
-            onChange={(blob) => setPhotos({ start: blob })}
-            onError={setFormError}
-            removable
-          />
-          <p className="muted small-text">Anyone with the link can see this photo.</p>
-        </div>
-      )}
-
       {isAdmin && !editing && (
         <label className="check-field">
           <input type="checkbox" checked={builtIn} onChange={(e) => setBuiltIn(e.target.checked)} />
@@ -184,7 +167,7 @@ export function ExerciseForm({ exercise, initialSteps = [], library, onDone }: P
             <PhotoField
               label="Start photo"
               current={exercise?.image_path ?? null}
-              value={photos.start ?? undefined}
+              value={photos.start}
               onChange={(blob) => setPhotos((p) => ({ ...p, start: blob ?? undefined }))}
               onError={setFormError}
             />

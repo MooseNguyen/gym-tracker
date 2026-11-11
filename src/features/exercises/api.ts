@@ -1,13 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, unwrap } from '../../lib/supabase'
-import {
-  BUILT_IN_UPLOAD_PREFIX,
-  customUploadPrefix,
-  EXERCISE_IMAGE_BUCKET,
-  isUploaded,
-} from '../../shared/ui/exerciseImage'
+import { EXERCISE_IMAGE_BUCKET, isUploaded, UPLOADED_PREFIX } from '../../shared/ui/exerciseImage'
 import type { Exercise, ExerciseKind } from '../../types/db'
-import { useAuth } from '../auth/AuthProvider'
 
 const ADMIN_ONLY = 'Only admins can change built-in exercises.'
 
@@ -96,12 +90,11 @@ export interface NewExercise {
 }
 
 /**
- * Photo changes from the form. undefined = keep the current photo; a Blob =
- * replace it (already resized); null = remove it (a built-in's end photo, a
- * custom exercise's only photo).
+ * Photo changes from the admin form. undefined = keep the current photo; a
+ * Blob = replace it (already resized); null = remove (end photo only).
  */
 export interface PhotoChanges {
-  start?: Blob | null
+  start?: Blob
   end?: Blob | null
 }
 
@@ -115,48 +108,31 @@ export interface SaveCustom {
   id?: string
   /** On an edit, kind is left as it is: past sets were logged for it. */
   fields: NewExercise
-  photo: Blob | null | undefined
-  /** The photo the exercise has now (edit only), to clean it up when replaced. */
-  currentPhoto?: string | null
 }
 
 /**
  * Creates or updates one of the member's own custom exercises (RLS limits a
- * member to their own rows and their own Storage folder).
+ * member to their own rows). Custom exercises have no photo.
  */
 export function useSaveCustomExercise() {
   const qc = useQueryClient()
-  const userId = useAuth().session?.user.id
   return useMutation({
-    mutationFn: async ({ id, fields, photo, currentPhoto }: SaveCustom) => {
-      if (!userId) throw new Error('You are signed out. Sign in again to save.')
-      const current = { image_path: currentPhoto ?? null, image_path_end: null }
-      return saveWithPhotos(
-        { start: photo },
-        current,
-        customUploadPrefix(userId),
-        async (paths) => {
-          const { kind, ...editable } = fields
-          const res = id
-            ? await supabase
-                .from('exercises')
-                .update({ ...editable, ...paths })
-                .eq('id', id)
-                .select(EXERCISE_COLUMNS)
-            : await supabase
-                .from('exercises')
-                .insert({ ...editable, kind, ...paths })
-                .select(EXERCISE_COLUMNS)
-          const saved = unwrap(res) as Exercise[]
-          // RLS hides a row that isn't the member's (or is gone): no row back.
-          if (saved.length !== 1) throw new Error('This exercise no longer exists.')
-          return saved[0]
-        },
-      )
+    mutationFn: async ({ id, fields }: SaveCustom) => {
+      const { kind, ...editable } = fields
+      const res = id
+        ? await supabase.from('exercises').update(editable).eq('id', id).select(EXERCISE_COLUMNS)
+        : await supabase
+            .from('exercises')
+            .insert({ ...editable, kind })
+            .select(EXERCISE_COLUMNS)
+      const saved = unwrap(res) as Exercise[]
+      // RLS hides a row that isn't the member's (or is gone): no row back.
+      if (saved.length !== 1) throw new Error('This exercise no longer exists.')
+      return saved[0]
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['exercises'] })
-      // Routines and history show the exercise name and photo too.
+      // Routines and history show the exercise name too.
       qc.invalidateQueries({ queryKey: ['routines'] })
       qc.invalidateQueries({ queryKey: ['workouts'] })
     },
@@ -179,10 +155,10 @@ export interface SaveBuiltIn {
   current?: PhotoPaths
 }
 
-async function uploadPhoto(blob: Blob, prefix: string): Promise<string> {
+async function uploadPhoto(blob: Blob): Promise<string> {
   // A new name for every upload: a URL never points at a different photo, so
   // browsers and the service worker can cache it forever.
-  const path = `${prefix}${crypto.randomUUID()}.jpg`
+  const path = `${UPLOADED_PREFIX}${crypto.randomUUID()}.jpg`
   const { error } = await supabase.storage
     .from(EXERCISE_IMAGE_BUCKET)
     // The raw bytes, not the Blob: supabase-js wraps a Blob in a multipart
@@ -209,14 +185,13 @@ async function removeUploads(paths: (string | null | undefined)[]) {
 async function saveWithPhotos(
   photos: PhotoChanges,
   current: PhotoPaths | undefined,
-  prefix: string,
   saveRow: (paths: Partial<PhotoPaths>) => Promise<Exercise>,
 ): Promise<Exercise> {
   const uploaded: string[] = []
   // undefined = keep, null = remove, a Blob = upload and use.
   const upload = async (blob: Blob | null | undefined) => {
     if (!blob) return blob
-    const path = await uploadPhoto(blob, prefix)
+    const path = await uploadPhoto(blob)
     uploaded.push(path)
     return path
   }
@@ -243,7 +218,7 @@ export function useSaveBuiltInExercise() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: ({ id, fields, photos, current }: SaveBuiltIn) =>
-      saveWithPhotos(photos, current, BUILT_IN_UPLOAD_PREFIX, async (paths) => {
+      saveWithPhotos(photos, current, async (paths) => {
         const row = { ...fields, ...paths }
         const res = id
           ? await supabase.from('exercises').update(row).eq('id', id).select(EXERCISE_COLUMNS)
@@ -268,18 +243,15 @@ export function useSaveBuiltInExercise() {
   })
 }
 
-/** Deletes one of the member's custom exercises, then its photo. */
 export function useDeleteExercise() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, image_path }: Pick<Exercise, 'id' | 'image_path'>) => {
-      const { data, error } = await supabase.from('exercises').delete().eq('id', id).select('id')
-      // 23503 = foreign key violation: the exercise is used in a workout or
-      // routine. The row stays, and so does its photo.
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('exercises').delete().eq('id', id)
+      // 23503 = foreign key violation: the exercise is used in a workout or routine.
       if (error?.code === '23503')
         throw new Error('This exercise is used in a routine or workout history.')
       if (error) throw new Error(error.message)
-      if (data.length === 1) await removeUploads([image_path])
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['exercises'] }),
   })
