@@ -87,6 +87,8 @@ The PR checks retry a failed test once, so a flaky test passes there; this run f
 - **Workout in progress = local draft** ([`draft.ts`](src/features/workout/draft.ts), [`draftStore.ts`](src/features/workout/draftStore.ts)).
   Every change is written to `localStorage`. "Finish" sends the whole workout in one `save_workout` RPC (one transaction).
   `workouts.id` is generated on the client, so retrying a save never creates duplicates.
+- **Saving with a weak or lost signal** ([`useSaveWorkout`](src/features/workout/api.ts)). Offline, TanStack Query pauses the save and sends it when the phone is back online; a request that fails on the way (supabase-js reports status 0, turned into a `NetworkError` by [`unwrap`](src/lib/unwrap.ts)) or hangs past 15 s is retried with backoff up to 30 s. Meanwhile Finish reads "Waiting for signal…". Errors from the server are not retried.
+  Sets edited while waiting are sent again with the same id once the first save lands. Only while the page is open: leave it or close the app and the draft stays, so pressing Finish again saves it.
 - **RLS is the security boundary.** Every table is scoped to `auth.uid()`. The anon key in the bundle is public by design.
 - **Derived numbers are not stored.** Volume, e1RM (Epley) and PRs are computed from sets ([`shared/calc`](src/shared/calc/index.ts)), so editing an old set can never leave stale stats.
 - **Rest timer** stores `restEndsAt` (a timestamp), not a counter, so it stays correct after the app is backgrounded.

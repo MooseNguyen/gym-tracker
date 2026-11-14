@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase, unwrap } from '../../lib/supabase'
+import { NetworkError, supabase, unwrap } from '../../lib/supabase'
 import type { PreviousSet } from '../../types/db'
 import type { SaveWorkoutPayload } from './draft'
 
@@ -34,11 +34,28 @@ export function usePreviousSets(exerciseIds: string[], excludeWorkoutId?: string
   })
 }
 
+/** A hung request on a weak gym signal fails after this, and is sent again. */
+const SAVE_TIMEOUT_MS = 15_000
+
+/**
+ * Keeps trying through a weak or lost signal while the page is open: offline,
+ * TanStack pauses it (networkMode 'online') and resumes when the phone is
+ * back online. Safe because the workout id is made on the phone and
+ * save_workout replaces the whole workout: a request that did reach the
+ * server, with only its answer lost, is not saved twice. Answers from the
+ * server (validation, RLS) would fail the same way again, so no retry.
+ */
 export function useSaveWorkout() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (payload: SaveWorkoutPayload) =>
-      unwrap(await supabase.rpc('save_workout', { p: payload })) as string,
+      unwrap(
+        await supabase
+          .rpc('save_workout', { p: payload })
+          .abortSignal(AbortSignal.timeout(SAVE_TIMEOUT_MS)),
+      ) as string,
+    retry: (_failures, error) => error instanceof NetworkError,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['workouts'] })
       qc.invalidateQueries({ queryKey: ['previous-sets'] })
