@@ -4,6 +4,7 @@ import { LogoutConfirm, MeSheetBody } from '../../features/settings/MeSheet'
 import { useDraft } from '../../features/workout/draftStore'
 import { LiveWorkoutBar } from '../../features/workout/LiveWorkoutBar'
 import { Dialog } from './Dialog'
+import { ErrorBoundary } from './ErrorBoundary'
 
 // Inline 24px stroke icons: five small paths don't justify an icon library.
 function Icon({ children }: { children: ReactNode }) {
@@ -98,7 +99,10 @@ export function Layout() {
   return (
     <div className={showLiveBar ? 'app has-livebar' : 'app'}>
       <div className="content">
-        <Outlet />
+        {/* A crashed page keeps the tab bar working; another tab clears the error. */}
+        <ErrorBoundary resetKey={pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </div>
       {showLiveBar && <LiveWorkoutBar draft={draft} />}
       <nav className="tabbar" aria-label="Main">
