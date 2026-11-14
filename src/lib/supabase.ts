@@ -14,8 +14,5 @@ if (!url || !anonKey) {
 // Typed by the generated schema: a renamed column or RPC argument is a type error.
 export const supabase = createClient<Database>(url, anonKey)
 
-/** Unwraps a Supabase response so callers (and TanStack Query) see a thrown Error. */
-export function unwrap<T>(res: { data: T; error: { message: string } | null }): T {
-  if (res.error) throw new Error(res.error.message)
-  return res.data
-}
+// In their own module so tests can import them without Supabase env variables.
+export { NetworkError, unwrap } from './unwrap'

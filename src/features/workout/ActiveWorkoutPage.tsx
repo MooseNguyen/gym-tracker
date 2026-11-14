@@ -34,8 +34,10 @@ import {
   updateSet,
   type DraftExercise,
   type DraftSet,
+  type WorkoutDraft,
 } from './draft'
-import { setDraft, useDraft } from './draftStore'
+import { getDraft, setDraft, useDraft } from './draftStore'
+import { NetworkError } from '../../lib/supabase'
 import { usePreviousSets, useSaveWorkout } from './api'
 import { PrBanner, type Celebration } from './PrBanner'
 import { describeReason, headlineSuggestion, suggestSets } from './progression'
@@ -95,6 +97,9 @@ export function ActiveWorkoutPage() {
     )
 
   const completed = completedSetCount(draft)
+  // Offline (paused by TanStack) or between retries after a network failure.
+  const waitingForSignal =
+    save.isPaused || (save.isPending && save.failureReason instanceof NetworkError)
   const unit = draftUnit(draft)
   const allCollapsed =
     draft.exercises.length > 0 && draft.exercises.every((e) => collapsed.has(e.id))
@@ -149,8 +154,21 @@ export function ActiveWorkoutPage() {
     )
       return
 
-    save.mutate(toSavePayload(draft), {
+    send(draft)
+  }
+
+  function send(sent: WorkoutDraft) {
+    save.mutate(toSavePayload(sent), {
       onSuccess: (id) => {
+        // Edited while the save waited for signal: those edits must not be
+        // dropped. Same id, so this replaces what was just saved.
+        const latest = getDraft()
+        if (latest && latest !== sent) {
+          // Not sendable as it is now: keep it here; the cards say why.
+          if (completedSetCount(latest) === 0 || tooLargeCompletedSets(latest) > 0) return
+          send(latest)
+          return
+        }
         setDraft(null)
         navigate(`/history/${id}`, { replace: true })
       },
@@ -230,7 +248,13 @@ export function ActiveWorkoutPage() {
             onClick={finish}
             disabled={save.isPending}
           >
-            {save.isPending ? 'Saving…' : isNew ? 'Finish' : 'Save'}
+            {waitingForSignal
+              ? 'Waiting for signal…'
+              : save.isPending
+                ? 'Saving…'
+                : isNew
+                  ? 'Finish'
+                  : 'Save'}
           </button>
         </div>
         <dl className="workout-stats">
@@ -252,6 +276,11 @@ export function ActiveWorkoutPage() {
       </header>
 
       {/* Next to Finish's new place, at the top. */}
+      {waitingForSignal && (
+        <p role="status" className="muted">
+          No signal. Your workout is safe on this phone and will be saved when you're back online.
+        </p>
+      )}
       {save.error && (
         <p role="alert" className="error">
           Saving failed: {save.error.message}. Your workout is still on this phone. Try again.
