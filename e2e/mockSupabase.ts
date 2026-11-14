@@ -18,7 +18,7 @@ export const bench = {
   image_path_end: 'repdb-bench-press-end.webp',
 }
 
-const user = {
+export const user = {
   id: '00000000-0000-0000-0000-00000000a5e1',
   email: 'e2e@example.test',
   aud: 'authenticated',

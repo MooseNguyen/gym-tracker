@@ -1,10 +1,16 @@
-import { QueryClient } from '@tanstack/react-query'
+import { MutationCache, QueryCache, QueryClient } from '@tanstack/react-query'
+import { reportError } from './monitoring'
 import { createSyncStoragePersister } from '@tanstack/query-sync-storage-persister'
 
 /** How long a saved copy of the data may be shown at start-up. */
 const PERSIST_MAX_AGE = 24 * 60 * 60_000
 
 export const queryClient = new QueryClient({
+  // Every failed query and mutation, after its last retry. The page still
+  // shows its own error; this only tells us it happened. Network errors are
+  // dropped by reportError.
+  queryCache: new QueryCache({ onError: reportError }),
+  mutationCache: new MutationCache({ onError: reportError }),
   defaultOptions: {
     queries: {
       // Only this user writes this data, so it rarely changes behind our back.

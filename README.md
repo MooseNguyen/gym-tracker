@@ -50,6 +50,27 @@ npm run dev
 Import the repo in Vercel, add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables, and deploy.
 `vercel.json` rewrites every path to `index.html` so deep links like `/history/:id` work.
 
+#### Error reporting (optional, Sentry)
+
+Without these variables the app sends nothing; with them, crashes and failed requests on any phone reach [Sentry](https://sentry.io) (free plan: 5,000 errors a month), with readable stacks.
+
+1. Create a Sentry project (platform **React**). In its settings, turn on **Security & Privacy → Prevent Storing of IP Addresses**.
+2. Create an **Organization Auth Token** (Settings → Auth Tokens). It is only used to upload source maps.
+3. In Vercel → Settings → Environment Variables, for **Production** and **Preview**:
+
+| Variable            | Value                                | Secret?                                                                         |
+| ------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `VITE_SENTRY_DSN`   | Project settings → Client Keys (DSN) | No: it ends up in the bundle, by design                                         |
+| `SENTRY_AUTH_TOKEN` | The token from step 2                | **Yes.** Build-time only; never `VITE_`-prefix it, or it would be in the bundle |
+| `SENTRY_ORG`        | Your organization slug               | No                                                                              |
+| `SENTRY_PROJECT`    | The project slug                     | No                                                                              |
+
+4. Redeploy. New issues are emailed to you by default (Alerts in Sentry).
+
+**What is sent:** the error and its stack, browser and OS, the page path, URLs of recent requests (without query strings), the account's UUID, and the release (build id) and environment (production / preview).
+**Not sent:** email, IP address, request or response bodies (workouts), headers (the session token), cookies, or anything in localStorage ([`monitoring.ts`](src/lib/monitoring.ts)).
+**Not reported:** requests that got no answer (no signal, timeouts): they are not bugs, and saves retry by themselves.
+
 ### 4. Install on iPhone
 
 Open the deployed URL in **Safari** → Share → **Add to Home Screen** → open the app from the icon and sign in **there**.
@@ -96,6 +117,7 @@ The PR checks retry a failed test once, so a flaky test passes there; this run f
 
 - **Error screen, not a blank page** ([`ErrorBoundary`](src/shared/ui/ErrorBoundary.tsx)). One boundary wraps the page inside the layout: a crashed page, or a lazy page whose code failed to download (offline, or after a deploy), shows "Something went wrong" + Reload while the tab bar keeps working, and another tab clears it. A second one in `main.tsx` catches the rest. Errors in event handlers and async code don't reach a boundary; queries and mutations show their own errors.
   `errorElement` would need a data router (`createBrowserRouter`); the app uses `<BrowserRouter>`.
+- **Error reporting** ([`monitoring.ts`](src/lib/monitoring.ts)): React's root error options (`onCaughtError`, `onUncaughtError`, `onRecoverableError` in `main.tsx`) and TanStack Query's `QueryCache` / `MutationCache` `onError` send to Sentry; errors only, no tracing or replay. Sentry v11 collects request bodies, headers, cookies and query strings by default: all are turned off. Source maps are built `hidden` and deleted after the upload, only when `SENTRY_AUTH_TOKEN` is set. The e2e tests run with a fake DSN and check what is sent ([`monitoring.spec.ts`](e2e/monitoring.spec.ts)).
 
 - **Drag and drop** uses dnd-kit ([`SortableList`](src/shared/ui/SortableList.tsx)): the HTML5 drag-and-drop API does not fire for touch on iOS.
   Only the ⠿ handle starts a drag (the card still scrolls), and Space + arrow keys reorder with the keyboard, announced by exercise name.
