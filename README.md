@@ -92,6 +92,9 @@ The PR checks retry a failed test once, so a flaky test passes there; this run f
 - **Rest timer** stores `restEndsAt` (a timestamp), not a counter, so it stays correct after the app is backgrounded.
   The screen is kept awake during a workout (Wake Lock API). iOS PWAs cannot schedule a notification for when the rest ends.
 
+- **Error screen, not a blank page** ([`ErrorBoundary`](src/shared/ui/ErrorBoundary.tsx)). One boundary wraps the page inside the layout: a crashed page, or a lazy page whose code failed to download (offline, or after a deploy), shows "Something went wrong" + Reload while the tab bar keeps working, and another tab clears it. A second one in `main.tsx` catches the rest. Errors in event handlers and async code don't reach a boundary; queries and mutations show their own errors.
+  `errorElement` would need a data router (`createBrowserRouter`); the app uses `<BrowserRouter>`.
+
 - **Drag and drop** uses dnd-kit ([`SortableList`](src/shared/ui/SortableList.tsx)): the HTML5 drag-and-drop API does not fire for touch on iOS.
   Only the ⠿ handle starts a drag (the card still scrolls), and Space + arrow keys reorder with the keyboard, announced by exercise name.
 - **three.js is decoration, never required.** It lives in its own lazy chunk ([`src/three`](src/three)):

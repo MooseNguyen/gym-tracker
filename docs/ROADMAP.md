@@ -22,6 +22,7 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 14  | Monthly backup of the whole database and photos, tested restore       | #25 |
 | 15  | Supabase region checked: Sydney, kept (moving was not worth it)       | #25 |
 | 17  | Weekly CI run of the e2e suite × 4, no retries (flake hunt)           | #31 |
+| 20  | Error screen instead of a blank page (error boundary)                 | #33 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),
@@ -30,11 +31,15 @@ test fixed by a real wheel bug fix (#27).
 
 ## Next
 
-| #   | Status | Item                                                                            | Effort | Why                                                                                                       |
-| --- | ------ | ------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------- |
-| 16  | To do  | Restore a backup into an empty Supabase project, end to end                     | S      | The restore script has only run against a local database; a backup never restored is a hope, not a backup |
-| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                             |
-| 19  | Later  | Members can delete their account and all its data                               | M      | Not possible today; expected once the app has outside users                                               |
+| #   | Status | Item                                                                            | Effort | Why                                                                                                                                  |
+| --- | ------ | ------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| 16  | To do  | Restore a backup into an empty Supabase project, end to end                     | S      | The restore script has only run against a local database; a backup never restored is a hope, not a backup                            |
+| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                                                        |
+| 21  | To do  | Error reporting from production (Sentry free tier, or a Supabase table)         | S–M    | Crashes on other people's phones are invisible today; plugs into React 19's `createRoot` error options after item 20                 |
+| 22  | To do  | Save a finished workout automatically when the phone is back online             | S      | Gyms have poor signal; today a failed save waits for the user to press Try again. Safe to retry: the workout id is made on the phone |
+| 23  | To do  | Body weight log with a chart (kg / lb)                                          | S–M    | Not tracked today; a new table with RLS, a form in Me, Recharts is already there                                                     |
+| 19  | Later  | Members can delete their account and all its data                               | M      | Not possible today; expected once the app has outside users                                                                          |
+| 24  | Later  | Supersets: two or three exercises done in turn, rest after the group            | M–L    | Touches the schema, the workout draft, the rest timer and the UI; only worth it if supersets are used often                          |
 
 ## Checklist
 
@@ -57,3 +62,8 @@ test fixed by a real wheel bug fix (#27).
 - [x] 17. Scheduled repeated e2e run — #31
 - ~~18. Upload cap per account~~ — dropped: custom exercises have no photos
 - [ ] 19. Account deletion
+- [x] 20. Error screen (error boundary) — #33
+- [ ] 21. Production error reporting
+- [ ] 22. Auto-save when back online
+- [ ] 23. Body weight log
+- [ ] 24. Supersets
