@@ -139,7 +139,7 @@ export function Layout() {
       </nav>
 
       <Dialog open={sheet === 'me'} onClose={() => closeSheet('me')} title="Me">
-        <MeSheetBody onLogOut={() => setSheet('logout')} />
+        <MeSheetBody onLogOut={() => setSheet('logout')} onClose={() => closeSheet('me')} />
       </Dialog>
       <Dialog open={sheet === 'logout'} onClose={() => closeSheet('logout')} title="Log out?">
         <LogoutConfirm onCancel={() => setSheet(null)} />

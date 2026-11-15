@@ -9,8 +9,9 @@ import { HomePage } from './features/home/HomePage'
 import { ConfirmProvider } from './shared/ui/ConfirmDialog'
 import { Layout } from './shared/ui/Layout'
 
-// Recharts is the heaviest dependency and only this page needs it.
+// Recharts is the heaviest dependency and only these pages need it.
 const ExerciseStatsPage = lazy(() => import('./features/stats/ExerciseStatsPage'))
+const BodyWeightPage = lazy(() => import('./features/body/BodyWeightPage'))
 
 // Pages the app does not open on: their own chunks keep the start-up bundle
 // small (drag-and-drop lives in the workout and editor chunks). Fetched in
@@ -71,6 +72,14 @@ export function App() {
                 element={
                   <Suspense fallback={<p className="muted center">Loading…</p>}>
                     <ExerciseStatsPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="body-weight"
+                element={
+                  <Suspense fallback={<p className="muted center">Loading…</p>}>
+                    <BodyWeightPage />
                   </Suspense>
                 }
               />

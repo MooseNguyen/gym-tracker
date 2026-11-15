@@ -1,22 +1,30 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { supabase } from '../../lib/supabase'
 import type { Unit } from '../../shared/units'
 import { useAuth } from '../auth/AuthProvider'
+import { fetchBodyWeights } from '../body/api'
+import { bodyWeightsToCsv } from '../body/bodyWeight'
 import { fetchAllWorkouts } from '../history/api'
+import { dayKey } from '../home/calendar'
 import { useDraft } from '../workout/draftStore'
 import { useProfile, useSetUnit } from './api'
 import { saveFile, workoutsToCsv } from './csv'
 
 const UNITS: Unit[] = ['kg', 'lb']
 
-/** The account sheet behind the "Me" tab: settings, export, log out. */
-export function MeSheetBody({ onLogOut }: { onLogOut: () => void }) {
+/** The account sheet behind the "Me" tab: settings, body weight, export, log out. */
+export function MeSheetBody({ onLogOut, onClose }: { onLogOut: () => void; onClose: () => void }) {
   const email = useAuth().session?.user.email
   return (
     <div className="stack me-sheet">
       {email && <p className="muted">{email}</p>}
       <UnitSetting />
-      <ExportCsv />
+      {/* The sheet is a dialog over the page: close it, or it stays on top of the new one. */}
+      <Link className="btn block" to="/body-weight" onClick={onClose}>
+        Body weight
+      </Link>
+      <YourData />
       <button type="button" className="btn block danger" onClick={onLogOut}>
         Log out
       </button>
@@ -67,33 +75,72 @@ function UnitSetting() {
   )
 }
 
+function YourData() {
+  const unit = useProfile().data?.unit ?? 'kg'
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+  async function workoutsFile(): Promise<PreparedFile> {
+    const workouts = await fetchAllWorkouts()
+    const sets = workouts.reduce(
+      (n, w) => n + w.workout_exercises.reduce((m, we) => m + we.sets.length, 0),
+      0,
+    )
+    return {
+      file: csvFile(
+        workoutsToCsv(workouts, unit),
+        `gym-tracker-${new Date().toISOString().slice(0, 10)}.csv`,
+      ),
+      summary: `${plural(sets, 'set')}, weights in ${unit}.`,
+    }
+  }
+
+  async function bodyWeightFile(): Promise<PreparedFile> {
+    const entries = await fetchBodyWeights()
+    return {
+      file: csvFile(
+        bodyWeightsToCsv(entries, unit),
+        `gym-tracker-body-weight-${dayKey(new Date())}.csv`,
+      ),
+      summary: `${plural(entries.length, 'weigh-in')}, in ${unit}.`,
+    }
+  }
+
+  return (
+    <section className="stack me-section" aria-labelledby="export-heading">
+      <h3 id="export-heading">Your data</h3>
+      <CsvExport label="Export workouts (CSV)" prepare={workoutsFile} />
+      <CsvExport label="Export body weight (CSV)" prepare={bodyWeightFile} />
+    </section>
+  )
+}
+
+const csvFile = (csv: string, name: string) => new File([csv], name, { type: 'text/csv' })
+
+interface PreparedFile {
+  file: File
+  /** What is in it, shown under the Save button. */
+  summary: string
+}
+
 type ExportState =
   | { step: 'idle' }
   | { step: 'loading' }
-  | { step: 'ready'; file: File; sets: number; unit: Unit }
+  | ({ step: 'ready' } & PreparedFile)
   | { step: 'done' }
   | { step: 'error'; message: string }
 
 /**
- * Two taps on purpose: the first loads every workout, the second hands the
- * file over. iOS only opens the share sheet straight from a tap, and loading
- * a long history can take longer than Safari keeps that tap "fresh".
+ * Two taps on purpose: the first loads the data, the second hands the file
+ * over. iOS only opens the share sheet straight from a tap, and loading a
+ * long history can take longer than Safari keeps that tap "fresh".
  */
-function ExportCsv() {
-  const unit = useProfile().data?.unit ?? 'kg'
+function CsvExport({ label, prepare }: { label: string; prepare: () => Promise<PreparedFile> }) {
   const [state, setState] = useState<ExportState>({ step: 'idle' })
 
-  async function prepare() {
+  async function load() {
     setState({ step: 'loading' })
     try {
-      const workouts = await fetchAllWorkouts()
-      const csv = workoutsToCsv(workouts, unit)
-      const sets = workouts.reduce(
-        (n, w) => n + w.workout_exercises.reduce((m, we) => m + we.sets.length, 0),
-        0,
-      )
-      const name = `gym-tracker-${new Date().toISOString().slice(0, 10)}.csv`
-      setState({ step: 'ready', file: new File([csv], name, { type: 'text/csv' }), sets, unit })
+      setState({ step: 'ready', ...(await prepare()) })
     } catch (e) {
       setState({ step: 'error', message: e instanceof Error ? e.message : String(e) })
     }
@@ -105,25 +152,22 @@ function ExportCsv() {
   }
 
   return (
-    <section className="stack me-section" aria-labelledby="export-heading">
-      <h3 id="export-heading">Your data</h3>
+    <div className="stack">
       {state.step === 'ready' ? (
         <>
           <button type="button" className="btn block primary" onClick={() => save(state.file)}>
             Save {state.file.name}
           </button>
-          <p className="muted small-text">
-            {state.sets} set{state.sets === 1 ? '' : 's'}, weights in {state.unit}.
-          </p>
+          <p className="muted small-text">{state.summary}</p>
         </>
       ) : (
         <button
           type="button"
           className="btn block"
-          onClick={prepare}
+          onClick={load}
           disabled={state.step === 'loading'}
         >
-          {state.step === 'loading' ? 'Preparing…' : 'Export workouts (CSV)'}
+          {state.step === 'loading' ? 'Preparing…' : label}
         </button>
       )}
       {state.step === 'done' && <p className="muted small-text">Exported.</p>}
@@ -132,7 +176,7 @@ function ExportCsv() {
           Export failed: {state.message}
         </p>
       )}
-    </section>
+    </div>
   )
 }
 
