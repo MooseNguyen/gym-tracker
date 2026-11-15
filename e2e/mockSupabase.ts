@@ -61,8 +61,11 @@ export async function fakeLogin(page: Page, { admin = false }: { admin?: boolean
     access_token: 'e2e.fake.token',
     refresh_token: 'e2e-refresh',
     token_type: 'bearer',
+    // Far in the future: tests that fix the page's clock (page.clock) ahead
+    // of real time would otherwise find the session expired and get the
+    // login page. With +1 h, a fixed 09:00 failed on CI at 07:22 UTC.
     expires_in: 3600,
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600,
     // Admin rights come from app_metadata (set server-side, see the admin migration).
     user: admin ? { ...user, app_metadata: { role: 'admin' } } : user,
   }
@@ -107,6 +110,13 @@ export interface MockOptions {
   prs?: { workout_id: string; set_id: string; weight_pr: boolean; e1rm_pr: boolean }[]
   /** The account's saved weight unit; no profile row (kg) when left out. */
   unit?: 'kg' | 'lb'
+  /** Weigh-ins already on the server, any order. */
+  bodyWeights?: BodyWeightRow[]
+}
+
+export interface BodyWeightRow {
+  measured_on: string
+  weight_kg: number
 }
 
 export async function mockSupabase(page: Page, opts: MockOptions = {}) {
@@ -114,6 +124,10 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   /** Bodies of the settings upserts the app sent. */
   const profileWrites: { unit: string }[] = []
   let unit = opts.unit
+  /** The body_weights table, kept like the database would (one row a day). */
+  const bodyWeights: BodyWeightRow[] = [...(opts.bodyWeights ?? [])]
+  /** Bodies of the weigh-in upserts the app sent. */
+  const bodyWeightWrites: (BodyWeightRow & { user_id: string })[] = []
 
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -166,6 +180,28 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
       const rows = unit ? [{ unit }] : []
       return json(route, single ? (rows[0] ?? null) : rows)
     }
+    if (path === '/rest/v1/body_weights') {
+      if (req.method() === 'POST') {
+        const body = req.postDataJSON() as BodyWeightRow & { user_id: string }
+        bodyWeightWrites.push(body)
+        const row = { measured_on: body.measured_on, weight_kg: body.weight_kg }
+        const i = bodyWeights.findIndex((b) => b.measured_on === row.measured_on)
+        if (i >= 0) bodyWeights[i] = row
+        else bodyWeights.push(row)
+        return json(route, [{ measured_on: row.measured_on }], 201)
+      }
+      if (req.method() === 'DELETE') {
+        const day = url.searchParams.get('measured_on')?.replace('eq.', '')
+        const i = bodyWeights.findIndex((b) => b.measured_on === day)
+        if (i < 0) return json(route, [])
+        bodyWeights.splice(i, 1)
+        return json(route, [{ measured_on: day }])
+      }
+      return json(
+        route,
+        [...bodyWeights].sort((a, b) => a.measured_on.localeCompare(b.measured_on)),
+      )
+    }
     if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
     if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
@@ -212,7 +248,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     return json(route, { message: `Unmocked ${req.method()} ${path}` }, 501)
   })
 
-  return { saved, profileWrites }
+  return { saved, profileWrites, bodyWeights, bodyWeightWrites }
 }
 
 // ---------------------------------------------------------------------------

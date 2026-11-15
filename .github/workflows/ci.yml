@@ -105,6 +105,10 @@ jobs:
         run: >
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           -v ON_ERROR_STOP=1 -f supabase/tests/profiles_rls.sql
+      - name: Check who may read and change body weights (RLS)
+        run: >
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          -v ON_ERROR_STOP=1 -f supabase/tests/body_weights_rls.sql
       # Last, so a stale file never skips the database checks above.
       - name: Committed types match the migrations
         run: |

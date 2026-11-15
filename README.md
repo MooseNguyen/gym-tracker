@@ -124,6 +124,7 @@ Re-check with `npm audit` when updating any of these.
   Sets edited while waiting are sent again with the same id once the first save lands. Only while the page is open: leave it or close the app and the draft stays, so pressing Finish again saves it.
 - **RLS is the security boundary.** Every table is scoped to `auth.uid()`. The anon key in the bundle is public by design.
 - **Derived numbers are not stored.** Volume, e1RM (Epley) and PRs are computed from sets ([`shared/calc`](src/shared/calc/index.ts)), so editing an old set can never leave stale stats.
+- **Body weight** ([`src/features/body`](src/features/body), Me → Body weight): one weigh-in per account per day (`body_weights`, primary key `(user_id, measured_on)`), so a second one that day replaces the first. Stored in kg like sets and shown in the account's unit; the day is the phone's local date, not a timestamp. Exported as its own CSV from Me, next to the workouts. RLS is checked in CI ([`body_weights_rls.sql`](supabase/tests/body_weights_rls.sql)).
 - **Rest timer** stores `restEndsAt` (a timestamp), not a counter, so it stays correct after the app is backgrounded.
   The screen is kept awake during a workout (Wake Lock API). iOS PWAs cannot schedule a notification for when the rest ends.
 
