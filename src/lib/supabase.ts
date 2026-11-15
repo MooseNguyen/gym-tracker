@@ -14,5 +14,6 @@ if (!url || !anonKey) {
 // Typed by the generated schema: a renamed column or RPC argument is a type error.
 export const supabase = createClient<Database>(url, anonKey)
 
-// In their own module so tests can import them without Supabase env variables.
+// Kept in their own module, which has no side effects: importing it does not
+// create the Supabase client (monitoring.ts imports NetworkError from there).
 export { NetworkError, unwrap } from './unwrap'
