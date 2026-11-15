@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../../lib/supabase'
 import { queryClient, queryPersister } from '../../lib/queryClient'
+import { setMonitoringUser } from '../../lib/monitoring'
 import { setDraftOwner } from '../workout/draftStore'
 
 interface AuthState {
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const apply = (session: Session | null) => {
       // Switch the draft before the session, so no render pairs user B with A's draft.
       setDraftOwner(session?.user.id ?? null)
+      setMonitoringUser(session?.user.id ?? null)
       setState({ session, loading: false })
     }
 

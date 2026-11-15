@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
 
 export const MOCK_SUPABASE_URL = 'https://e2e-mock.supabase.co'
+/** Error reporting is on in e2e, as in production; events go to this fake host. */
+export const MOCK_SENTRY_HOST = 'e2e-sentry.invalid'
 
 export default defineConfig({
   testDir: 'e2e',
@@ -24,6 +26,7 @@ export default defineConfig({
     env: {
       VITE_SUPABASE_URL: MOCK_SUPABASE_URL,
       VITE_SUPABASE_ANON_KEY: 'e2e-anon-key',
+      VITE_SENTRY_DSN: `https://e2epublickey@${MOCK_SENTRY_HOST}/1`,
     },
   },
 })
