@@ -10,18 +10,23 @@ Installable on iPhone as a PWA.
 ### 1. Supabase project
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **SQL Editor** → run, in this order:
-   1. [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql)
-   2. [`supabase/seed.sql`](supabase/seed.sql)
-   3. [`supabase/migrations/20261107000000_folders_images.sql`](supabase/migrations/20261107000000_folders_images.sql) (folders + exercise photos)
-   4. [`supabase/migrations/20261108000000_exercise_instructions.sql`](supabase/migrations/20261108000000_exercise_instructions.sql) (step-by-step instructions)
+2. **Schema and built-in exercises.** The later migrations update the built-in exercises that `seed.sql` creates, so the seed must run right after the first migration, not after all of them (`db push --include-seed` runs it last):
+   1. **SQL Editor** → run [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql), then [`supabase/seed.sql`](supabase/seed.sql).
+   2. Link the CLI to the project (it asks for the database password; the ref is the subdomain of the project URL, 20 lowercase letters):
 
-   Steps 3 and 4 must run **after** the seed: they update the built-in exercises it creates.
-   If step 4 is missing, the app still works; the "How to" sheet just shows no steps.
+      ```sh
+      npx supabase link --project-ref <ref>
+      ```
 
-   Or with the CLI: `npx supabase link --project-ref <ref>` then `npx supabase db push --include-seed`.
+   3. Record the first migration as applied, so the CLI does not run it again, then apply the rest:
 
-   > **Upgrading an existing database?** Run only the migrations you have not run yet. Never edit a migration that already ran: add a new one.
+      ```sh
+      npx supabase migration repair --status applied 20261106000000
+      npx supabase db push --dry-run   # lists what will run
+      npx supabase db push
+      ```
+
+   > **Changing the schema later:** add a new file to `supabase/migrations` (never edit one that already ran), then `npx supabase db push --dry-run` and `npx supabase db push`. Apply migrations **only** with `db push`, never by pasting them into the SQL Editor: the CLI records what ran in `supabase_migrations.schema_migrations`, and a migration run by hand is missing there, so the next push tries to run it again (`type "…" already exists`). If that happens, check that the migration's tables and columns exist, mark it with `npx supabase migration repair --status applied <version>`, and push again.
 
 3. **Authentication → Sign In / Providers → Email**: keep Email enabled.
    - "Confirm email" **on**: after creating the account, click the link in the confirmation email once (opening it in Safari is fine), then sign in.
