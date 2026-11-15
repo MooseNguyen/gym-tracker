@@ -23,7 +23,21 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "exercises": {
+            "body_weights": {
+                  Row: {
+                    "measured_on": string,"updated_at": string,"user_id": string,"weight_kg": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "measured_on": string,"updated_at"?: string,"user_id"?: string,"weight_kg": number
+                  }
+                  Update: {
+                    "measured_on"?: string,"updated_at"?: string,"user_id"?: string,"weight_kg"?: number
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"exercises": {
                   Row: {
                     "created_at": string,"equipment": string,"hidden": boolean,"id": string,"image_path": string | null,"image_path_end": string | null,"instructions": (string)[] | null,"kind": Database["public"]['Enums']["exercise_kind"],"muscle_group": string,"name": string,"secondary_muscles": (string)[],"user_id": string | null
                   }

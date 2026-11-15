@@ -13,4 +13,7 @@ union all select 'workouts', count(*) from public.workouts
 union all select 'workout_exercises', count(*) from public.workout_exercises
 union all select 'sets', count(*) from public.sets
 union all select 'profiles', count(*) from public.profiles
-union all select 'photos', count(*) from storage.objects where bucket_id = 'exercise-images';
+union all select 'photos', count(*) from storage.objects where bucket_id = 'exercise-images'
+-- New tables go last: restore.mjs compares line by line, so a backup made
+-- before a table existed still checks every line it has.
+union all select 'body_weights', count(*) from public.body_weights;
