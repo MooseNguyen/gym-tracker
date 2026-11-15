@@ -103,6 +103,18 @@ The PR checks retry a failed test once, so a flaky test passes there; this run f
 - **When it fails** (GitHub emails whoever last changed the workflow file): download the `playwright-report-repeat` artifact and open the failing test's trace with `npx playwright show-trace <trace.zip>`. It shows the exact step and the page at that moment.
 - A failure here is often a real timing bug, not just a bad test (the rest wheel, #27): reproduce it locally with `npx playwright test <file> --repeat-each=40 --workers=8` before changing the test.
 
+### npm audit
+
+`npm audit --omit=dev` (what ships to phones) must stay at **0**. The rest is build and lint tooling; what is left, checked on 2026-11-15, is accepted for now:
+
+| Finding                                           | Pulled in by                                                 | Why it is accepted                                                                                                                   |
+| ------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `glob`, `minimatch` (moderate), `deepmerge` (low) | `vite-plugin-pwa` → `workbox-build`                          | Build only, on this repo's own patterns. No fix: `npm audit` suggests a downgrade, and workbox-build 7.4.1 (latest) still uses them. |
+| `minimatch` (moderate)                            | `typescript-eslint` → `@typescript-eslint/typescript-estree` | Lint only, on our own globs. Its latest (8.72.2) still asks for `minimatch@^10`; the fix is in 11.                                   |
+| `glob` → `minimatch` (moderate)                   | `@sentry/vite-plugin` 11.10.0                                | Build only. Fixed in 11.12.0 (2026-11-10): move it and `@sentry/react` to 11.12 together once that release is two weeks old.         |
+
+Re-check with `npm audit` when updating any of these.
+
 ## Architecture notes
 
 - **Workout in progress = local draft** ([`draft.ts`](src/features/workout/draft.ts), [`draftStore.ts`](src/features/workout/draftStore.ts)).
