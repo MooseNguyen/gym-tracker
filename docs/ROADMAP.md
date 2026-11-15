@@ -25,6 +25,7 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 20  | Error screen instead of a blank page (error boundary)                 | #33 |
 | 22  | A finished workout saves by itself when the signal comes back         | #34 |
 | 21  | Errors from production reported to Sentry (no personal data)          | #35 |
+| 23  | Body weight log with a chart (kg / lb) and its own CSV export         | #37 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),
@@ -37,7 +38,6 @@ test fixed by a real wheel bug fix (#27).
 | --- | ------ | ------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
 | 16  | To do  | Restore a backup into an empty Supabase project, end to end                     | S      | The restore script has only run against a local database; a backup never restored is a hope, not a backup   |
 | 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                               |
-| 23  | To do  | Body weight log with a chart (kg / lb)                                          | S–M    | Not tracked today; a new table with RLS, a form in Me, Recharts is already there                            |
 | 19  | Later  | Members can delete their account and all its data                               | M      | Not possible today; expected once the app has outside users                                                 |
 | 24  | Later  | Supersets: two or three exercises done in turn, rest after the group            | M–L    | Touches the schema, the workout draft, the rest timer and the UI; only worth it if supersets are used often |
 
@@ -65,5 +65,5 @@ test fixed by a real wheel bug fix (#27).
 - [x] 20. Error screen (error boundary) — #33
 - [x] 21. Production error reporting — #35
 - [x] 22. Auto-save when back online — #34
-- [ ] 23. Body weight log
+- [x] 23. Body weight log — #37
 - [ ] 24. Supersets
