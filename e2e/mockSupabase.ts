@@ -61,8 +61,11 @@ export async function fakeLogin(page: Page, { admin = false }: { admin?: boolean
     access_token: 'e2e.fake.token',
     refresh_token: 'e2e-refresh',
     token_type: 'bearer',
+    // Far in the future: tests that fix the page's clock (page.clock) ahead
+    // of real time would otherwise find the session expired and get the
+    // login page. With +1 h, a fixed 09:00 failed on CI at 07:22 UTC.
     expires_in: 3600,
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600,
     // Admin rights come from app_metadata (set server-side, see the admin migration).
     user: admin ? { ...user, app_metadata: { role: 'admin' } } : user,
   }
