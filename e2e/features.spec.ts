@@ -19,12 +19,19 @@ async function exerciseAction(page: Page, exercise: string, item: string) {
   await page.getByRole('dialog', { name: exercise }).getByRole('button', { name: item }).click()
 }
 
-/** Finish, and confirm dropping the sets left unticked. */
+/**
+ * Finish a Push workout, and confirm dropping the sets left unticked. One set
+ * done is not the routine's 3 + 3, so it asks about Push too: keep it.
+ */
 async function finishDroppingUnticked(page: Page) {
   await page.getByRole('button', { name: 'Finish workout' }).click()
   await page
     .getByRole('dialog', { name: 'Finish workout?' })
     .getByRole('button', { name: 'Finish' })
+    .click()
+  await page
+    .getByRole('dialog', { name: 'Update "Push"?' })
+    .getByRole('button', { name: 'Keep routine' })
     .click()
 }
 

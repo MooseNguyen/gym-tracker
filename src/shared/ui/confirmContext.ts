@@ -5,6 +5,7 @@ import { createContext, useContext, type ReactNode } from 'react'
 
 export interface ConfirmOptions {
   title: string
+  /** Text is wrapped in a paragraph; other content is shown as it is. */
   message?: ReactNode
   confirmLabel?: string
   cancelLabel?: string

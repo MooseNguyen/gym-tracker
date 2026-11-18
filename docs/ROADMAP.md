@@ -26,6 +26,7 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 22  | A finished workout saves by itself when the signal comes back         | #34 |
 | 21  | Errors from production reported to Sentry (no personal data)          | #35 |
 | 23  | Body weight log with a chart (kg / lb) and its own CSV export         | #37 |
+| 25  | After a workout that differs from its routine, ask to update it       | #39 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),

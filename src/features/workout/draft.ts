@@ -444,6 +444,15 @@ export function completedSetCount(d: WorkoutDraft): number {
   return d.exercises.reduce((n, e) => n + e.sets.filter((s) => s.completed).length, 0)
 }
 
+/**
+ * Whether Finish saves this set: ticked, with its required value. Second check
+ * on top of the tick: a draft saved before ticking was validated (or edited
+ * afterwards) can still hold a ticked set with no reps. Never save it.
+ */
+export function isSavedSet(kind: ExerciseKind, set: DraftSet): boolean {
+  return set.completed && hasRequiredValue(kind, set)
+}
+
 /** Only completed sets are saved; exercises left with no completed sets are dropped. */
 export function toSavePayload(d: WorkoutDraft, now = new Date()): SaveWorkoutPayload {
   const unit = draftUnit(d)
@@ -471,9 +480,7 @@ export function toSavePayload(d: WorkoutDraft, now = new Date()): SaveWorkoutPay
         exercise_id: e.exerciseId,
         notes: e.notes.trim() || null,
         sets: e.sets
-          // Second check: a draft saved before ticking was validated (or edited
-          // afterwards) can still hold a ticked set with no reps. Never save it.
-          .filter((s) => s.completed && hasRequiredValue(e.kind, s))
+          .filter((s) => isSavedSet(e.kind, s))
           .map((s) => ({
             set_type: s.setType,
             // Every kind can carry weight: a weighted pull-up, a plate on a plank.
