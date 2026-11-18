@@ -3,6 +3,10 @@ import type { ExerciseKind, PreviousSet, Workout } from '../../types/db'
 import {
   addSet,
   adjustCountdown,
+  clearDuration,
+  durationSeconds,
+  maxDurationSeconds,
+  setDuration,
   completedVolume,
   draftFromWorkout,
   startCountdown,
@@ -503,5 +507,32 @@ describe('a draft typed in lb', () => {
     const ex = d.exercises[0]
     d = updateSet(d, ex.id, ex.sets[0].id, { weight: '100', reps: '5', completed: true })
     expect(toSavePayload(d).exercises[0].sets[0].weight_kg).toBe(100)
+  })
+})
+
+describe('duration set by hand', () => {
+  const start = new Date('2026-11-18T07:00:00Z')
+  const at = (h: number, m = 0) => Date.parse('2026-11-18T07:00:00Z') + (h * 60 + m) * 60_000
+  const running = () => newDraft({ name: 'Push' }, start)
+
+  it('runs until set, then stays at the set value and ends the workout there', () => {
+    const d = running()
+    expect(durationSeconds(d, at(3))).toBe(3 * 3600)
+    const set = setDuration(d, 70 * 60)
+    expect(durationSeconds(set, at(5))).toBe(70 * 60) // no longer follows the clock
+    expect(set.startedAt).toBe(d.startedAt)
+    expect(toSavePayload(set, new Date(at(5))).ended_at).toBe('2026-11-18T08:10:00.000Z')
+  })
+
+  it('back to the live clock for a new workout, never for an edited one', () => {
+    const set = setDuration(running(), 600)
+    expect(clearDuration(set).endedAt).toBeNull()
+    const edited = { ...set, mode: 'edit' as const }
+    expect(clearDuration(edited)).toBe(edited)
+  })
+
+  it('at most the time since the start, and never over 24 h', () => {
+    expect(maxDurationSeconds(running(), at(0, 45))).toBe(45 * 60)
+    expect(maxDurationSeconds(running(), at(30))).toBe(24 * 3600)
   })
 })
