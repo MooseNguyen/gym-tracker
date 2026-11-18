@@ -114,6 +114,14 @@ export interface MockOptions {
   bodyWeights?: BodyWeightRow[]
 }
 
+export interface RoutineWrite {
+  id?: string
+  name: string
+  notes: string | null
+  folder_id: string | null
+  exercises: { exercise_id: string; target_sets: number; rest_seconds: number }[]
+}
+
 export interface BodyWeightRow {
   measured_on: string
   weight_kg: number
@@ -128,6 +136,8 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   const bodyWeights: BodyWeightRow[] = [...(opts.bodyWeights ?? [])]
   /** Bodies of the weigh-in upserts the app sent. */
   const bodyWeightWrites: (BodyWeightRow & { user_id: string })[] = []
+  /** Bodies of the save_routine calls the app made. */
+  const routineWrites: RoutineWrite[] = []
 
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -202,7 +212,19 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
         [...bodyWeights].sort((a, b) => a.measured_on.localeCompare(b.measured_on)),
       )
     }
-    if (path === '/rest/v1/routines') return json(route, opts.routines ?? [])
+    if (path === '/rest/v1/routines') {
+      const all = (opts.routines ?? []) as { id: string }[]
+      // By id: the routine editor (.single()) and the check after a workout (.maybeSingle()).
+      const id = url.searchParams.get('id')?.replace('eq.', '')
+      if (!id) return json(route, all)
+      const found = all.filter((r) => r.id === id)
+      return json(route, single ? (found[0] ?? null) : found)
+    }
+    if (path === '/rest/v1/rpc/save_routine') {
+      const { p } = req.postDataJSON() as { p: RoutineWrite }
+      routineWrites.push(p)
+      return json(route, p.id ?? 'r-new')
+    }
     if (path === '/rest/v1/routine_folders') return json(route, opts.folders ?? [])
     if (path === '/rest/v1/rpc/previous_sets') {
       const prev = opts.previous
@@ -248,7 +270,7 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     return json(route, { message: `Unmocked ${req.method()} ${path}` }, 501)
   })
 
-  return { saved, profileWrites, bodyWeights, bodyWeightWrites }
+  return { saved, profileWrites, bodyWeights, bodyWeightWrites, routineWrites }
 }
 
 // ---------------------------------------------------------------------------

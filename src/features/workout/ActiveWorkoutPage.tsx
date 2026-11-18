@@ -9,7 +9,16 @@ import { Dialog } from '../../shared/ui/Dialog'
 import { Disclosure } from '../../shared/ui/Disclosure'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { MoveButtons, SortableList, type ItemControls } from '../../shared/ui/SortableList'
-import type { Exercise, PreviousSet, SetType } from '../../types/db'
+import type { Exercise, PreviousSet, Routine, SetType } from '../../types/db'
+import { reportError } from '../../lib/monitoring'
+import { fetchRoutine, useSaveRoutine } from '../routines/api'
+import {
+  describeChanges,
+  doneExercises,
+  hasChanges,
+  routineChanges,
+  routineInputFrom,
+} from '../routines/routineSync'
 import {
   addExercises,
   addSet,
@@ -54,6 +63,9 @@ export function ActiveWorkoutPage() {
   const draft = useDraft()
   const navigate = useNavigate()
   const save = useSaveWorkout()
+  const saveRoutine = useSaveRoutine()
+  // Saved; now asking about (or updating) the routine it was started from.
+  const [syncingRoutine, setSyncingRoutine] = useState(false)
   const [picking, setPicking] = useState(false)
   const [celebration, setCelebration] = useState<Celebration | null>(null)
   // View state only (not part of the draft): which exercise cards are folded.
@@ -159,7 +171,7 @@ export function ActiveWorkoutPage() {
 
   function send(sent: WorkoutDraft) {
     save.mutate(toSavePayload(sent), {
-      onSuccess: (id) => {
+      onSuccess: async (id) => {
         // Edited while the save waited for signal: those edits must not be
         // dropped. Same id, so this replaces what was just saved.
         const latest = getDraft()
@@ -169,10 +181,55 @@ export function ActiveWorkoutPage() {
           send(latest)
           return
         }
+        // After the save, so the workout is never held up by the routine.
+        if (sent.mode === 'new' && sent.routineId) await offerRoutineUpdate(sent.routineId, sent)
         setDraft(null)
         navigate(`/history/${id}`, { replace: true })
       },
     })
+  }
+
+  /** Asks to make the routine match what was done, when it differs. Never throws. */
+  async function offerRoutineUpdate(routineId: string, sent: WorkoutDraft) {
+    setSyncingRoutine(true)
+    try {
+      let routine: Routine | null
+      try {
+        // The server's copy: the routine may have been edited during the workout.
+        routine = await fetchRoutine(routineId)
+      } catch (error) {
+        reportError(error) // only an offer: the workout is saved, so move on
+        return
+      }
+      if (!routine) return // deleted since the workout started
+      const done = doneExercises(sent)
+      const changes = routineChanges(routine, done)
+      if (!hasChanges(changes)) return
+      const update = await confirm({
+        title: `Update "${routine.name}"?`,
+        message: <RoutineChangeList lines={describeChanges(changes)} />,
+        confirmLabel: 'Update routine',
+        cancelLabel: 'Keep routine',
+      })
+      if (!update) return
+      const input = routineInputFrom(routine, done)
+      for (;;) {
+        try {
+          await saveRoutine.mutateAsync(input)
+          return
+        } catch {
+          const retry = await confirm({
+            title: `Couldn't update "${routine.name}"`,
+            message: 'Your workout is saved. The routine stays as it was.',
+            confirmLabel: 'Try again',
+            cancelLabel: 'Skip',
+          })
+          if (!retry) return
+        }
+      }
+    } finally {
+      setSyncingRoutine(false)
+    }
   }
 
   async function removeWithConfirm(ex: DraftExercise) {
@@ -246,11 +303,11 @@ export function ActiveWorkoutPage() {
             className="btn primary finish-btn"
             aria-label={isNew ? 'Finish workout' : 'Save changes'}
             onClick={finish}
-            disabled={save.isPending}
+            disabled={save.isPending || syncingRoutine}
           >
             {waitingForSignal
               ? 'Waiting for signal…'
-              : save.isPending
+              : save.isPending || syncingRoutine
                 ? 'Saving…'
                 : isNew
                   ? 'Finish'
@@ -800,5 +857,19 @@ function SuggestionLine({
         Apply
       </button>
     </div>
+  )
+}
+
+function RoutineChangeList({ lines }: { lines: string[] }) {
+  return (
+    <>
+      <p>Make the routine match this workout:</p>
+      <ul className="change-list" aria-label="Changes">
+        {lines.map((line, i) => (
+          // A line can repeat (the same exercise removed twice): the index tells them apart.
+          <li key={i}>{line}</li>
+        ))}
+      </ul>
+    </>
   )
 }

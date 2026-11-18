@@ -822,6 +822,11 @@ button.link {
 .confirm-body p {
   line-height: 1.5;
 }
+.change-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  line-height: 1.5;
+}
 .confirm-actions .btn {
   min-height: 48px;
 }

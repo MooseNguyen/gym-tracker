@@ -73,7 +73,8 @@ function ConfirmBody({
 }) {
   return (
     <div className="stack confirm-body">
-      {options.message && <p>{options.message}</p>}
+      {/* Text gets its paragraph; markup (a list) brings its own: no <ul> inside a <p>. */}
+      {typeof options.message === 'string' ? <p>{options.message}</p> : options.message}
       <div className="row confirm-actions">
         <button type="button" className="btn" onClick={() => onAnswer(false)}>
           {options.cancelLabel ?? 'Cancel'}

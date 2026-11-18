@@ -39,6 +39,18 @@ export function useRoutine(id: string | undefined) {
   })
 }
 
+/** The routine as the server has it now; null when it was deleted. */
+export async function fetchRoutine(id: string): Promise<Routine | null> {
+  return unwrap(
+    await supabase
+      .from('routines')
+      .select(ROUTINE_SELECT)
+      .eq('id', id)
+      .order('position', { referencedTable: 'routine_exercises' })
+      .maybeSingle(),
+  ) as unknown as Routine | null
+}
+
 // A type, not an interface: only type aliases fit the generated Json type of the RPC argument.
 export type RoutineInput = {
   id?: string
