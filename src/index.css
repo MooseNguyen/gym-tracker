@@ -1154,6 +1154,17 @@ button.link {
 .workout-bar .stat-value {
   font-size: 1.25rem;
 }
+/* A stat that opens its editor (the duration): looks like the value, underlined to show it is tappable. */
+.stat-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
 .title-input {
   font-family: var(--font-display);
   font-size: 2rem;
@@ -2253,6 +2264,11 @@ button.link {
 }
 .time-wheel-item.on {
   color: var(--text);
+}
+.duration-wheels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 .timer-sheet .segmented {
   margin-bottom: 4px;

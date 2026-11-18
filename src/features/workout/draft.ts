@@ -50,7 +50,10 @@ export interface WorkoutDraft {
   name: string
   notes: string
   startedAt: string
-  /** Only set when editing a saved workout, so its duration is preserved. */
+  /**
+   * Set when editing a saved workout (its end), or when the duration was set
+   * by hand (setDuration); null = the workout ends when Finish is pressed.
+   */
   endedAt: string | null
   exercises: DraftExercise[]
   /** Epoch ms. A timestamp, not a counter: it stays correct after the app is backgrounded. */
@@ -438,6 +441,34 @@ export type SaveWorkoutPayload = {
       rpe: number | null
     }[]
   }[]
+}
+
+// ---------------------------------------------------------------------------
+// Duration set by hand (forgot to press Finish, or fixing a saved workout).
+// The start stays; the end becomes start + duration.
+// ---------------------------------------------------------------------------
+
+export const MIN_DURATION_S = 60
+export const MAX_DURATION_S = 24 * 3600
+
+/** Seconds from the start to the set end, or to `now` while it runs. */
+export function durationSeconds(d: WorkoutDraft, now: number): number {
+  const end = d.endedAt ? Date.parse(d.endedAt) : now
+  return Math.max(0, Math.floor((end - Date.parse(d.startedAt)) / 1000))
+}
+
+/** Longest duration allowed: 24 h, and the end never after `now`. */
+export function maxDurationSeconds(d: WorkoutDraft, now: number): number {
+  return Math.min(MAX_DURATION_S, Math.floor((now - Date.parse(d.startedAt)) / 1000))
+}
+
+export function setDuration(d: WorkoutDraft, seconds: number): WorkoutDraft {
+  return { ...d, endedAt: new Date(Date.parse(d.startedAt) + seconds * 1000).toISOString() }
+}
+
+/** Back to a running clock: the workout ends when Finish is pressed. New workouts only. */
+export function clearDuration(d: WorkoutDraft): WorkoutDraft {
+  return d.mode === 'new' ? { ...d, endedAt: null } : d
 }
 
 export function completedSetCount(d: WorkoutDraft): number {

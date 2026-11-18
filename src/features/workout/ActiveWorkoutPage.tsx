@@ -28,6 +28,7 @@ import {
   describeImprovement,
   improvementOver,
   draftUnit,
+  durationSeconds,
   MAX_REPS,
   parseNumber,
   removeExercise,
@@ -54,7 +55,7 @@ import { playCelebration } from './celebrate'
 import { PlateSheet } from './PlateSheet'
 import { ReorderSheet } from './ReorderSheet'
 import { RestTimer } from './RestTimer'
-import { RestPickerSheet, TimerSheet } from './TimerSheets'
+import { DurationSheet, RestPickerSheet, TimerSheet } from './TimerSheets'
 import { spokenSeconds, STOPPED, stopwatchElapsed } from './timers'
 import { formatDuration, useNow } from './useNow'
 import { useWakeLock } from './useWakeLock'
@@ -82,6 +83,7 @@ export function ActiveWorkoutPage() {
   const [replacing, setReplacing] = useState<DraftExercise | null>(null)
   const [reordering, setReordering] = useState(false)
   const [timerOpen, setTimerOpen] = useState(false)
+  const [durationOpen, setDurationOpen] = useState(false)
   const isNew = draft?.mode === 'new'
   const now = useNow(1000, isNew)
   const stopwatch = draft?.stopwatch ?? STOPPED
@@ -113,6 +115,9 @@ export function ActiveWorkoutPage() {
   const waitingForSignal =
     save.isPaused || (save.isPending && save.failureReason instanceof NetworkError)
   const unit = draftUnit(draft)
+  // Set by hand (a new workout) or the saved one's (editing): fixed, not running.
+  const durationFixed = isNew && draft.endedAt != null
+  const durationText = formatDuration(durationSeconds(draft, now))
   const allCollapsed =
     draft.exercises.length > 0 && draft.exercises.every((e) => collapsed.has(e.id))
 
@@ -316,9 +321,17 @@ export function ActiveWorkoutPage() {
         </div>
         <dl className="workout-stats">
           <div>
-            <dt className="stat-label">Duration</dt>
+            <dt className="stat-label">{durationFixed ? 'Duration (set)' : 'Duration'}</dt>
             <dd className="stat-value">
-              {isNew ? formatDuration((now - Date.parse(draft.startedAt)) / 1000) : 'Editing'}
+              <button
+                type="button"
+                className="stat-button"
+                aria-label={`Duration ${durationText}, change`}
+                aria-haspopup="dialog"
+                onClick={() => setDurationOpen(true)}
+              >
+                {durationText}
+              </button>
             </dd>
           </div>
           <div>
@@ -419,6 +432,7 @@ export function ActiveWorkoutPage() {
         <RestTimer endsAt={draft.restEndsAt} totalMs={draft.restTotalMs} />
       )}
       <TimerSheet open={timerOpen} onClose={() => setTimerOpen(false)} />
+      <DurationSheet open={durationOpen} onClose={() => setDurationOpen(false)} />
       <PrBanner celebration={celebration} onDone={clearCelebration} />
 
       <ExercisePicker

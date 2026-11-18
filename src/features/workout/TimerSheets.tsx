@@ -1,7 +1,14 @@
 import { useState } from 'react'
 import { Dialog } from '../../shared/ui/Dialog'
 import { TimeWheel } from '../../shared/ui/TimeWheel'
-import { startCountdown } from './draft'
+import {
+  clearDuration,
+  durationSeconds,
+  maxDurationSeconds,
+  MIN_DURATION_S,
+  setDuration,
+  startCountdown,
+} from './draft'
 import { setDraft, useDraft } from './draftStore'
 import {
   formatStopwatch,
@@ -156,4 +163,95 @@ function StopwatchPanel() {
       </div>
     </div>
   )
+}
+
+const HOURS = Array.from({ length: 24 }, (_, h) => h)
+const MINUTES = Array.from({ length: 60 }, (_, m) => m)
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/** Hours and minutes of the workout; Save sets the end to start + that. */
+export function DurationSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Dialog open={open} onClose={onClose} title="Duration">
+      <DurationBody onDone={onClose} />
+    </Dialog>
+  )
+}
+
+// Own component: the wheels start from the current duration each time the sheet opens.
+function DurationBody({ onDone }: { onDone: () => void }) {
+  const draft = useDraft()
+  const [opened] = useState(() => Date.now())
+  const current = draft ? durationSeconds(draft, opened) : 0
+  const [hours, setHours] = useState(() => Math.min(23, Math.floor(current / 3600)))
+  const [minutes, setMinutes] = useState(() => Math.floor((current % 3600) / 60))
+  if (!draft) return null
+
+  const chosen = hours * 3600 + minutes * 60
+  const max = maxDurationSeconds(draft, opened)
+  const problem =
+    chosen < MIN_DURATION_S
+      ? 'At least 1 minute.'
+      : chosen > max
+        ? `At most ${formatHoursMinutes(max)}: the time since the workout started.`
+        : null
+
+  return (
+    <div className="stack timer-sheet">
+      <p className="muted center">The start stays; the end moves.</p>
+      <div className="duration-wheels">
+        <TimeWheel
+          values={HOURS}
+          value={hours}
+          onChange={setHours}
+          format={(h) => `${h} h`}
+          spoken={(h) => plural(h, 'hour')}
+          label="Hours"
+        />
+        <TimeWheel
+          values={MINUTES}
+          value={minutes}
+          onChange={setMinutes}
+          format={(m) => `${m} min`}
+          spoken={(m) => plural(m, 'minute')}
+          label="Minutes"
+        />
+      </div>
+      {problem && (
+        <p role="alert" className="error center">
+          {problem}
+        </p>
+      )}
+      <button
+        type="button"
+        className="btn primary block"
+        disabled={problem != null}
+        onClick={() => {
+          setDraft((d) => setDuration(d, chosen))
+          onDone()
+        }}
+      >
+        Save
+      </button>
+      {draft.mode === 'new' && draft.endedAt && (
+        <button
+          type="button"
+          className="btn block"
+          onClick={() => {
+            setDraft(clearDuration)
+            onDone()
+          }}
+        >
+          Use live time
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** "1 h 10 min", "45 min". */
+function formatHoursMinutes(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  return h > 0 ? `${h} h ${m} min` : `${m} min`
 }

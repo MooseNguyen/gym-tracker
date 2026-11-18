@@ -1,11 +1,12 @@
 import { Link } from 'react-router'
-import type { WorkoutDraft } from './draft'
+import { durationSeconds, type WorkoutDraft } from './draft'
 import { formatDuration, useNow } from './useNow'
 
 /**
  * The workout in progress, docked above the tab bar on every page except the
  * workout itself, so it is one tap away from anywhere. Shows the running rest
- * countdown when there is one, otherwise the time since the start.
+ * countdown when there is one, otherwise the time since the start
+ * (or the duration set by hand).
  */
 export function LiveWorkoutBar({ draft }: { draft: WorkoutDraft }) {
   const now = useNow(1000)
@@ -16,7 +17,7 @@ export function LiveWorkoutBar({ draft }: { draft: WorkoutDraft }) {
   let status: string
   if (editing) status = 'Editing'
   else if (resting) status = `Rest ${formatDuration(restLeft)}`
-  else status = formatDuration(Math.floor((now - Date.parse(draft.startedAt)) / 1000))
+  else status = formatDuration(durationSeconds(draft, now)) // the set duration, if any
 
   return (
     <Link
