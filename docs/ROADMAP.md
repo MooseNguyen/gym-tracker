@@ -36,12 +36,16 @@ test fixed by a real wheel bug fix (#27).
 
 ## Next
 
-| #   | Status | Item                                                                            | Effort | Why                                                                                                         |
-| --- | ------ | ------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------- |
-| 16  | To do  | Restore a backup into an empty Supabase project, end to end                     | S      | The restore script has only run against a local database; a backup never restored is a hope, not a backup   |
-| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet                               |
-| 19  | Later  | Members can delete their account and all its data                               | M      | Not possible today; expected once the app has outside users                                                 |
-| 24  | Later  | Supersets: two or three exercises done in turn, rest after the group            | M–L    | Touches the schema, the workout draft, the rest timer and the UI; only worth it if supersets are used often |
+| #   | Status | Item                                                                                                                    | Effort | Why                                                                                                                                                                                                             |
+| --- | ------ | ----------------------------------------------------------------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 16  | To do  | Restore a backup into an empty Supabase project, end to end; seed becomes a migration right after init                  | S–M    | The restore script has only run against a local database; a backup never restored is a hope, not a backup. A fresh database built by the CLI runs the seed last, after the migrations that update its exercises |
+| 10  | To do  | Check on a real iPhone: glass blur, page transitions, Me sheet, CSV share sheet, Update routine dialog, Duration wheels | S      | Headless browsers in CI don't render `backdrop-filter` or the iOS share sheet, and wheels feel different under a finger                                                                                         |
+| 27  | Idea   | Sticky note per exercise ("seat on 4, wide grip"), shown every time the exercise comes up                               | M      | Workout notes stay with that one workout; set-up details are needed every session. New table with RLS                                                                                                           |
+| 28  | Idea   | Warm-up sets generated from the working weight (e.g. 40 % × 10, 60 % × 5, 80 % × 3), rounded to the plates              | S      | Reuses the plate calculator and the Warm-up set type; no mental maths before a heavy lift. No schema change                                                                                                     |
+| 29  | Idea   | Weekly goal (e.g. 4 workouts) with progress and a streak on Home                                                        | S–M    | Keeps the habit going; builds on the 28-day strip. One column on `profiles`                                                                                                                                     |
+| 30  | Idea   | Bodyweight exercises' volume counts the logged body weight (pull-up = body + added)                                     | S      | Today only the added weight counts, so their volume is near zero. Needs a rule for days with no weigh-in                                                                                                        |
+| 31  | Idea   | Import history from a Hevy or Strong CSV                                                                                | M      | Someone moving from another app keeps their history; matters once others use the app                                                                                                                            |
+| 32  | Idea   | Automated accessibility checks (axe) in the e2e suite                                                                   | S      | Catches a11y regressions on every PR instead of by hand. New dev dependency `@axe-core/playwright` (test only, not in the bundle)                                                                               |
 
 ## Checklist
 
@@ -63,9 +67,17 @@ test fixed by a real wheel bug fix (#27).
 - [ ] 16. Restore test on a real project
 - [x] 17. Scheduled repeated e2e run — #31
 - ~~18. Upload cap per account~~ — dropped: custom exercises have no photos
-- [ ] 19. Account deletion
+- ~~19. Account deletion~~ — dropped
 - [x] 20. Error screen (error boundary) — #33
 - [x] 21. Production error reporting — #35
 - [x] 22. Auto-save when back online — #34
 - [x] 23. Body weight log — #37
-- [ ] 24. Supersets
+- ~~24. Supersets~~ — dropped
+- [x] 25. Ask to update the routine after a workout — #39
+- [x] 26. Duration set by hand — #40
+- [ ] 27. Sticky exercise notes
+- [ ] 28. Warm-up set generator
+- [ ] 29. Weekly goal and streak
+- [ ] 30. Bodyweight volume with logged body weight
+- [ ] 31. Import from Hevy / Strong
+- [ ] 32. Accessibility checks (axe)
