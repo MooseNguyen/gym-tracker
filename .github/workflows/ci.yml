@@ -64,7 +64,7 @@ jobs:
           retention-days: 7
 
   migrations:
-    name: Migrations + seed on a fresh database
+    name: Migrations on a fresh database
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -77,7 +77,7 @@ jobs:
       # The repo keeps no config.toml; defaults are enough for a throwaway DB.
       - run: npx supabase init
       # Real Supabase Postgres (auth schema included) in Docker:
-      # applies every migration in order, then seed.sql.
+      # applies every migration in order (built-in exercises included).
       - run: npx supabase db start
       # The app's database types come from the same fresh database, so they
       # can never drift from the migrations. Uploaded even when the check
