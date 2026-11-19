@@ -73,8 +73,8 @@ RESTORE_URL=https://<new-ref>.supabase.co
 RESTORE_SERVICE_KEY=
 ```
 
-3. Schema, from the migrations (no `--include-seed`: the data comes from the
-   backup):
+3. Schema, from the migrations (they also add the built-in exercises; the
+   restore replaces them with the backup's, ids included):
 
 ```powershell
 npx supabase db push --db-url "<RESTORE_DB_URL>"

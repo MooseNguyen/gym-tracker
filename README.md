@@ -10,21 +10,21 @@ Installable on iPhone as a PWA.
 ### 1. Supabase project
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **Schema and built-in exercises.** The later migrations update the built-in exercises that `seed.sql` creates, so the seed must run right after the first migration, not after all of them (`db push --include-seed` runs it last):
-   1. **SQL Editor** → run [`supabase/migrations/20261106000000_init.sql`](supabase/migrations/20261106000000_init.sql), then [`supabase/seed.sql`](supabase/seed.sql).
-   2. Link the CLI to the project (it asks for the database password; the ref is the subdomain of the project URL, 20 lowercase letters):
+2. **Schema and built-in exercises**, both from `supabase/migrations` (the first built-ins come from `20261106000001_seed_built_ins.sql`, right after the schema, so the later migrations that update them find them):
+   1. Link the CLI to the project (it asks for the database password; the ref is the subdomain of the project URL, 20 lowercase letters):
 
       ```sh
       npx supabase link --project-ref <ref>
       ```
 
-   3. Record the first migration as applied, so the CLI does not run it again, then apply the rest:
+   2. Apply every migration:
 
       ```sh
-      npx supabase migration repair --status applied 20261106000000
       npx supabase db push --dry-run   # lists what will run
       npx supabase db push
       ```
+
+   > **A database set up before #42** (`init.sql` and `seed.sql` pasted into the SQL Editor) already has these built-ins, renamed by later migrations. Mark the seed migration as applied there, without running it: `npx supabase migration repair --status applied 20261106000001`. The migration also skips itself on any database that already has built-ins.
 
    > **Changing the schema later:** add a new file to `supabase/migrations` (never edit one that already ran), then `npx supabase db push --dry-run` and `npx supabase db push`. Apply migrations **only** with `db push`, never by pasting them into the SQL Editor: the CLI records what ran in `supabase_migrations.schema_migrations`, and a migration run by hand is missing there, so the next push tries to run it again (`type "…" already exists`). If that happens, check that the migration's tables and columns exist, mark it with `npx supabase migration repair --status applied <version>`, and push again.
 
@@ -168,7 +168,7 @@ where email = 'you@example.com';
 ```
 
 The role lives in `app_metadata`, which users cannot change themselves; RLS (`is_admin()`, [migration](supabase/migrations/20261113000000_admin_exercises.sql)) enforces it, and CI checks it ([`admin_rls.sql`](supabase/tests/admin_rls.sql)).
-Built-ins added this way exist only in that database (not in `seed.sql`): the monthly backup ([docs/BACKUP.md](docs/BACKUP.md)) keeps them and their photos.
+Built-ins added this way exist only in that database (not in the migrations): the monthly backup ([docs/BACKUP.md](docs/BACKUP.md)) keeps them and their photos.
 
 ### Custom exercises (every user)
 

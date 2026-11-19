@@ -1,4 +1,4 @@
--- Sanity checks on a database built from scratch (all migrations + seed.sql).
+-- Sanity checks on a database built from scratch (all migrations, in order).
 -- Run by CI after `supabase db start`; any failed check raises and fails the job.
 do $$
 declare
@@ -21,7 +21,7 @@ begin
   end if;
 
   -- Every exercise a user can pick has a photo and how-to steps (this also
-  -- covers the seed rows, which run after the migrations on a fresh database).
+  -- covers the first built-ins, from 20261106000001_seed_built_ins.sql).
   select count(*) into without_photo
   from exercises where user_id is null and not hidden and image_path is null;
   select count(*) into without_steps
@@ -69,7 +69,7 @@ begin
   end if;
 
   -- Secondary muscles: specific app values only (no plain group, no cardio),
-  -- and the RepDB fill reached the seed's rows too.
+  -- and the RepDB fill reached the first built-ins too.
   select count(*) into bad_secondary
   from exercises, unnest(secondary_muscles) as m
   where user_id is null
