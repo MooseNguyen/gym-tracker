@@ -63,6 +63,22 @@ jobs:
             test-results
           retention-days: 7
 
+  edge-functions:
+    name: Edge Functions (Deno)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: supabase/functions/rest-alerts
+    steps:
+      - uses: actions/checkout@v4
+      # Supabase Edge Functions run on Deno 2.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check index.ts
+      - run: deno test
+
   migrations:
     name: Migrations on a fresh database
     runs-on: ubuntu-latest
@@ -113,6 +129,10 @@ jobs:
         run: >
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
           -v ON_ERROR_STOP=1 -f supabase/tests/exercise_notes_rls.sql
+      - name: Check rest-over push notifications (RLS and cron)
+        run: >
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          -v ON_ERROR_STOP=1 -f supabase/tests/rest_push_rls.sql
       # Last, so a stale file never skips the database checks above.
       - name: Committed types match the migrations
         run: |
