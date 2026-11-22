@@ -12,11 +12,24 @@
 
 import { buildPushHTTPRequest } from '@pushforge/builder'
 import { createClient } from '@supabase/supabase-js'
-import { isGone, isStale, REST_OVER_PAYLOAD, sameSecret } from './rules.ts'
+import {
+  isGone,
+  isStale,
+  pushRefusalReason,
+  REST_OVER_PAYLOAD,
+  sameSecret,
+  thrownName,
+} from './rules.ts'
 
 interface DueAlert {
   user_id: string
   fire_at: string
+}
+
+/** What the push service answered; `reason` only when it refused. */
+interface PushOutcome {
+  status: number
+  reason?: string
 }
 
 interface Subscription {
@@ -86,20 +99,39 @@ Deno.serve(async (req) => {
 
   const gone = subscriptions.filter((_, i) => {
     const r = results[i]
-    return r.status === 'fulfilled' && isGone(r.value)
+    return r.status === 'fulfilled' && isGone(r.value.status)
   })
   for (const s of gone) {
     await db.from('push_subscriptions').delete().match({ user_id: s.user_id, endpoint: s.endpoint })
   }
 
-  const sent = results.filter((r) => r.status === 'fulfilled' && r.value < 300).length
-  const failed = results.length - sent - gone.length
-  // Counts only: endpoints identify a person's phone, so they stay out of the logs.
-  if (failed > 0) console.error(`rest-alerts: ${failed} of ${results.length} pushes failed`)
-  return Response.json({ sent, gone: gone.length, failed, dropped: due.length - users.length })
+  // Why each failed push failed: an HTTP status with the service's reason
+  // code, or the name of what threw. Never endpoints (they identify a
+  // person's phone) or error messages (see thrownName).
+  const failures = results.flatMap((r) => {
+    if (r.status === 'rejected') return [thrownName(r.reason)]
+    const { status, reason } = r.value
+    return status < 300 || isGone(status) ? [] : [`${status} ${reason}`]
+  })
+  const sent = results.length - gone.length - failures.length
+  if (failures.length > 0) {
+    console.error(
+      `rest-alerts: ${failures.length} of ${results.length} pushes failed: ${failures.join(', ')}`,
+    )
+  }
+  return Response.json({
+    sent,
+    gone: gone.length,
+    failed: failures.length,
+    dropped: due.length - users.length,
+  })
 })
 
-async function send(s: Subscription, privateJWK: string, adminContact: string): Promise<number> {
+async function send(
+  s: Subscription,
+  privateJWK: string,
+  adminContact: string,
+): Promise<PushOutcome> {
   const { endpoint, headers, body } = await buildPushHTTPRequest({
     privateJWK,
     subscription: { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
@@ -116,6 +148,9 @@ async function send(s: Subscription, privateJWK: string, adminContact: string): 
     body,
     signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
   })
-  await res.body?.cancel()
-  return res.status
+  if (res.ok) {
+    await res.body?.cancel()
+    return { status: res.status }
+  }
+  return { status: res.status, reason: pushRefusalReason(await res.text()) }
 }

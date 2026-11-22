@@ -108,6 +108,7 @@ Without these steps the Me sheet shows alerts as unavailable and nothing is sent
 
 To rotate the cron secret, change it in both places (`secrets set` and `vault.update_secret`). Changing the VAPID keys invalidates every subscription: each phone has to turn alerts off and on again.
 Check it works: Database → Cron → `send-due-rest-alerts` runs every 5 s; Edge Functions → `rest-alerts` → Logs shows `{"sent":1,...}` after a rest.
+A failed push is logged with the push service's status and reason, e.g. `pushes failed: 403 BadJwtToken` (usually `VITE_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_JWK` are not one pair, or `VAPID_CONTACT` is not a `mailto:`), or with an error name such as `SyntaxError` (`VAPID_PRIVATE_JWK` is not valid JSON).
 
 ### 4. Install on iPhone
 
