@@ -85,6 +85,34 @@ isOneToOne: false
                   Relationships: [
                     
                   ]
+                },"push_subscriptions": {
+                  Row: {
+                    "auth": string,"created_at": string,"endpoint": string,"p256dh": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "auth": string,"created_at"?: string,"endpoint": string,"p256dh": string,"user_id"?: string
+                  }
+                  Update: {
+                    "auth"?: string,"created_at"?: string,"endpoint"?: string,"p256dh"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
+                },"rest_alerts": {
+                  Row: {
+                    "fire_at": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "fire_at": string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "fire_at"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"routine_exercises": {
                   Row: {
                     "exercise_id": string,"id": string,"position": number,"rest_seconds": number,"routine_id": string,"target_sets": number
