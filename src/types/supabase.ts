@@ -37,6 +37,26 @@ export type Database = {
                   Relationships: [
                     
                   ]
+                },"exercise_notes": {
+                  Row: {
+                    "exercise_id": string,"note": string,"updated_at": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "exercise_id": string,"note": string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Update: {
+                    "exercise_id"?: string,"note"?: string,"updated_at"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "exercise_notes_exercise_id_fkey"
+      columns: ["exercise_id"]
+isOneToOne: false
+      referencedRelation: "exercises"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"exercises": {
                   Row: {
                     "created_at": string,"equipment": string,"hidden": boolean,"id": string,"image_path": string | null,"image_path_end": string | null,"instructions": (string)[] | null,"kind": Database["public"]['Enums']["exercise_kind"],"muscle_group": string,"name": string,"secondary_muscles": (string)[],"user_id": string | null
