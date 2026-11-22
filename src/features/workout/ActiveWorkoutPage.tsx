@@ -1,7 +1,9 @@
 import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { ExercisePicker } from '../exercises/ExercisePicker'
+import { CardNote, ExerciseNoteSheet } from '../exercises/ExerciseNote'
 import { HowToSheet } from '../exercises/HowTo'
+import { useExerciseNote } from '../exercises/notesApi'
 import { formatSetIn, formatSetValues } from '../history/format'
 import { formatAmount, fromKg, MAX_WEIGHT, type Unit } from '../../shared/units'
 import { useConfirm } from '../../shared/ui/confirmContext'
@@ -529,6 +531,8 @@ function ExerciseCard({
   // Notes stay out of the way until asked for (or already written).
   const [notesOpen, setNotesOpen] = useState(() => ex.notes !== '')
   const [restOpen, setRestOpen] = useState(false)
+  const [noteOpen, setNoteOpen] = useState(false)
+  const hasNote = useExerciseNote(ex.exerciseId) !== undefined
   let normalCount = 0
   const timed = ex.kind === 'duration'
   const required = requiredField(ex.kind)
@@ -576,6 +580,7 @@ function ExerciseCard({
         }
       >
         <div className="exercise-body">
+          <CardNote exerciseId={ex.exerciseId} name={ex.name} onEdit={() => setNoteOpen(true)} />
           {suggest && <SuggestionLine ex={ex} previous={previous} unit={unit} />}
 
           <div className="exercise-tools">
@@ -599,6 +604,17 @@ function ExerciseCard({
               <span aria-hidden="true">✎</span> Notes
               {ex.notes && !notesOpen && <span className="tool-dot" aria-label="(has notes)" />}
             </button>
+            {!hasNote && (
+              <button
+                type="button"
+                className="tool-chip"
+                aria-label={`Pin a note to ${ex.name}, shown every time`}
+                aria-haspopup="dialog"
+                onClick={() => setNoteOpen(true)}
+              >
+                <span aria-hidden="true">📌</span> Pin note
+              </button>
+            )}
           </div>
           {notesOpen && (
             <input
@@ -749,6 +765,10 @@ function ExerciseCard({
         </div>
       </Disclosure>
 
+      <ExerciseNoteSheet
+        target={noteOpen ? { exerciseId: ex.exerciseId, name: ex.name } : null}
+        onClose={() => setNoteOpen(false)}
+      />
       <RestPickerSheet
         open={restOpen}
         exerciseName={ex.name}

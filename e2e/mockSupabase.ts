@@ -112,6 +112,13 @@ export interface MockOptions {
   unit?: 'kg' | 'lb'
   /** Weigh-ins already on the server, any order. */
   bodyWeights?: BodyWeightRow[]
+  /** Sticky exercise notes already on the server. */
+  exerciseNotes?: ExerciseNoteRow[]
+}
+
+export interface ExerciseNoteRow {
+  exercise_id: string
+  note: string
 }
 
 export interface RoutineWrite {
@@ -138,6 +145,10 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   const bodyWeightWrites: (BodyWeightRow & { user_id: string })[] = []
   /** Bodies of the save_routine calls the app made. */
   const routineWrites: RoutineWrite[] = []
+  /** The exercise_notes table (one note per exercise for this account). */
+  const exerciseNotes: ExerciseNoteRow[] = [...(opts.exerciseNotes ?? [])]
+  /** What the app sent: a note saved, or null for a note deleted. */
+  const exerciseNoteWrites: { exercise_id: string; note: string | null }[] = []
 
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -212,6 +223,25 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
         [...bodyWeights].sort((a, b) => a.measured_on.localeCompare(b.measured_on)),
       )
     }
+    if (path === '/rest/v1/exercise_notes') {
+      if (req.method() === 'POST') {
+        const body = req.postDataJSON() as ExerciseNoteRow & { user_id: string }
+        exerciseNoteWrites.push({ exercise_id: body.exercise_id, note: body.note })
+        const i = exerciseNotes.findIndex((n) => n.exercise_id === body.exercise_id)
+        const row = { exercise_id: body.exercise_id, note: body.note }
+        if (i >= 0) exerciseNotes[i] = row
+        else exerciseNotes.push(row)
+        return json(route, [{ exercise_id: row.exercise_id }], 201)
+      }
+      if (req.method() === 'DELETE') {
+        const id = url.searchParams.get('exercise_id')?.replace('eq.', '') ?? ''
+        exerciseNoteWrites.push({ exercise_id: id, note: null })
+        const i = exerciseNotes.findIndex((n) => n.exercise_id === id)
+        if (i >= 0) exerciseNotes.splice(i, 1)
+        return route.fulfill({ status: 204 })
+      }
+      return json(route, exerciseNotes)
+    }
     if (path === '/rest/v1/routines') {
       const all = (opts.routines ?? []) as { id: string }[]
       // By id: the routine editor (.single()) and the check after a workout (.maybeSingle()).
@@ -270,7 +300,15 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     return json(route, { message: `Unmocked ${req.method()} ${path}` }, 501)
   })
 
-  return { saved, profileWrites, bodyWeights, bodyWeightWrites, routineWrites }
+  return {
+    saved,
+    profileWrites,
+    bodyWeights,
+    bodyWeightWrites,
+    routineWrites,
+    exerciseNotes,
+    exerciseNoteWrites,
+  }
 }
 
 // ---------------------------------------------------------------------------

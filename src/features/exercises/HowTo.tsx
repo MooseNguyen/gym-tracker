@@ -3,6 +3,7 @@ import { Dialog } from '../../shared/ui/Dialog'
 import { exerciseImageUrl } from '../../shared/ui/exerciseImage'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { useExerciseInstructions } from './api'
+import { HowToNote } from './ExerciseNote'
 
 interface Target {
   id: string
@@ -90,6 +91,7 @@ export function HowToSheet({
       {exercise && (
         <div className="stack how-to">
           <HowToImage exercise={exercise} />
+          <HowToNote exerciseId={exercise.id} name={exercise.name} />
           <HowToSteps exerciseId={exercise.id} imagePath={exercise.imagePath} />
         </div>
       )}
