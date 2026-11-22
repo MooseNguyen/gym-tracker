@@ -61,6 +61,8 @@ export default defineConfig(({ mode }) => {
           // ~8 MB of images up front.
           globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
           navigateFallback: '/index.html',
+          // Push and notification-click handlers for the rest-over alert.
+          importScripts: ['push-sw.js'],
           runtimeCaching: [
             {
               // Cached the first time each photo is shown, then served offline.

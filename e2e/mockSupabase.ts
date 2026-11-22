@@ -149,6 +149,8 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
   const exerciseNotes: ExerciseNoteRow[] = [...(opts.exerciseNotes ?? [])]
   /** What the app sent: a note saved, or null for a note deleted. */
   const exerciseNoteWrites: { exercise_id: string; note: string | null }[] = []
+  /** Writes to push_subscriptions and rest_alerts, in order: body for an upsert, filter for a delete. */
+  const pushWrites: PushWrite[] = []
 
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) })
@@ -242,6 +244,18 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
       }
       return json(route, exerciseNotes)
     }
+    if (path === '/rest/v1/push_subscriptions' || path === '/rest/v1/rest_alerts') {
+      const table = path.split('/').pop() as PushWrite['table']
+      if (req.method() === 'POST') {
+        pushWrites.push({ table, op: 'upsert', body: req.postDataJSON() as Record<string, string> })
+        return route.fulfill({ status: 201 })
+      }
+      if (req.method() === 'DELETE') {
+        pushWrites.push({ table, op: 'delete', body: Object.fromEntries(url.searchParams) })
+        return route.fulfill({ status: 204 })
+      }
+      return json(route, [])
+    }
     if (path === '/rest/v1/routines') {
       const all = (opts.routines ?? []) as { id: string }[]
       // By id: the routine editor (.single()) and the check after a workout (.maybeSingle()).
@@ -308,7 +322,15 @@ export async function mockSupabase(page: Page, opts: MockOptions = {}) {
     routineWrites,
     exerciseNotes,
     exerciseNoteWrites,
+    pushWrites,
   }
+}
+
+export interface PushWrite {
+  table: 'push_subscriptions' | 'rest_alerts'
+  op: 'upsert' | 'delete'
+  /** The upserted row, or the delete's filters (e.g. { endpoint: 'eq.https://…' }). */
+  body: Record<string, string>
 }
 
 // ---------------------------------------------------------------------------

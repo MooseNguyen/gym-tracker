@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState, type CSSProperties, type ReactNode } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
+import { RestAlertSync } from '../../features/notifications/RestAlertSync'
 import { LogoutConfirm, MeSheetBody } from '../../features/settings/MeSheet'
 import { useDraft } from '../../features/workout/draftStore'
 import { LiveWorkoutBar } from '../../features/workout/LiveWorkoutBar'
@@ -105,6 +106,7 @@ export function Layout() {
         </ErrorBoundary>
       </div>
       {showLiveBar && <LiveWorkoutBar draft={draft} />}
+      <RestAlertSync />
       <nav className="tabbar" aria-label="Main">
         {/* One highlight that slides to the active tab (tabs are equal width). */}
         <span
