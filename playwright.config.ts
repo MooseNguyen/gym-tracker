@@ -27,6 +27,8 @@ export default defineConfig({
       VITE_SUPABASE_URL: MOCK_SUPABASE_URL,
       VITE_SUPABASE_ANON_KEY: 'e2e-anon-key',
       VITE_SENTRY_DSN: `https://e2epublickey@${MOCK_SENTRY_HOST}/1`,
+      // A made-up key: the push service is faked in e2e/restPush.spec.ts.
+      VITE_VAPID_PUBLIC_KEY: 'BPm1ZnXjc3RlZC1rZXktZm9yLWUyZS10ZXN0cy1vbmx5LW5vdC1yZWFsLWF0LWFsbA',
     },
   },
 })

@@ -1,11 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { reportError } from '../../lib/monitoring'
 import { supabase } from '../../lib/supabase'
 import type { Unit } from '../../shared/units'
 import { useAuth } from '../auth/AuthProvider'
 import { fetchBodyWeights } from '../body/api'
 import { bodyWeightsToCsv } from '../body/bodyWeight'
 import { fetchAllWorkouts } from '../history/api'
+import { turnOffRestPush } from '../notifications/restPush'
+import { RestPushSetting } from '../notifications/RestPushSetting'
 import { dayKey } from '../home/calendar'
 import { useDraft } from '../workout/draftStore'
 import { useProfile, useSetUnit } from './api'
@@ -20,6 +23,7 @@ export function MeSheetBody({ onLogOut, onClose }: { onLogOut: () => void; onClo
     <div className="stack me-sheet">
       {email && <p className="muted">{email}</p>}
       <UnitSetting />
+      <RestPushSetting />
       {/* The sheet is a dialog over the page: close it, or it stays on top of the new one. */}
       <Link className="btn block" to="/body-weight" onClick={onClose}>
         Body weight
@@ -189,6 +193,9 @@ export function LogoutConfirm({ onCancel }: { onCancel: () => void }) {
   async function logOut() {
     setPending(true)
     setError(null)
+    // The next account on this phone must turn alerts on for itself. Best
+    // effort: no signal must not block logging out.
+    await turnOffRestPush().catch(reportError)
     // On success onAuthStateChange clears the session and RequireAuth sends
     // the user to /login, which unmounts this dialog.
     const { error } = await supabase.auth.signOut()

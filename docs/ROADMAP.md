@@ -29,6 +29,7 @@ number. Effort: **S** ≈ under half a day, **M** ≈ 1–2 days.
 | 25  | After a workout that differs from its routine, ask to update it       | #39 |
 | 26  | Set a workout's duration by hand, while training or from History      | #40 |
 | 27  | Sticky note per exercise, on the workout card and in How-to           | #43 |
+| 33  | "Rest over" push notification on iPhone, even with the phone locked   | #44 |
 
 Also shipped along the way: RepDB exercise library (#14, #15), admin form for
 built-in exercises with photos (#16), UI polish and the live workout bar (#17),
@@ -81,3 +82,4 @@ test fixed by a real wheel bug fix (#27).
 - [ ] 30. Bodyweight volume with logged body weight
 - [ ] 31. Import from Hevy / Strong
 - [ ] 32. Accessibility checks (axe)
+- [x] 33. Rest-over push notifications — #44

@@ -76,6 +76,39 @@ Without these variables the app sends nothing; with them, crashes and failed req
 **Not sent:** email, IP address, request or response bodies (workouts), headers (the session token), cookies, or anything in localStorage ([`monitoring.ts`](src/lib/monitoring.ts)).
 **Not reported:** requests that got no answer (no signal, timeouts): they are not bugs, and saves retry by themselves.
 
+#### Rest timer alerts (optional, Web Push)
+
+Without these steps the Me sheet shows alerts as unavailable and nothing is sent. Run them once per Supabase project (also after restoring into a new one: Vault and function secrets are not in a backup). Keep every value below out of git and out of chats.
+
+1. Apply the migration: `npx supabase db push --linked --dry-run`, then `npx supabase db push --linked`. Safe before the rest: the cron job does nothing until step 4.
+2. Make the keys: `npx @pushforge/builder@2.0.5 vapid` prints a **public key** and a **private key** (JWK). Make the cron secret: `node -e "console.log(crypto.randomBytes(32).toString('base64url'))"`.
+3. Put the function's secrets in `supabase/functions/.env` (ignored by git), set them, then delete the file:
+
+   ```
+   VAPID_PRIVATE_JWK={"kty":"EC","crv":"P-256",...}   # the private key, on one line
+   VAPID_CONTACT=mailto:you@example.com                # push services may write to it
+   REST_ALERTS_SECRET=...                              # the cron secret
+   ```
+
+   ```bash
+   npx supabase secrets set --env-file supabase/functions/.env
+   npx supabase functions deploy rest-alerts --no-verify-jwt
+   ```
+
+   `--no-verify-jwt`: the caller is the database, not a signed-in user; the function checks `x-cron-secret` instead.
+
+4. In the Supabase dashboard → SQL Editor (Vault is not a migration: it holds secrets):
+
+   ```sql
+   select vault.create_secret('https://<project-ref>.supabase.co/functions/v1/rest-alerts', 'rest_alerts_url');
+   select vault.create_secret('<the cron secret>', 'rest_alerts_secret');
+   ```
+
+5. In Vercel → Environment Variables (Production and Preview): `VITE_VAPID_PUBLIC_KEY` = the public key (not a secret: it is in the bundle by design). Redeploy.
+
+To rotate the cron secret, change it in both places (`secrets set` and `vault.update_secret`). Changing the VAPID keys invalidates every subscription: each phone has to turn alerts off and on again.
+Check it works: Database → Cron → `send-due-rest-alerts` runs every 5 s; Edge Functions → `rest-alerts` → Logs shows `{"sent":1,...}` after a rest.
+
 ### 4. Install on iPhone
 
 Open the deployed URL in **Safari** → Share → **Add to Home Screen** → open the app from the icon and sign in **there**.
@@ -134,7 +167,14 @@ Re-check with `npm audit` when updating any of these.
 - **Sticky exercise notes** ([`notesApi.ts`](src/features/exercises/notesApi.ts), table `exercise_notes`): one note per account per exercise ("seat on 4, wide grip"), shown at the top of the exercise card and in How-to, up to 200 characters. Separate from the per-workout notes, which stay in that workout's history. Saved straight to the server, not through the workout draft: the screen shows the new note at once and goes back to the old one if the server refuses it ("Not saved", Retry). Offline, TanStack pauses the save and sends it when the signal is back; that wait is in memory, so closing the app before then loses that one edit. A note that fails to load just isn't shown: the workout never depends on it.
 - **Duration set by hand** (tap Duration in the workout header, while training or editing a saved workout): the start stays and the draft's `endedAt` becomes start + the picked hours and minutes, which Finish / Save then sends as `ended_at`. While training this freezes the clock ("Duration (set)") until **Use live time**. At least 1 minute, at most 24 h and never past now, so `ended_at` is never in the future.
 - **Rest timer** stores `restEndsAt` (a timestamp), not a counter, so it stays correct after the app is backgrounded.
-  The screen is kept awake during a workout (Wake Lock API). iOS PWAs cannot schedule a notification for when the rest ends.
+  The screen is kept awake during a workout (Wake Lock API). iOS PWAs cannot schedule a notification for when the rest ends, so the server sends it (next note).
+- **Rest-over notifications** ([`src/features/notifications`](src/features/notifications), migration [`20261123000000_rest_push.sql`](supabase/migrations/20261123000000_rest_push.sql), Edge Function [`rest-alerts`](supabase/functions/rest-alerts/index.ts)). iOS stops a Home Screen app's JavaScript when the phone locks, so the app cannot raise the alert itself. Instead:
+  - With **Me → Rest timer alerts** on, this phone's push subscription is stored in `push_subscriptions` (one row per account and phone). Log out turns it off, so the next account on the phone opts in itself.
+  - Every change to `restEndsAt` (new rest, −15, +15, Skip) upserts or deletes the account's single `rest_alerts` row, in order, with no retry: a rest is over within minutes.
+  - `pg_cron` runs `private.send_due_rest_alerts()` every 5 s. Only when a row is due does it call the Edge Function through `pg_net`, with a secret of its own from Vault (not the service-role key: pg_net keeps request headers in a table until sent).
+  - The function claims the due rows by deleting them (an overlapping run gets nothing), drops any more than a minute late, pushes "Rest over" to the account's phones (TTL 60 s, urgency high) and deletes subscriptions the push service reports gone (404/410).
+  - [`public/push-sw.js`](public/push-sw.js), loaded into the generated service worker, shows it. iOS requires every push to show a notification, so it also appears with the app open.
+  - Up to ~5 s late (the cron interval) plus Apple's delivery. iPhone needs iOS 16.4+ and the app on the Home Screen; in a Safari tab, Me says so. The notification is the same fixed text for everyone: no personal data leaves the database.
 
 - **Error screen, not a blank page** ([`ErrorBoundary`](src/shared/ui/ErrorBoundary.tsx)). One boundary wraps the page inside the layout: a crashed page, or a lazy page whose code failed to download (offline, or after a deploy), shows "Something went wrong" + Reload while the tab bar keeps working, and another tab clears it. A second one in `main.tsx` catches the rest. Errors in event handlers and async code don't reach a boundary; queries and mutations show their own errors.
   `errorElement` would need a data router (`createBrowserRouter`); the app uses `<BrowserRouter>`.
@@ -196,5 +236,7 @@ The E2E tests mock the network, so they do not cover SQL. After setting up Supab
 
 - [ ] Leave the phone on the bench during rest: the screen stays on (Wake Lock; broken in home-screen apps on some older iOS versions).
 - [ ] Lock the phone with the side button during rest, unlock after a minute: the timer shows the right time left, ticked sets are still there.
+- [ ] Me → Rest timer alerts → On (from the Home Screen app), start a 1:00 rest and lock the phone: "Rest over" arrives within a few seconds of the end, with sound. Tap it: the workout opens. Skip a rest: no notification.
+- [ ] A pinned 📌 note on an exercise card reads well, wraps, and opens the note sheet when tapped.
 - [ ] Drag an exercise by its ⠿ handle: it moves; dragging elsewhere on the card scrolls the page.
 - [ ] Beat a set from last time: banner + particles. With Settings → Accessibility → Motion → Reduce Motion on: banner only.
