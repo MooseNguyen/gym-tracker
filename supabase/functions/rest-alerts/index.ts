@@ -139,7 +139,10 @@ async function send(
       payload: REST_OVER_PAYLOAD,
       adminContact,
       // A rest alert is worthless a minute later; "high" wakes a locked phone at once.
-      options: { ttl: 60, urgency: 'high', topic: 'rest-over' },
+      // No Topic header: Apple refused 'rest-over' with 400 BadWebPushTopic, and
+      // nothing needs it (the TTL expires old alerts, the service worker's tag
+      // replaces a shown one).
+      options: { ttl: 60, urgency: 'high' },
     },
   })
   const res = await fetch(endpoint, {
