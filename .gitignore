@@ -32,6 +32,9 @@ dist-ssr
 test-results
 playwright-report
 
+# Screenshots and measurements from npm run test:visual
+.taste-skill
+
 # Supabase CLI
 supabase/.temp
 supabase/.branches
