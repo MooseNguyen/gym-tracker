@@ -66,8 +66,8 @@
   --font-display: 'Barlow Condensed', 'Barlow', system-ui, sans-serif;
 
   /* Radius follows hierarchy: containers > controls > chips */
-  --r-card: 14px;
-  --r-control: 10px;
+  --r-card: 20px;
+  --r-control: 14px;
   --r-pill: 999px;
   --tap: 44px; /* Apple's minimum touch target */
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -541,7 +541,7 @@ button.link {
   justify-content: center;
   gap: 2px;
   border: 1.5px solid transparent;
-  border-radius: 12px;
+  border-radius: 16px;
   background: var(--surface);
   color: var(--muted);
   text-decoration: none;
@@ -794,7 +794,7 @@ button.link {
   padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
   border: 1px solid var(--line);
   border-bottom: none;
-  border-radius: 20px 20px 0 0;
+  border-radius: 28px 28px 0 0;
   border-color: var(--glass-border);
   background: var(--glass-fill-strong);
   backdrop-filter: var(--glass-blur);
@@ -1363,10 +1363,10 @@ button.link {
   transition: background 0.25s;
 }
 .sets td:first-child {
-  border-radius: 6px 0 0 6px;
+  border-radius: 10px 0 0 10px;
 }
 .sets td:last-child {
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 10px 10px 0;
 }
 .sets tr.done td {
   background: color-mix(in srgb, var(--success) 13%, transparent);
@@ -1378,7 +1378,7 @@ button.link {
 }
 .num-input {
   width: 100%;
-  border-radius: 6px;
+  border-radius: 10px;
   min-height: 32px;
   height: 32px;
   padding: 2px;
@@ -1397,8 +1397,8 @@ button.link {
   color: var(--placeholder);
   font-weight: 500;
 }
-/* Small to look at (34px) but ~44px to hit: the invisible ::after / the
-   select overlay reach 5px past the edge, so a tired thumb still lands. */
+/* Small to look at but ~44px to hit: the invisible ::after / the select
+   overlay reach past the edge, so a tired thumb still lands. */
 .set-type,
 .check {
   position: relative;
@@ -1407,17 +1407,25 @@ button.link {
   width: 34px;
   height: 34px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--raised);
   cursor: pointer;
   font-family: var(--font-display);
   font-size: 1rem;
   font-weight: 700;
 }
+/* The done tick is a small circle (22px); its hit area stays 44px. */
+.check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  line-height: 1;
+}
 .check::after {
   content: '';
   position: absolute;
-  inset: -5px;
+  inset: -11px;
 }
 .set-type select {
   position: absolute;
@@ -1470,7 +1478,7 @@ button.link {
   padding: 12px 14px;
   overflow: hidden; /* clips the progress bar to the rounded corners */
   border: 1px solid transparent;
-  border-radius: 20px;
+  border-radius: 24px;
   /* Frosted glass: a lighter, more saturated blur than the other layers,
      a sheen from the top, and a gradient hairline as its edge. */
   background:
