@@ -128,10 +128,27 @@ Then open the app from the home screen and sign in with it.
 | `npm run lint`                        | ESLint                                                                          |
 | `npm test`                            | Unit tests (calc + workout draft logic)                                         |
 | `npm run test:e2e`                    | Playwright on an iPhone 13 WebKit profile, with Supabase mocked                 |
+| `npm run test:visual`                 | Screenshots and design measurements of every screen (see below); not run in CI  |
 | `npm run db:types`                    | Generate TS types from the linked Supabase project (replace `src/types/db.ts`)  |
 | `node scripts/repdb/fetch-images.mjs` | Re-download the RepDB exercise images listed in `scripts/repdb/library.json`    |
 | `npm run backup`                      | Monthly backup of production data and photos ([docs/BACKUP.md](docs/BACKUP.md)) |
 | `npm run restore -- <folder>`         | Restore a backup into a fresh project and check the counts                      |
+
+### Comparing a visual change
+
+`npm run test:visual` opens every screen (with mocked data, like the e2e
+tests) on the iPhone 13 profile and at 1440×900, and writes to
+`.taste-skill/visual/<label>/` (gitignored): a screenshot of the first screen,
+a full-page one without the fixed bars, and a JSON file with the font sizes,
+colours, radii, tap targets under 44px, low-contrast text and console errors.
+Run it on `main` and on your branch, then compare:
+
+```powershell
+$env:VISUAL_LABEL='before'; npm run test:visual
+$env:VISUAL_LABEL='after'; npm run test:visual
+```
+
+It asserts nothing about the design, so it is not part of CI.
 
 ### Flake hunt (scheduled CI)
 
