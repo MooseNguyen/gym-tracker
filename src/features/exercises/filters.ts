@@ -32,14 +32,33 @@ export function groupForRegion(part: BodyPart): string | null {
 export interface ExerciseFilters {
   muscles: ReadonlySet<string>
   equipment: ReadonlySet<string>
+  /** Only exercises added from the app, not the library that ships with it. */
+  addedInApp: boolean
   query: string
 }
 
-export const NO_FILTERS: ExerciseFilters = { muscles: new Set(), equipment: new Set(), query: '' }
+export const NO_FILTERS: ExerciseFilters = {
+  muscles: new Set(),
+  equipment: new Set(),
+  addedInApp: false,
+  query: '',
+}
+
+/** Shared by the filter chip and its removable chip on the results bar. */
+export const ADDED_IN_APP_LABEL = 'Added in app'
 
 /**
- * Any of the picked muscles AND any of the picked equipment AND the name
- * contains the query. An empty selection in a category means "all".
+ * Added from the app (an admin's built-in or a custom exercise). Cached data
+ * from before the column existed falls back to "custom exercises only".
+ */
+export function isAddedInApp(e: Exercise): boolean {
+  return e.added_in_app ?? e.user_id !== null
+}
+
+/**
+ * Any of the picked muscles AND any of the picked equipment AND (when on)
+ * added in the app AND the name contains the query. An empty selection in a
+ * category means "all".
  * A picked group ('back') also matches its sub-muscles ('lats', ...); a
  * picked sub-muscle matches only itself.
  */
@@ -51,6 +70,7 @@ export function filterExercises(list: Exercise[], f: ExerciseFilters): Exercise[
         f.muscles.has(e.muscle_group) ||
         f.muscles.has(muscleParent(e.muscle_group))) &&
       (f.equipment.size === 0 || f.equipment.has(e.equipment)) &&
+      (!f.addedInApp || isAddedInApp(e)) &&
       (!q || e.name.toLowerCase().includes(q)),
   )
 }

@@ -2,7 +2,14 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { ExerciseThumb } from '../../shared/ui/ExerciseThumb'
 import { muscleLabel, type Exercise } from '../../types/db'
 import { ExerciseFilters } from './ExerciseFilters'
-import { filterExercises, NO_FILTERS, toggle, type ExerciseFilters as Filters } from './filters'
+import {
+  ADDED_IN_APP_LABEL,
+  filterExercises,
+  isAddedInApp,
+  NO_FILTERS,
+  toggle,
+  type ExerciseFilters as Filters,
+} from './filters'
 
 interface Props {
   exercises: Exercise[]
@@ -26,7 +33,9 @@ export function ExerciseList({ exercises, renderAction, resultsFooter }: Props) 
 
   const filtered = useMemo(() => filterExercises(exercises, filters), [exercises, filters])
   const active = [...filters.muscles, ...filters.equipment]
-  const hasFilters = active.length > 0
+  const hasFilters = active.length > 0 || filters.addedInApp
+  // Nothing to find at all, whatever the other filters: say why.
+  const noneAddedInApp = filters.addedInApp && !exercises.some(isAddedInApp)
 
   const removeChip = (value: string) =>
     setFilters((f) =>
@@ -67,11 +76,13 @@ export function ExerciseList({ exercises, renderAction, resultsFooter }: Props) 
               disabled={filtered.length === 0}
               onClick={() => setStep('results')}
             >
-              {filtered.length === 0
-                ? 'No exercises match'
-                : hasFilters
-                  ? `Show ${filtered.length} exercise${filtered.length === 1 ? '' : 's'}`
-                  : `Show all ${filtered.length}`}
+              {noneAddedInApp
+                ? 'No exercises added in the app yet'
+                : filtered.length === 0
+                  ? 'No exercises match'
+                  : hasFilters
+                    ? `Show ${filtered.length} exercise${filtered.length === 1 ? '' : 's'}`
+                    : `Show all ${filtered.length}`}
             </button>
           </div>
         </>
@@ -92,10 +103,24 @@ export function ExerciseList({ exercises, renderAction, resultsFooter }: Props) 
                 {muscleLabel(v)} ✕
               </button>
             ))}
+            {filters.addedInApp && (
+              <button
+                type="button"
+                className="chip on small"
+                aria-label={`Remove filter ${ADDED_IN_APP_LABEL}`}
+                onClick={() => setFilters((f) => ({ ...f, addedInApp: false }))}
+              >
+                {ADDED_IN_APP_LABEL} ✕
+              </button>
+            )}
             <small className="muted results-count">{filtered.length} found</small>
           </div>
           {filtered.length === 0 ? (
-            <p className="muted center">No exercises match. Change the filters or the search.</p>
+            <p className="muted center">
+              {noneAddedInApp
+                ? 'No exercises have been added in the app yet.'
+                : 'No exercises match. Change the filters or the search.'}
+            </p>
           ) : (
             <ul className="list">
               {filtered.map((e) => (

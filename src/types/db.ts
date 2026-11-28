@@ -19,6 +19,11 @@ export interface Exercise {
   image_path: string | null
   /** Second photo, the end of the movement (RepDB built-ins); null = one photo. */
   image_path_end?: string | null
+  /**
+   * Added from the app (an admin's built-in or a custom exercise), not part of
+   * the library that ships with it (RepDB). Missing in old cached data.
+   */
+  added_in_app?: boolean
   /** Loaded only by the admin's hidden list (useHiddenExercises); missing = visible. */
   hidden?: boolean
 }

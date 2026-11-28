@@ -6,7 +6,7 @@ import type { Exercise, ExerciseKind } from '../../types/db'
 const ADMIN_ONLY = 'Only admins can change built-in exercises.'
 
 const EXERCISE_COLUMNS =
-  'id, user_id, name, muscle_group, secondary_muscles, equipment, kind, image_path, image_path_end'
+  'id, user_id, name, muscle_group, secondary_muscles, equipment, kind, image_path, image_path_end, added_in_app'
 
 export function useExercises() {
   return useQuery({
