@@ -59,14 +59,14 @@ isOneToOne: false
                   ]
                 },"exercises": {
                   Row: {
-                    "created_at": string,"equipment": string,"hidden": boolean,"id": string,"image_path": string | null,"image_path_end": string | null,"instructions": (string)[] | null,"kind": Database["public"]['Enums']["exercise_kind"],"muscle_group": string,"name": string,"secondary_muscles": (string)[],"user_id": string | null
+                    "added_in_app": boolean,"created_at": string,"equipment": string,"hidden": boolean,"id": string,"image_path": string | null,"image_path_end": string | null,"instructions": (string)[] | null,"kind": Database["public"]['Enums']["exercise_kind"],"muscle_group": string,"name": string,"secondary_muscles": (string)[],"user_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"equipment": string,"hidden"?: boolean,"id"?: string,"image_path"?: string | null,"image_path_end"?: string | null,"instructions"?: (string)[] | null,"kind"?: Database["public"]['Enums']["exercise_kind"],"muscle_group": string,"name": string,"secondary_muscles"?: (string)[],"user_id"?: string | null
+                    "added_in_app"?: boolean,"created_at"?: string,"equipment": string,"hidden"?: boolean,"id"?: string,"image_path"?: string | null,"image_path_end"?: string | null,"instructions"?: (string)[] | null,"kind"?: Database["public"]['Enums']["exercise_kind"],"muscle_group": string,"name": string,"secondary_muscles"?: (string)[],"user_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"equipment"?: string,"hidden"?: boolean,"id"?: string,"image_path"?: string | null,"image_path_end"?: string | null,"instructions"?: (string)[] | null,"kind"?: Database["public"]['Enums']["exercise_kind"],"muscle_group"?: string,"name"?: string,"secondary_muscles"?: (string)[],"user_id"?: string | null
+                    "added_in_app"?: boolean,"created_at"?: string,"equipment"?: string,"hidden"?: boolean,"id"?: string,"image_path"?: string | null,"image_path_end"?: string | null,"instructions"?: (string)[] | null,"kind"?: Database["public"]['Enums']["exercise_kind"],"muscle_group"?: string,"name"?: string,"secondary_muscles"?: (string)[],"user_id"?: string | null
                   }
                   Relationships: [
                     

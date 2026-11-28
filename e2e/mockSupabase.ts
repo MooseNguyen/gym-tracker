@@ -16,6 +16,7 @@ export const bench = {
   kind: 'weight_reps',
   image_path: 'repdb-bench-press.webp',
   image_path_end: 'repdb-bench-press-end.webp',
+  added_in_app: false,
 }
 
 export const user = {
@@ -344,6 +345,7 @@ const exercise = (id: string, name: string, image_path: string, kind = 'weight_r
   equipment: 'barbell',
   kind,
   image_path,
+  added_in_app: false,
 })
 export const overheadPress = exercise('ex-ohp', 'Overhead Press', 'overhead-press.webp')
 export const pullUp = exercise('ex-pull', 'Pull Up', 'pull-up.webp', 'bodyweight_reps')
@@ -400,6 +402,7 @@ export const customCurl = {
   equipment: 'cable',
   kind: 'weight_reps',
   image_path: null,
+  added_in_app: true,
 }
 
 // ---------------------------------------------------------------------------

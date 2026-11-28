@@ -23,6 +23,9 @@ select pg_temp.act_as('00000000-0000-0000-0000-0000000000a1', 'member');
 do $$
 begin
   insert into exercises (name, muscle_group, equipment) values ('My Row', 'upper-back', 'cable');
+  if not (select added_in_app from exercises where name = 'My Row') then
+    raise exception 'a custom exercise was not marked added_in_app';
+  end if;
 
   begin
     insert into exercises (user_id, name, muscle_group, equipment)
@@ -49,6 +52,9 @@ do $$
 begin
   insert into exercises (user_id, name, muscle_group, equipment, image_path, instructions)
   values (null, 'Iso-Lateral Pulldown', 'lats', 'machine', 'own/test.jpg', array['Pull.']);
+  if not (select added_in_app from exercises where user_id is null and name = 'Iso-Lateral Pulldown') then
+    raise exception 'a built-in added by an admin was not marked added_in_app';
+  end if;
 
   update exercises set equipment = 'other' where id = (select id from exercises where user_id is null and not hidden order by name limit 1);
   if not found then

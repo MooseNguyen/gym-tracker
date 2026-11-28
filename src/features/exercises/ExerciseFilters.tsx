@@ -4,6 +4,7 @@ import { BodyMap } from './bodyMap/BodyMap'
 import { EquipmentIcon } from './EquipmentIcon'
 import {
   activeGroups,
+  ADDED_IN_APP_LABEL,
   toggle,
   toggleGroup,
   toggleSubgroup,
@@ -49,6 +50,21 @@ export function ExerciseFilters({ filters, onChange }: Props) {
           onClick={() => setTab('equipment')}
         >
           Equipment{filters.equipment.size > 0 && ` (${filters.equipment.size})`}
+        </button>
+      </div>
+
+      {/* Wrapped so the chip keeps its own width inside the column. */}
+      <div>
+        <button
+          type="button"
+          className={filters.addedInApp ? 'chip on' : 'chip'}
+          aria-pressed={filters.addedInApp}
+          onClick={() => onChange({ ...filters, addedInApp: !filters.addedInApp })}
+        >
+          <span className="chip-check" aria-hidden="true">
+            {filters.addedInApp ? '✓' : ''}
+          </span>
+          {ADDED_IN_APP_LABEL}
         </button>
       </div>
 

@@ -229,6 +229,10 @@ where email = 'you@example.com';
 The role lives in `app_metadata`, which users cannot change themselves; RLS (`is_admin()`, [migration](supabase/migrations/20261113000000_admin_exercises.sql)) enforces it, and CI checks it ([`admin_rls.sql`](supabase/tests/admin_rls.sql)).
 Built-ins added this way exist only in that database (not in the migrations): the monthly backup ([docs/BACKUP.md](docs/BACKUP.md)) keeps them and their photos.
 
+They are marked `added_in_app` (the column defaults to true for every row the app inserts), so the **Added in app** chip in the exercise filters finds them, together with each user's custom exercises.
+Library exercises from the migrations are `false`; a future migration that adds library exercises must set `added_in_app = false` itself.
+The [migration](supabase/migrations/20261127000000_exercise_added_in_app.sql) guessed the existing ones from their photos: check its query on production once.
+
 ### Custom exercises (every user)
 
 Anyone can add their own exercises (**+ New**) and edit or delete them later (✎, 🗑): name, muscle group, equipment. RLS lets each account change only its own (init migration).

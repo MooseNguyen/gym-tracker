@@ -12,6 +12,7 @@ declare
   old_data int;
   bad_secondary int;
   with_secondary int;
+  marked_added int;
 begin
   -- 264 before RepDB + 310 added; 48 old ones RepDB doesn't cover are hidden.
   select count(*) into built_ins from exercises where user_id is null;
@@ -86,6 +87,12 @@ begin
   from exercises where user_id is null and not hidden and cardinality(secondary_muscles) > 0;
   if with_secondary <> 493 then
     raise exception 'expected 493 visible built-ins with secondary muscles, found %', with_secondary;
+  end if;
+
+  -- Built-ins from the migrations ship with the app: none counts as added in it.
+  select count(*) into marked_added from exercises where user_id is null and added_in_app;
+  if marked_added <> 0 then
+    raise exception '% built-ins from the migrations are marked added_in_app', marked_added;
   end if;
 
   raise notice 'ok: % built-in exercises', built_ins;

@@ -6,6 +6,7 @@ import {
   filterExercises,
   GROUP_REGIONS,
   groupForRegion,
+  isAddedInApp,
   NO_FILTERS,
   toggle,
   toggleGroup,
@@ -30,9 +31,10 @@ const library = [
   ex('Cable Curl', 'biceps', 'cable'),
 ]
 const names = (list: Exercise[]) => list.map((e) => e.name)
-const f = (muscles: string[] = [], equipment: string[] = [], query = '') => ({
+const f = (muscles: string[] = [], equipment: string[] = [], query = '', addedInApp = false) => ({
   muscles: new Set(muscles),
   equipment: new Set(equipment),
+  addedInApp,
   query,
 })
 
@@ -72,6 +74,42 @@ describe('filterExercises', () => {
 
   it('returns nothing when no exercise matches', () => {
     expect(filterExercises(library, f(['calves'], ['barbell']))).toEqual([])
+  })
+})
+
+describe('added in app filter', () => {
+  const mixed: Exercise[] = [
+    { ...ex('Bench Press', 'mid-chest', 'barbell'), added_in_app: false },
+    { ...ex('Iso Chest Press', 'mid-chest', 'machine'), added_in_app: true },
+    { ...ex('Iso Pulldown', 'lats', 'machine'), added_in_app: true },
+    { ...ex('My Chest Fly', 'mid-chest', 'cable'), user_id: 'me', added_in_app: true },
+  ]
+
+  it('keeps only exercises added in the app (admin built-ins and custom ones)', () => {
+    expect(names(filterExercises(mixed, f([], [], '', true)))).toEqual([
+      'Iso Chest Press',
+      'Iso Pulldown',
+      'My Chest Fly',
+    ])
+  })
+
+  it('combines with muscles, equipment and the name search', () => {
+    expect(names(filterExercises(mixed, f(['chest'], [], '', true)))).toEqual([
+      'Iso Chest Press',
+      'My Chest Fly',
+    ])
+    expect(names(filterExercises(mixed, f([], ['machine'], 'pull', true)))).toEqual([
+      'Iso Pulldown',
+    ])
+  })
+
+  it('returns nothing when the app has added no exercises', () => {
+    expect(filterExercises([mixed[0]], f([], [], '', true))).toEqual([])
+  })
+
+  it('falls back to custom exercises for cached data without the column', () => {
+    expect(isAddedInApp(ex('Old Built-in', 'lats', 'machine'))).toBe(false)
+    expect(isAddedInApp({ ...ex('Old Custom', 'lats', 'machine'), user_id: 'me' })).toBe(true)
   })
 })
 
